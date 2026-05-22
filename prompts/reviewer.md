@@ -9,8 +9,7 @@ Sections:
 3) Risk Focus
 4) Implementation Scope
 5) Acceptance Criteria
-6) Validation
-7) Final Instruction To Model
+6) Final Instruction To Model
 
 User request:
 {{ USER_REQUEST }}

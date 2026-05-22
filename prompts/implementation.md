@@ -8,8 +8,7 @@ Sections:
 2) Constraints
 3) Step-by-step Scope
 4) Acceptance Criteria
-5) Validation
-6) Final Instruction To Model
+5) Final Instruction To Model
 
 User request:
 {{ USER_REQUEST }}

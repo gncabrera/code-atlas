@@ -9,8 +9,7 @@ Sections:
 3) Implementation Scope
 4) Abuse Cases
 5) Acceptance Criteria
-6) Validation
-7) Final Instruction To Model
+6) Final Instruction To Model
 
 User request:
 {{ USER_REQUEST }}
