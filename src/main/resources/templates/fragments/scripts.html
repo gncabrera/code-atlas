@@ -7,5 +7,12 @@
     <script th:src="@{/js/common.js(v=${assetVersion})}"></script>
     <script th:src="@{'/js/' + ${pageJs}(v=${assetVersion})}"></script>
 </th:block>
+<th:block th:fragment="pageScriptsWithVendor(pageJs, extraVendorJs)">
+    <script th:src="@{/js/vendor/jquery-3.7.1.min.js(v=${assetVersion})}"></script>
+    <script th:src="@{/js/vendor/bootstrap.bundle.min.js(v=${assetVersion})}"></script>
+    <script th:src="@{/js/common.js(v=${assetVersion})}"></script>
+    <script th:src="@{'/js/' + ${extraVendorJs}(v=${assetVersion})}"></script>
+    <script th:src="@{'/js/' + ${pageJs}(v=${assetVersion})}"></script>
+</th:block>
 </body>
 </html>

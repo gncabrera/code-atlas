@@ -5,6 +5,9 @@ $(function () {
 
     let projects = [];
     let enabledModels = [];
+    let skillsById = {};
+    let loadedSkills = [];
+    let pendingDraftSkillIds = null;
     let isRestoringDraft = false;
     let draftStatusHideTimeout = null;
 
@@ -19,7 +22,8 @@ $(function () {
         "#aiModelPrompt",
         "#sendToModelBtn",
         "#outputPrompt",
-        "#copyOutputBtn"
+        "#copyOutputBtn",
+        "#skillMultiselect"
     ];
 
     const draftFieldSelectors = [
@@ -75,8 +79,34 @@ $(function () {
             userRequest: ($("#userRequest").val() || "").trim(),
             aiModelSelect: $("#aiModelSelect").val() || "",
             aiModelPrompt: ($("#aiModelPrompt").val() || "").trim(),
-            outputPrompt: ($("#outputPrompt").val() || "").trim()
+            outputPrompt: ($("#outputPrompt").val() || "").trim(),
+            skillMultiselect: getSelectedSkillIds()
         };
+    }
+
+    function getSelectedSkillIds() {
+        return ($("#skillMultiselect").val() || []).map(String);
+    }
+
+    function getDefaultSkillIds(skills) {
+        return (skills || [])
+            .filter(function (skill) {
+                return Boolean(skill.defaultInOutputPrompt);
+            })
+            .map(function (skill) {
+                return String(skill.id);
+            });
+    }
+
+    function skillIdsEqual(left, right) {
+        const a = (left || []).map(String).sort();
+        const b = (right || []).map(String).sort();
+        if (a.length !== b.length) {
+            return false;
+        }
+        return a.every(function (value, index) {
+            return value === b[index];
+        });
     }
 
     function getDefaultAiModelSelectValue() {
@@ -94,7 +124,8 @@ $(function () {
             && !data.projectSelect
             && data.promptModeSelect === "BALANCED"
             && data.shouldSendAgentsFile === true
-            && String(data.aiModelSelect || "") === getDefaultAiModelSelectValue();
+            && String(data.aiModelSelect || "") === getDefaultAiModelSelectValue()
+            && skillIdsEqual(data.skillMultiselect, getDefaultSkillIds(loadedSkills));
     }
 
     function hideDraftStatus() {
@@ -142,6 +173,10 @@ $(function () {
             $("#shouldSendAgentsFile").prop("checked", Boolean(value));
             return true;
         }
+        if (fieldKey === "skillMultiselect") {
+            applySkillMultiselectSelection(Array.isArray(value) ? value.map(String) : []);
+            return true;
+        }
         const $field = $("#" + fieldKey);
         if (!$field.length) {
             return false;
@@ -181,6 +216,9 @@ $(function () {
         if (!data || typeof data !== "object") {
             return false;
         }
+        pendingDraftSkillIds = Array.isArray(data.skillMultiselect)
+            ? data.skillMultiselect.map(String)
+            : null;
         isRestoringDraft = true;
         let restored = false;
         const hadContent = !isDraftAtDefaults(data);
@@ -210,6 +248,7 @@ $(function () {
         } else {
             $modelSelect.val("");
         }
+        applySkillMultiselectSelection(getDefaultSkillIds(loadedSkills));
         updateAgentsCheckboxVisibility();
         updateTokenInfo();
     }
@@ -228,7 +267,19 @@ $(function () {
         $("#userRequest, #aiModelPrompt, #outputPrompt").on("input", debouncedSaveDraft);
         $("#projectSelect, #promptModeSelect, #aiModelSelect").on("change", debouncedSaveDraft);
         $("#shouldSendAgentsFile").on("change", debouncedSaveDraft);
+        $("#skillMultiselect").on("change", debouncedSaveDraft);
         $("#btn-clear-prompt").on("click", clearDraft);
+    }
+
+    function applySkillMultiselectSelection(selectedIds) {
+        const $select = $("#skillMultiselect");
+        if (!$select.length || !$select.find("option").length) {
+            return;
+        }
+        $select.val(selectedIds || []);
+        if ($select.data("multiselect")) {
+            $select.multiselect("refresh");
+        }
     }
 
     function updateAgentsCheckboxVisibility() {
@@ -277,6 +328,7 @@ $(function () {
                 populateProjects();
                 populateModels();
                 loadDraftFromLocalStorage();
+                loadSkills();
             })
             .fail(function (xhr) {
                 CodeAtlas.showToast(
@@ -376,13 +428,131 @@ $(function () {
             });
     });
 
-    $("#copyOutputBtn").on("click", function () {
-        const output = $("#outputPrompt").val() || "";
-        if (CodeAtlas.copyToClipboard(output)) {
-            CodeAtlas.showToast("Output prompt copied.", "info");
+    function uncategorizedCategory(category) {
+        const normalized = (category || "").trim();
+        return normalized || "(Uncategorized)";
+    }
+
+    function populateSkillMultiselect(skills, selectedIds) {
+        const $select = $("#skillMultiselect");
+        loadedSkills = skills || [];
+        skillsById = {};
+        if ($select.data("multiselect")) {
+            $select.multiselect("destroy");
+        }
+        $select.empty();
+        const initialSelection = selectedIds !== undefined && selectedIds !== null
+            ? selectedIds.map(String)
+            : getDefaultSkillIds(loadedSkills);
+        if (!skills || skills.length === 0) {
+            $select.multiselect({
+                enableFiltering: true,
+                includeSelectAllOption: true,
+                buttonWidth: "20%",
+                nonSelectedText: "No skills available",
+                onChange: debouncedSaveDraft
+            });
             return;
         }
-        CodeAtlas.showToast("Copy failed.", "danger");
+        skills.forEach(function (skill) {
+            skillsById[String(skill.id)] = skill;
+        });
+        const grouped = {};
+        skills.forEach(function (skill) {
+            const category = uncategorizedCategory(skill.category);
+            if (!grouped[category]) {
+                grouped[category] = [];
+            }
+            grouped[category].push(skill);
+        });
+        Object.keys(grouped).sort(function (a, b) {
+            return a.localeCompare(b);
+        }).forEach(function (category) {
+            const $optgroup = $("<optgroup>").attr("label", category);
+            grouped[category].sort(function (a, b) {
+                return a.name.localeCompare(b.name);
+            }).forEach(function (skill) {
+                const optionId = String(skill.id);
+                $optgroup.append(
+                    $("<option>", {
+                        value: optionId,
+                        text: skill.name,
+                        selected: initialSelection.indexOf(optionId) >= 0
+                    })
+                );
+            });
+            $select.append($optgroup);
+        });
+        $select.multiselect({
+            enableFiltering: true,
+            includeSelectAllOption: true,
+            buttonWidth: "20%",
+            nonSelectedText: "Select skills to append",
+            onChange: debouncedSaveDraft
+        });
+    }
+
+    function loadSkills() {
+        CodeAtlas.apiGet("/api/skills")
+            .done(function (response) {
+                if (response.result !== "success") {
+                    CodeAtlas.showToast(
+                        response.message || "Failed loading skills.",
+                        "danger"
+                    );
+                    populateSkillMultiselect([]);
+                    return;
+                }
+                const skills = response.data || [];
+                const selection = pendingDraftSkillIds !== null
+                    ? pendingDraftSkillIds
+                    : getDefaultSkillIds(skills);
+                populateSkillMultiselect(skills, selection);
+                pendingDraftSkillIds = null;
+            })
+            .fail(function (xhr) {
+                CodeAtlas.showToast(
+                    CodeAtlas.apiMessage(xhr, "Failed loading skills."),
+                    "danger"
+                );
+                populateSkillMultiselect([]);
+            });
+    }
+
+    function buildCopyPayload() {
+        let output = $("#outputPrompt").val() || "";
+        const selectedIds = $("#skillMultiselect").val() || [];
+        if (selectedIds.length === 0) {
+            return output;
+        }
+        const promptBlocks = selectedIds
+            .map(function (id) {
+                const skill = skillsById[String(id)];
+                return skill && skill.prompt ? skill.prompt.trim() : "";
+            })
+            .filter(function (prompt) {
+                return prompt.length > 0;
+            });
+        if (promptBlocks.length === 0) {
+            return output;
+        }
+        return output + "\n\n--- Skills ---\n\n" + promptBlocks.join("\n\n");
+    }
+
+    $("#copyOutputBtn").on("click", function () {
+        const $copyBtn = $(this);
+        const output = buildCopyPayload();
+        if (!output.trim()) {
+            CodeAtlas.showToast("Nothing to copy.", "danger");
+            return;
+        }
+        CodeAtlas.setButtonLoading($copyBtn, true, "Copying...");
+        if (CodeAtlas.copyToClipboard(output)) {
+            CodeAtlas.showToast("Output prompt copied.", "info");
+        } else {
+            CodeAtlas.showToast("Copy failed.", "danger");
+        }
+        CodeAtlas.setButtonLoading($copyBtn, false);
     });
 
     bindDraftAutoSave();

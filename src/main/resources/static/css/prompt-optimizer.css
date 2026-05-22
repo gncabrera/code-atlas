@@ -2,3 +2,12 @@
 #tokenLimit {
     font-weight: 600;
 }
+
+#outputPromptActions {
+    gap: 0.5rem;
+}
+
+#skillMultiselectWrapper {
+    flex: 1 1 12rem;
+    min-width: 12rem;
+}

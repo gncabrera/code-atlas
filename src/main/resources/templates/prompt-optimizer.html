@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Code Atlas - Prompt Optimizer</title>
     <th:block th:replace="~{fragments/head :: pageHead('prompt-optimizer.css')}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/vendor/bootstrap-multiselect.css(v=${assetVersion})}">
 </head>
 <body>
 <div th:replace="~{fragments/navbar :: navbar}"></div>
@@ -99,11 +100,17 @@
         <div class="card-body">
             <textarea id="outputPrompt" class="form-control mb-3" rows="30"
                       placeholder="Model response..." ></textarea>
-            <button id="copyOutputBtn" class="btn btn-outline-secondary">Copy</button>
+            <div id="outputPromptActions" class="d-flex flex-wrap align-items-center mb-3">
+                <button type="button" id="copyOutputBtn" class="btn btn-outline-secondary">Copy</button>
+                <div id="skillMultiselectWrapper" class="flex-grow-1">
+                    <label for="skillMultiselect" class="form-label visually-hidden">Skills to append on copy</label>
+                    <select id="skillMultiselect" multiple="multiple"></select>
+                </div>
+            </div>
         </div>
     </div>
 </main>
 
-<th:block th:replace="~{fragments/scripts :: pageScripts('prompt-optimizer.js')}"></th:block>
+<th:block th:replace="~{fragments/scripts :: pageScriptsWithVendor('prompt-optimizer.js', 'vendor/bootstrap-multiselect.js')}"></th:block>
 </body>
 </html>

@@ -57,6 +57,7 @@
             $("#skillTargetPath").val("");
             $("#skillDescription").val("");
             $("#skillPrompt").val("");
+            $("#skillDefaultInOutputPrompt").prop("checked", false);
             if (skillModal) {
                 skillModal.hide();
             }
@@ -68,6 +69,7 @@
             $("#skillTargetPath").val(skill.targetPath);
             $("#skillDescription").val(skill.description || "");
             $("#skillPrompt").val(skill.prompt);
+            $("#skillDefaultInOutputPrompt").prop("checked", Boolean(skill.defaultInOutputPrompt));
             showSkillModal();
         },
         buildPayload: function () {
@@ -76,7 +78,8 @@
                 prompt: $("#skillPrompt").val(),
                 targetPath: $("#skillTargetPath").val().trim(),
                 description: $("#skillDescription").val().trim(),
-                category: $("#skillCategory").val().trim()
+                category: $("#skillCategory").val().trim(),
+                defaultInOutputPrompt: $("#skillDefaultInOutputPrompt").is(":checked")
             };
         },
         validateSave: function () {
@@ -101,7 +104,8 @@
                 $("<td></td>").text(skill.name),
                 $("<td></td>").text(skill.category || ""),
                 $("<td></td>").text(skill.targetPath),
-                $("<td></td>").text(descSnippet)
+                $("<td></td>").text(descSnippet),
+                $("<td></td>").text(skill.defaultInOutputPrompt ? "Yes" : "No")
             ];
         }
     });
@@ -114,6 +118,7 @@
             $("#skillTargetPath").val("");
             $("#skillDescription").val("");
             $("#skillPrompt").val("");
+            $("#skillDefaultInOutputPrompt").prop("checked", false);
             showSkillModal();
         });
 

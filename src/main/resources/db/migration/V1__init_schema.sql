@@ -49,7 +49,8 @@ CREATE TABLE IF NOT EXISTS skill (
     prompt TEXT NOT NULL,
     target_path TEXT NOT NULL,
     description TEXT,
-    category TEXT
+    category TEXT,
+    default_in_output_prompt INTEGER NOT NULL DEFAULT 0
 );
 
 INSERT INTO ai_model_api_key (name, api_key, provider, is_active)

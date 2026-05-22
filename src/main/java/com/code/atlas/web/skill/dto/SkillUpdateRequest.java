@@ -5,7 +5,8 @@ public record SkillUpdateRequest(
         String prompt,
         String targetPath,
         String description,
-        String category
+        String category,
+        Boolean defaultInOutputPrompt
 ) {
     public SkillUpdateRequest {
         if (name == null || name.isBlank()) {

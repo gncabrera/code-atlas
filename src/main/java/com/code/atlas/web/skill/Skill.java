@@ -35,4 +35,7 @@ public class Skill {
 
     @Column
     private String category;
+
+    @Column(name = "default_in_output_prompt", nullable = false)
+    private boolean defaultInOutputPrompt = false;
 }

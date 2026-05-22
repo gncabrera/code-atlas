@@ -5,7 +5,8 @@ public record SkillCreateRequest(
         String prompt,
         String targetPath,
         String description,
-        String category
+        String category,
+        Boolean defaultInOutputPrompt
 ) {
     public SkillCreateRequest {
         if (name == null || name.isBlank()) {

@@ -1,6 +1,6 @@
 -- Seed skills from skills/agents, skills/general, and install docs (see skills/README.md)
 
-INSERT INTO skill (name, prompt, target_path, description, category)
+INSERT INTO skill (name, prompt, target_path, description, category, default_in_output_prompt)
 SELECT 'architect',
        '---
 name: architect
@@ -56,10 +56,11 @@ Unresolved only: security | migration | edge cases | consistency | rollback.
 ',
        '.cursor/skills/architect/SKILL.md',
        'Architecture/discovery only. Impact analysis + state files. Never implement code.',
-       'base'
+       'base',
+       0
 WHERE NOT EXISTS (SELECT 1 FROM skill WHERE name = 'architect');
 
-INSERT INTO skill (name, prompt, target_path, description, category)
+INSERT INTO skill (name, prompt, target_path, description, category, default_in_output_prompt)
 SELECT 'implement',
        '---
 name: implement
@@ -115,10 +116,11 @@ Run focused checks only when cheap and relevant.
 ',
        '.cursor/skills/implement/SKILL.md',
        'Implementation mode only. Minimal code changes, strict scope, state update same turn.',
-       'base'
+       'base',
+       0
 WHERE NOT EXISTS (SELECT 1 FROM skill WHERE name = 'implement');
 
-INSERT INTO skill (name, prompt, target_path, description, category)
+INSERT INTO skill (name, prompt, target_path, description, category, default_in_output_prompt)
 SELECT 'risk-scan',
        '---
 name: risk-scan
@@ -165,10 +167,11 @@ Per finding:
 ',
        '.cursor/skills/risk-scan/SKILL.md',
        'Risk scan pre/post. Findings to RISK_SCAN.md only.',
-       'base'
+       'base',
+       0
 WHERE NOT EXISTS (SELECT 1 FROM skill WHERE name = 'risk-scan');
 
-INSERT INTO skill (name, prompt, target_path, description, category)
+INSERT INTO skill (name, prompt, target_path, description, category, default_in_output_prompt)
 SELECT 'auto-mode',
        '---
 name: auto-mode
@@ -245,10 +248,11 @@ Treat as high-risk triggers:
 ',
        '.cursor/skills/auto-mode/SKILL.md',
        'Mode overlay: intent classifier + adaptive question gates. Layer after base.',
-       'mode-overlay'
+       'mode-overlay',
+       0
 WHERE NOT EXISTS (SELECT 1 FROM skill WHERE name = 'auto-mode');
 
-INSERT INTO skill (name, prompt, target_path, description, category)
+INSERT INTO skill (name, prompt, target_path, description, category, default_in_output_prompt)
 SELECT 'model-opus',
        '---
 name: model-opus
@@ -352,10 +356,11 @@ Use deterministic evaluation order:
 ',
        '.cursor/skills/model-opus/SKILL.md',
        'Model overlay for Opus-class depth, validation, confidence gating. Third layer.',
-       'model-overlay'
+       'model-overlay',
+       0
 WHERE NOT EXISTS (SELECT 1 FROM skill WHERE name = 'model-opus');
 
-INSERT INTO skill (name, prompt, target_path, description, category)
+INSERT INTO skill (name, prompt, target_path, description, category, default_in_output_prompt)
 SELECT 'snapshot',
        '---
 name: snapshot
@@ -409,10 +414,11 @@ No surrounding chat prose.
 ',
        '.cursor/skills/snapshot/SKILL.md',
        'Compact handoff snapshot for model/chat switch.',
-       'agents'
+       'agents',
+       0
 WHERE NOT EXISTS (SELECT 1 FROM skill WHERE name = 'snapshot');
 
-INSERT INTO skill (name, prompt, target_path, description, category)
+INSERT INTO skill (name, prompt, target_path, description, category, default_in_output_prompt)
 SELECT 'caveman',
        '---
 name: caveman
@@ -482,10 +488,11 @@ Code/commits/PRs: write normal. "stop caveman" or "normal mode": revert. Level p
 ',
        '.cursor/skills/caveman/SKILL.md',
        'Ultra-compressed communication mode (lite/full/ultra).',
-       'general'
+       'general',
+       1
 WHERE NOT EXISTS (SELECT 1 FROM skill WHERE name = 'caveman');
 
-INSERT INTO skill (name, prompt, target_path, description, category)
+INSERT INTO skill (name, prompt, target_path, description, category, default_in_output_prompt)
 SELECT 'ask',
        '---
 name: ask
@@ -546,10 +553,11 @@ Rules:
 ',
        '.cursor/skills/ask/SKILL.md',
        'Requirements clarification via numbered questions with a/b/c options.',
-       'general'
+       'general',
+       1
 WHERE NOT EXISTS (SELECT 1 FROM skill WHERE name = 'ask');
 
-INSERT INTO skill (name, prompt, target_path, description, category)
+INSERT INTO skill (name, prompt, target_path, description, category, default_in_output_prompt)
 SELECT 'state-format',
        '# State Format
 
@@ -587,10 +595,11 @@ Forbidden:
 ',
        '.cursor/STATE_FORMAT.md',
        'Shared spec for implementation state files (ARCHITECTURE, TASKS, RISKS).',
-       'doc'
+       'doc',
+       0
 WHERE NOT EXISTS (SELECT 1 FROM skill WHERE name = 'state-format');
 
-INSERT INTO skill (name, prompt, target_path, description, category)
+INSERT INTO skill (name, prompt, target_path, description, category, default_in_output_prompt)
 SELECT 'workflow',
        '# Workflow
 
@@ -741,5 +750,6 @@ Si hay desync, corregir manualmente en `@implementation/{ARCHITECTURE,TASKS,RISK
 ',
        '.cursor/WORKFLOW.md',
        'Token-saving implementation loop and model matrix for composable skills.',
-       'doc'
+       'doc',
+       0
 WHERE NOT EXISTS (SELECT 1 FROM skill WHERE name = 'workflow');

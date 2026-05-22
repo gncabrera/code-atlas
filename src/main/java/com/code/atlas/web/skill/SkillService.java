@@ -40,7 +40,7 @@ public class SkillService {
     public SkillDto createSkill(SkillCreateRequest request) {
         Skill skill = new Skill();
         applyRequest(skill, request.name(), request.prompt(), request.targetPath(),
-                request.description(), request.category());
+                request.description(), request.category(), request.defaultInOutputPrompt());
         return toDto(skillRepository.save(skill));
     }
 
@@ -49,7 +49,7 @@ public class SkillService {
         Skill skill = skillRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Skill not found for id: " + id));
         applyRequest(skill, request.name(), request.prompt(), request.targetPath(),
-                request.description(), request.category());
+                request.description(), request.category(), request.defaultInOutputPrompt());
         return toDto(skillRepository.save(skill));
     }
 
@@ -104,12 +104,14 @@ public class SkillService {
             String prompt,
             String targetPath,
             String description,
-            String category) {
+            String category,
+            Boolean defaultInOutputPrompt) {
         skill.setName(name.trim());
         skill.setPrompt(prompt);
         skill.setTargetPath(targetPath.trim());
         skill.setDescription(normalizeOptional(description));
         skill.setCategory(normalizeOptional(category));
+        skill.setDefaultInOutputPrompt(Boolean.TRUE.equals(defaultInOutputPrompt));
     }
 
     private String normalizeOptional(String value) {
@@ -127,6 +129,7 @@ public class SkillService {
                 skill.getPrompt(),
                 skill.getTargetPath(),
                 skill.getDescription(),
-                skill.getCategory());
+                skill.getCategory(),
+                skill.isDefaultInOutputPrompt());
     }
 }

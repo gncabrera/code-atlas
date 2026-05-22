@@ -6,6 +6,7 @@ public record SkillDto(
         String prompt,
         String targetPath,
         String description,
-        String category
+        String category,
+        boolean defaultInOutputPrompt
 ) {
 }
