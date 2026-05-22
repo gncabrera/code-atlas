@@ -66,7 +66,7 @@ RestController:
 4. All dependencies in class methods must be autowired with a constructor, unless specified otherwise.
 5. Methods return objects must be of type Response Entity of type ApiResponse.
 6. All class method logic must be implemented in a try..catch block(s).
-7. Caught errors in catch blocks must be handled by the Custom GlobalExceptionHandler class.
+7. Caught errors in catch blocks must be handled by `GlobalExceptionHandler`: call `logCaughtException(context, ex)` before `errorResponseEntity(...)`, and use `resolveMessage(ex, fallback)` for the API `message` (never swallow exceptions without logging).
 
 PageController:
 
@@ -167,18 +167,27 @@ public class ApiResponse<T> {
   private T data;           // return object from service class, if successful
 }
 
-GlobalExceptionHandler Class (/GlobalExceptionHandler.java)
+GlobalExceptionHandler Class (`/GlobalExceptionHandler.java`)
 
-@RestControllerAdvice
-public class GlobalExceptionHandler {
+`@RestControllerAdvice` centralizes API error responses and server-side logging.
 
-    public static ResponseEntity<ApiResponse<?>> errorResponseEntity(String message, HttpStatus status) {
-      ApiResponse<?> response = new ApiResponse<>("error", message, null)
-      return new ResponseEntity<>(response, status);
-    }
+Logging (console / SLF4J):
 
-    @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<ApiResponse<?>> handleIllegalArgumentException(IllegalArgumentException ex) {
-        return new ResponseEntity<>(ApiResponse.error(400, ex.getMessage()), HttpStatus.BAD_REQUEST);
-    }
-}
+1. **Expected errors** (`IllegalArgumentException`, `NoSuchElementException`, `MethodArgumentNotValidException`): `log.warn` with message only — no stack trace.
+2. **Unexpected errors** (`Exception` fallback and non-expected types in controller `catch`): `log.error` with full stack trace (`log.error("...", ex)`).
+3. **RestController `catch` blocks**: always call `GlobalExceptionHandler.logCaughtException("<HTTP method> <path>", ex)` before building the response.
+
+API response (`ApiResponse.message`):
+
+1. Return `ex.getMessage()` when present (via `resolveMessage(ex, fallback)`).
+2. Use a short fallback only when the message is null or blank.
+3. `@ExceptionHandler(Exception.class)` returns HTTP 500; controller catches typically return HTTP 400.
+
+Helper methods (use from controllers):
+
+```java
+GlobalExceptionHandler.logCaughtException("POST /api/projects", ex);
+return GlobalExceptionHandler.errorResponseEntity(
+    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
+    HttpStatus.BAD_REQUEST);
+```

@@ -40,7 +40,10 @@ public class PromptController {
             );
             return ResponseEntity.ok(ApiResponse.success("Prompt metadata fetched.", metadata));
         } catch (Exception ex) {
-            return GlobalExceptionHandler.errorResponseEntity(ex.getMessage(), HttpStatus.BAD_REQUEST);
+            GlobalExceptionHandler.logCaughtException("GET /api/prompts/metadata", ex);
+            return GlobalExceptionHandler.errorResponseEntity(
+                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
+                    HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -50,7 +53,10 @@ public class PromptController {
             BuildPreviewResponseDto responseDto = promptService.buildPreview(requestDto);
             return ResponseEntity.ok(ApiResponse.success("Prompt preview built.", responseDto));
         } catch (Exception ex) {
-            return GlobalExceptionHandler.errorResponseEntity(ex.getMessage(), HttpStatus.BAD_REQUEST);
+            GlobalExceptionHandler.logCaughtException("POST /api/prompts/build-preview", ex);
+            return GlobalExceptionHandler.errorResponseEntity(
+                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
+                    HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -60,7 +66,10 @@ public class PromptController {
             SendPromptResponseDto responseDto = promptService.sendToModel(requestDto);
             return ResponseEntity.ok(ApiResponse.success("Prompt sent to AI model.", responseDto));
         } catch (Exception ex) {
-            return GlobalExceptionHandler.errorResponseEntity(ex.getMessage(), HttpStatus.BAD_REQUEST);
+            GlobalExceptionHandler.logCaughtException("POST /api/prompts/send", ex);
+            return GlobalExceptionHandler.errorResponseEntity(
+                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
+                    HttpStatus.BAD_REQUEST);
         }
     }
 }

@@ -33,7 +33,10 @@ public class AIModelApiKeyController {
             List<AIModelApiKeyDto> keys = aiModelApiKeyService.getAllKeys(activeOnly);
             return ResponseEntity.ok(ApiResponse.success("API keys fetched.", keys));
         } catch (Exception ex) {
-            return GlobalExceptionHandler.errorResponseEntity(ex.getMessage(), HttpStatus.BAD_REQUEST);
+            GlobalExceptionHandler.logCaughtException("GET /api/api-keys", ex);
+            return GlobalExceptionHandler.errorResponseEntity(
+                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
+                    HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -43,7 +46,10 @@ public class AIModelApiKeyController {
             AIModelApiKeyDto key = aiModelApiKeyService.getKeyById(id);
             return ResponseEntity.ok(ApiResponse.success("API key fetched.", key));
         } catch (Exception ex) {
-            return GlobalExceptionHandler.errorResponseEntity(ex.getMessage(), HttpStatus.BAD_REQUEST);
+            GlobalExceptionHandler.logCaughtException("GET /api/api-keys/{id}", ex);
+            return GlobalExceptionHandler.errorResponseEntity(
+                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
+                    HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -53,7 +59,10 @@ public class AIModelApiKeyController {
             AIModelApiKeyDto created = aiModelApiKeyService.createKey(saveDto);
             return new ResponseEntity<>(ApiResponse.success("API key created.", created), HttpStatus.CREATED);
         } catch (Exception ex) {
-            return GlobalExceptionHandler.errorResponseEntity(ex.getMessage(), HttpStatus.BAD_REQUEST);
+            GlobalExceptionHandler.logCaughtException("POST /api/api-keys", ex);
+            return GlobalExceptionHandler.errorResponseEntity(
+                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
+                    HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -63,7 +72,10 @@ public class AIModelApiKeyController {
             AIModelApiKeyDto updated = aiModelApiKeyService.updateKey(id, saveDto);
             return ResponseEntity.ok(ApiResponse.success("API key updated.", updated));
         } catch (Exception ex) {
-            return GlobalExceptionHandler.errorResponseEntity(ex.getMessage(), HttpStatus.BAD_REQUEST);
+            GlobalExceptionHandler.logCaughtException("PUT /api/api-keys/{id}", ex);
+            return GlobalExceptionHandler.errorResponseEntity(
+                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
+                    HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -73,7 +85,10 @@ public class AIModelApiKeyController {
             aiModelApiKeyService.deleteKey(id);
             return ResponseEntity.ok(ApiResponse.success("API key deleted.", null));
         } catch (Exception ex) {
-            return GlobalExceptionHandler.errorResponseEntity(ex.getMessage(), HttpStatus.BAD_REQUEST);
+            GlobalExceptionHandler.logCaughtException("DELETE /api/api-keys/{id}", ex);
+            return GlobalExceptionHandler.errorResponseEntity(
+                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
+                    HttpStatus.BAD_REQUEST);
         }
     }
 }

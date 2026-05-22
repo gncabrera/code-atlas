@@ -35,7 +35,10 @@ public class AIModelController {
                     : aiModelService.getAllModels();
             return ResponseEntity.ok(ApiResponse.success("AI models fetched.", models));
         } catch (Exception ex) {
-            return GlobalExceptionHandler.errorResponseEntity(ex.getMessage(), HttpStatus.BAD_REQUEST);
+            GlobalExceptionHandler.logCaughtException("GET /api/ai-models", ex);
+            return GlobalExceptionHandler.errorResponseEntity(
+                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
+                    HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -45,7 +48,10 @@ public class AIModelController {
             AIModelResponseDto model = aiModelService.getModelById(id);
             return ResponseEntity.ok(ApiResponse.success("AI model fetched.", model));
         } catch (Exception ex) {
-            return GlobalExceptionHandler.errorResponseEntity(ex.getMessage(), HttpStatus.BAD_REQUEST);
+            GlobalExceptionHandler.logCaughtException("GET /api/ai-models/{id}", ex);
+            return GlobalExceptionHandler.errorResponseEntity(
+                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
+                    HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -55,7 +61,10 @@ public class AIModelController {
             AIModelResponseDto created = aiModelService.createModel(requestDto);
             return new ResponseEntity<>(ApiResponse.success("AI model created.", created), HttpStatus.CREATED);
         } catch (Exception ex) {
-            return GlobalExceptionHandler.errorResponseEntity(ex.getMessage(), HttpStatus.BAD_REQUEST);
+            GlobalExceptionHandler.logCaughtException("POST /api/ai-models", ex);
+            return GlobalExceptionHandler.errorResponseEntity(
+                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
+                    HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -65,7 +74,10 @@ public class AIModelController {
             AIModelResponseDto updated = aiModelService.updateModel(id, requestDto);
             return ResponseEntity.ok(ApiResponse.success("AI model updated.", updated));
         } catch (Exception ex) {
-            return GlobalExceptionHandler.errorResponseEntity(ex.getMessage(), HttpStatus.BAD_REQUEST);
+            GlobalExceptionHandler.logCaughtException("PUT /api/ai-models/{id}", ex);
+            return GlobalExceptionHandler.errorResponseEntity(
+                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
+                    HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -75,7 +87,10 @@ public class AIModelController {
             aiModelService.deleteModel(id);
             return ResponseEntity.ok(ApiResponse.success("AI model deleted.", null));
         } catch (Exception ex) {
-            return GlobalExceptionHandler.errorResponseEntity(ex.getMessage(), HttpStatus.BAD_REQUEST);
+            GlobalExceptionHandler.logCaughtException("DELETE /api/ai-models/{id}", ex);
+            return GlobalExceptionHandler.errorResponseEntity(
+                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
+                    HttpStatus.BAD_REQUEST);
         }
     }
 }

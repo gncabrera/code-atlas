@@ -32,7 +32,10 @@ public class ProjectController {
             List<ProjectResponseDto> projects = projectService.getAllProjects();
             return ResponseEntity.ok(ApiResponse.success("Projects fetched.", projects));
         } catch (Exception ex) {
-            return GlobalExceptionHandler.errorResponseEntity(ex.getMessage(), HttpStatus.BAD_REQUEST);
+            GlobalExceptionHandler.logCaughtException("GET /api/projects", ex);
+            return GlobalExceptionHandler.errorResponseEntity(
+                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
+                    HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -42,7 +45,10 @@ public class ProjectController {
             ProjectResponseDto project = projectService.getProjectById(id);
             return ResponseEntity.ok(ApiResponse.success("Project fetched.", project));
         } catch (Exception ex) {
-            return GlobalExceptionHandler.errorResponseEntity(ex.getMessage(), HttpStatus.BAD_REQUEST);
+            GlobalExceptionHandler.logCaughtException("GET /api/projects/{id}", ex);
+            return GlobalExceptionHandler.errorResponseEntity(
+                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
+                    HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -52,7 +58,10 @@ public class ProjectController {
             ProjectResponseDto created = projectService.createProject(requestDto);
             return new ResponseEntity<>(ApiResponse.success("Project created.", created), HttpStatus.CREATED);
         } catch (Exception ex) {
-            return GlobalExceptionHandler.errorResponseEntity(ex.getMessage(), HttpStatus.BAD_REQUEST);
+            GlobalExceptionHandler.logCaughtException("POST /api/projects", ex);
+            return GlobalExceptionHandler.errorResponseEntity(
+                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
+                    HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -62,7 +71,10 @@ public class ProjectController {
             ProjectResponseDto updated = projectService.updateProject(id, requestDto);
             return ResponseEntity.ok(ApiResponse.success("Project updated.", updated));
         } catch (Exception ex) {
-            return GlobalExceptionHandler.errorResponseEntity(ex.getMessage(), HttpStatus.BAD_REQUEST);
+            GlobalExceptionHandler.logCaughtException("PUT /api/projects/{id}", ex);
+            return GlobalExceptionHandler.errorResponseEntity(
+                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
+                    HttpStatus.BAD_REQUEST);
         }
     }
 
@@ -72,7 +84,10 @@ public class ProjectController {
             projectService.deleteProject(id);
             return ResponseEntity.ok(ApiResponse.success("Project deleted.", null));
         } catch (Exception ex) {
-            return GlobalExceptionHandler.errorResponseEntity(ex.getMessage(), HttpStatus.BAD_REQUEST);
+            GlobalExceptionHandler.logCaughtException("DELETE /api/projects/{id}", ex);
+            return GlobalExceptionHandler.errorResponseEntity(
+                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
+                    HttpStatus.BAD_REQUEST);
         }
     }
 }
