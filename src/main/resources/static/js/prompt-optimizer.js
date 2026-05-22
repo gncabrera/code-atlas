@@ -248,7 +248,9 @@ $(function () {
     function updateTokenInfo() {
         const model = selectedModel();
         const tokens = estimateTokens($("#aiModelPrompt").val());
-        const tokenLimit = model ? model.tokensPerMinute : 0;
+        const tokenLimit = model
+            ? (model.tokensPerMinute === 0 ? "unlimited" : model.tokensPerMinute)
+            : 0;
         $("#estimatedTokens").text(tokens);
         $("#tokenLimit").text(tokenLimit);
     }
@@ -340,7 +342,7 @@ $(function () {
             return;
         }
         const estimatedTokens = estimateTokens(aiModelPrompt);
-        if (estimatedTokens > model.tokensPerMinute) {
+        if (model.tokensPerMinute > 0 && estimatedTokens > model.tokensPerMinute) {
             showAlert("Cannot send. Estimated tokens exceed tokensPerMinute.", true);
             return;
         }

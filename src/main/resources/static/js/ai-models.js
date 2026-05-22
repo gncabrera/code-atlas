@@ -104,8 +104,8 @@ $(function () {
                 if (description.length > descriptionMaxLength) {
                     return "Description cannot exceed " + descriptionMaxLength + " characters.";
                 }
-                if (!Number.isFinite(tokensPerMinute) || tokensPerMinute < 1) {
-                    return "Tokens per minute must be at least 1.";
+                if (!Number.isFinite(tokensPerMinute) || tokensPerMinute < 0) {
+                    return "Tokens per minute must be 0 or greater (0 = unlimited).";
                 }
                 if (!Number.isFinite(requestsPerMinute) || requestsPerMinute < 0) {
                     return "Requests per minute must be 0 or greater.";

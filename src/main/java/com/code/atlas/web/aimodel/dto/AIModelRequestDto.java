@@ -16,8 +16,8 @@ public record AIModelRequestDto(
         if (description != null && description.length() > 500) {
             throw new IllegalArgumentException("Description cannot exceed 500 characters.");
         }
-        if (tokensPerMinute <= 0) {
-            throw new IllegalArgumentException("tokensPerMinute must be greater than zero.");
+        if (tokensPerMinute < 0) {
+            throw new IllegalArgumentException("tokensPerMinute cannot be negative.");
         }
         if (requestsPerMinute < 0) {
             throw new IllegalArgumentException("requestsPerMinute cannot be negative.");

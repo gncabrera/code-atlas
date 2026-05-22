@@ -64,7 +64,7 @@ public class PromptService {
         }
         String exactPrompt = requestDto.aiModelPrompt();
         int estimatedTokens = estimateTokens(exactPrompt);
-        if (estimatedTokens > model.getTokensPerMinute()) {
+        if (model.getTokensPerMinute() > 0 && estimatedTokens > model.getTokensPerMinute()) {
             throw new IllegalArgumentException(
                     "Estimated tokens exceed model tokensPerMinute limit."
             );
