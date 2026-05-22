@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Code Atlas - Prompt History</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.8/dist/brite/bootstrap.min.css">
+    <link rel="stylesheet" href="/css/prompt-history.css">
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main class="container py-4">
+    <h1 class="mb-2">Prompt History</h1>
+    <p class="text-muted mb-4">Read-only log of prompt optimizer requests and responses.</p>
+    <div id="promptHistoryAlert" class="alert d-none" role="alert"></div>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-8">
+                    <label for="promptHistorySearch" class="form-label">Search</label>
+                    <input id="promptHistorySearch" class="form-control" type="text"
+                           placeholder="Filter by project, model, prompt, or response text">
+                </div>
+                <div class="col-md-4">
+                    <label for="promptHistoryPageSize" class="form-label">Rows per page</label>
+                    <select id="promptHistoryPageSize" class="form-select">
+                        <option value="10">10</option>
+                        <option value="25" selected>25</option>
+                        <option value="50">50</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <span>History records</span>
+            <div id="promptHistoryPaginationInfo" class="text-muted small"></div>
+        </div>
+        <div class="card-body table-responsive">
+            <table class="table table-striped table-sm align-middle mb-0">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Date</th>
+                    <th>Project</th>
+                    <th>AI Model</th>
+                    <th>Mode</th>
+                    <th>Status</th>
+                    <th>Agents file</th>
+                    <th>Tokens</th>
+                    <th>Request</th>
+                    <th>Response</th>
+                    <th>Error</th>
+                </tr>
+                </thead>
+                <tbody id="promptHistoryTableBody">
+                <tr id="promptHistoryLoadingRow">
+                    <td colspan="11" class="text-center py-4">
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        Loading prompt history...
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div class="btn-group">
+                <button id="promptHistoryPrevBtn" type="button" class="btn btn-outline-secondary btn-sm" disabled>
+                    Previous
+                </button>
+                <button id="promptHistoryNextBtn" type="button" class="btn btn-outline-secondary btn-sm" disabled>
+                    Next
+                </button>
+            </div>
+            <span id="promptHistoryPageLabel" class="text-muted small"></span>
+        </div>
+    </div>
+</main>
+
+<div class="modal fade" id="promptHistoryDetailModal" tabindex="-1" aria-labelledby="promptHistoryDetailModalLabel"
+     aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="promptHistoryDetailModalLabel">Record details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <dl class="row small mb-3" id="promptHistoryDetailMeta"></dl>
+                <h6>Request prompt</h6>
+                <pre id="promptHistoryDetailRequest" class="prompt-history-detail-pre mb-3"></pre>
+                <h6>Response prompt</h6>
+                <pre id="promptHistoryDetailResponse" class="prompt-history-detail-pre mb-3"></pre>
+                <div id="promptHistoryDetailErrorSection" class="d-none">
+                    <h6>Error message</h6>
+                    <pre id="promptHistoryDetailError" class="prompt-history-detail-pre text-danger mb-0"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<th:block th:replace="~{fragments/scripts :: pageScripts('prompt-history.js')}"></th:block>
+</body>
+</html>

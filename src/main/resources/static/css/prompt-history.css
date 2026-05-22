@@ -1,0 +1,27 @@
+#promptHistoryAlert {
+    word-break: break-word;
+}
+
+.prompt-history-id {
+    font-family: var(--bs-font-monospace);
+    font-size: 0.875rem;
+}
+
+.prompt-history-cell-text {
+    max-width: 12rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.prompt-history-detail-pre {
+    background-color: var(--bs-tertiary-bg);
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+    font-size: 0.8125rem;
+    max-height: 16rem;
+    overflow: auto;
+    padding: 0.75rem;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
