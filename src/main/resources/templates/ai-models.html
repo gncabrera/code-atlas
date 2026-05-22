@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Code Atlas - AI Models</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.8/dist/brite/bootstrap.min.css">
+    <link rel="stylesheet" href="/css/ai-models.css">
 </head>
 <body>
 <div th:replace="~{fragments/navbar :: navbar}"></div>
@@ -20,23 +21,23 @@
             <div class="row g-3">
                 <div class="col-md-4">
                     <label for="modelName" class="form-label">Model Name</label>
-                    <input id="modelName" class="form-control" type="text" placeholder="gemini-2.5-flash" required>
+                    <input id="modelName" class="form-control" type="text" placeholder="gemini-2.5-flash">
                 </div>
                 <div class="col-md-4">
                     <label for="modelTokensPerMinute" class="form-label">Tokens Per Minute</label>
-                    <input id="modelTokensPerMinute" class="form-control" type="number" min="1" required>
+                    <input id="modelTokensPerMinute" class="form-control" type="number" min="1">
                 </div>
                 <div class="col-md-4">
                     <label for="modelRequestsPerMinute" class="form-label">Requests Per Minute (Info)</label>
-                    <input id="modelRequestsPerMinute" class="form-control" type="number" min="0" required>
+                    <input id="modelRequestsPerMinute" class="form-control" type="number" min="0">
                 </div>
                 <div class="col-md-4">
                     <label for="modelRequestsPerDay" class="form-label">Requests Per Day (Info)</label>
-                    <input id="modelRequestsPerDay" class="form-control" type="number" min="0" required>
+                    <input id="modelRequestsPerDay" class="form-control" type="number" min="0">
                 </div>
                 <div class="col-md-8">
                     <label for="modelApiKey" class="form-label">API Key</label>
-                    <input id="modelApiKey" class="form-control" type="text" required>
+                    <input id="modelApiKey" class="form-control" type="text">
                 </div>
                 <div class="col-12">
                     <div class="form-check">
@@ -72,7 +73,6 @@
     </div>
 </main>
 
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script src="/js/ai-models.js"></script>
+<th:block th:replace="~{fragments/scripts :: pageScripts('ai-models.js')}"></th:block>
 </body>
 </html>

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Code Atlas - Projects</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.8/dist/brite/bootstrap.min.css">
+    <link rel="stylesheet" href="/css/projects.css">
 </head>
 <body>
 <div th:replace="~{fragments/navbar :: navbar}"></div>
@@ -20,15 +21,15 @@
             <div class="row g-3">
                 <div class="col-md-6">
                     <label for="projectName" class="form-label">Name</label>
-                    <input id="projectName" class="form-control" type="text" required>
+                    <input id="projectName" class="form-control" type="text">
                 </div>
                 <div class="col-md-6">
                     <label for="projectPath" class="form-label">Path</label>
-                    <input id="projectPath" class="form-control" type="text" required>
+                    <input id="projectPath" class="form-control" type="text">
                 </div>
                 <div class="col-12">
                     <label for="projectDescription" class="form-label">Description</label>
-                    <textarea id="projectDescription" class="form-control" rows="3" required></textarea>
+                    <textarea id="projectDescription" class="form-control" rows="3"></textarea>
                 </div>
                 <div class="col-12">
                     <div class="form-check">
@@ -63,7 +64,6 @@
     </div>
 </main>
 
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script src="/js/projects.js"></script>
+<th:block th:replace="~{fragments/scripts :: pageScripts('projects.js')}"></th:block>
 </body>
 </html>

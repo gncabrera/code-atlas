@@ -8,10 +8,7 @@ $(function () {
     }
 
     function showAlert(message, isError) {
-        const alert = $("#globalAlert");
-        alert.removeClass("d-none alert-success alert-danger")
-            .addClass(isError ? "alert-danger" : "alert-success")
-            .text(message);
+        CodeAtlas.showAlert("#globalAlert", message, isError);
     }
 
     function selectedProject() {
@@ -64,7 +61,7 @@ $(function () {
     }
 
     function loadMetadata() {
-        $.get("/api/prompts/metadata")
+        CodeAtlas.apiGet("/api/prompts/metadata")
             .done(function (response) {
                 projects = response.data.projects || [];
                 enabledModels = response.data.enabledModels || [];
@@ -72,8 +69,7 @@ $(function () {
                 populateModels();
             })
             .fail(function (xhr) {
-                const message = xhr.responseJSON?.message || "Failed loading prompt page metadata.";
-                showAlert(message, true);
+                showAlert(CodeAtlas.apiMessage(xhr, "Failed loading prompt page metadata."), true);
             });
     }
 
@@ -109,8 +105,7 @@ $(function () {
                 showAlert(response.message || "Preview built.", false);
             })
             .fail(function (xhr) {
-                const message = xhr.responseJSON?.message || "Failed building preview.";
-                showAlert(message, true);
+                showAlert(CodeAtlas.apiMessage(xhr, "Failed building preview."), true);
             });
     });
 
@@ -152,20 +147,17 @@ $(function () {
                 showAlert(response.message || "Prompt sent.", false);
             })
             .fail(function (xhr) {
-                const message = xhr.responseJSON?.message || "Failed sending prompt to model.";
-                showAlert(message, true);
+                showAlert(CodeAtlas.apiMessage(xhr, "Failed sending prompt to model."), true);
             });
     });
 
     $("#copyOutputBtn").on("click", function () {
         const output = $("#outputPrompt").val() || "";
-        navigator.clipboard.writeText(output)
-            .then(function () {
-                showAlert("Output prompt copied.", false);
-            })
-            .catch(function () {
-                showAlert("Copy failed.", true);
-            });
+        if (CodeAtlas.copyToClipboard(output)) {
+            showAlert("Output prompt copied.", false);
+            return;
+        }
+        showAlert("Copy failed.", true);
     });
 
     loadMetadata();

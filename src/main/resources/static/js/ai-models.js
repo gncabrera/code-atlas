@@ -1,12 +1,19 @@
-$(function () {
-    function showAlert(message, isError) {
-        const alert = $("#modelsAlert");
-        alert.removeClass("d-none alert-success alert-danger")
-            .addClass(isError ? "alert-danger" : "alert-success")
-            .text(message);
-    }
-
-    function clearForm() {
+CodeAtlas.initCrudPage({
+    alertSelector: "#modelsAlert",
+    tableBodySelector: "#modelsTableBody",
+    apiBase: "/api/ai-models",
+    idFieldSelector: "#modelId",
+    saveBtnSelector: "#saveModelBtn",
+    resetBtnSelector: "#resetModelBtn",
+    deleteConfirmMessage: "Delete selected AI model?",
+    messages: {
+        loadFailed: "Failed loading AI models.",
+        saveFailed: "Failed saving AI model.",
+        deleteFailed: "Failed deleting AI model.",
+        deleted: "AI model deleted.",
+        saved: "AI model saved."
+    },
+    clearForm: function () {
         $("#modelId").val("");
         $("#modelName").val("");
         $("#modelTokensPerMinute").val("");
@@ -14,97 +21,56 @@ $(function () {
         $("#modelRequestsPerDay").val(0);
         $("#modelApiKey").val("");
         $("#modelEnabled").prop("checked", true);
-    }
-
-    function rowActions(model) {
-        const actions = $("<td></td>");
-        const editBtn = $("<button class='btn btn-sm btn-outline-primary me-2'>Edit</button>");
-        const deleteBtn = $("<button class='btn btn-sm btn-outline-danger'>Delete</button>");
-        editBtn.on("click", function () {
-            $("#modelId").val(model.id);
-            $("#modelName").val(model.name);
-            $("#modelTokensPerMinute").val(model.tokensPerMinute);
-            $("#modelRequestsPerMinute").val(model.requestsPerMinute);
-            $("#modelRequestsPerDay").val(model.requestsPerDay);
-            $("#modelApiKey").val(model.apiKey);
-            $("#modelEnabled").prop("checked", model.enabled);
-        });
-        deleteBtn.on("click", function () {
-            if (!window.confirm("Delete selected AI model?")) {
-                return;
-            }
-            $.ajax({
-                url: `/api/ai-models/${model.id}`,
-                method: "DELETE"
-            }).done(function () {
-                showAlert("AI model deleted.", false);
-                loadModels();
-                clearForm();
-            }).fail(function (xhr) {
-                const message = xhr.responseJSON?.message || "Failed deleting AI model.";
-                showAlert(message, true);
-            });
-        });
-        actions.append(editBtn).append(deleteBtn);
-        return actions;
-    }
-
-    function renderTable(models) {
-        const tbody = $("#modelsTableBody");
-        tbody.empty();
-        models.forEach(function (model) {
-            const row = $("<tr></tr>");
-            row.append($("<td></td>").text(model.name));
-            row.append($("<td></td>").text(model.enabled ? "Yes" : "No"));
-            row.append($("<td></td>").text(model.tokensPerMinute));
-            row.append($("<td></td>").text(model.requestsPerMinute));
-            row.append($("<td></td>").text(model.requestsPerDay));
-            row.append(rowActions(model));
-            tbody.append(row);
-        });
-    }
-
-    function loadModels() {
-        $.get("/api/ai-models")
-            .done(function (response) {
-                renderTable(response.data || []);
-            })
-            .fail(function (xhr) {
-                const message = xhr.responseJSON?.message || "Failed loading AI models.";
-                showAlert(message, true);
-            });
-    }
-
-    $("#saveModelBtn").on("click", function () {
-        const modelId = $("#modelId").val();
-        const payload = {
-            name: $("#modelName").val(),
+    },
+    fillForm: function (model) {
+        $("#modelId").val(model.id);
+        $("#modelName").val(model.name);
+        $("#modelTokensPerMinute").val(model.tokensPerMinute);
+        $("#modelRequestsPerMinute").val(model.requestsPerMinute);
+        $("#modelRequestsPerDay").val(model.requestsPerDay);
+        $("#modelApiKey").val(model.apiKey);
+        $("#modelEnabled").prop("checked", model.enabled);
+    },
+    buildPayload: function () {
+        return {
+            name: $("#modelName").val().trim(),
             enabled: $("#modelEnabled").is(":checked"),
             tokensPerMinute: Number($("#modelTokensPerMinute").val()),
             requestsPerMinute: Number($("#modelRequestsPerMinute").val()),
             requestsPerDay: Number($("#modelRequestsPerDay").val()),
-            apiKey: $("#modelApiKey").val()
+            apiKey: $("#modelApiKey").val().trim()
         };
-        const method = modelId ? "PUT" : "POST";
-        const endpoint = modelId ? `/api/ai-models/${modelId}` : "/api/ai-models";
-        $.ajax({
-            url: endpoint,
-            method: method,
-            contentType: "application/json",
-            data: JSON.stringify(payload)
-        }).done(function (response) {
-            showAlert(response.message || "AI model saved.", false);
-            loadModels();
-            clearForm();
-        }).fail(function (xhr) {
-            const message = xhr.responseJSON?.message || "Failed saving AI model.";
-            showAlert(message, true);
-        });
-    });
-
-    $("#resetModelBtn").on("click", function () {
-        clearForm();
-    });
-
-    loadModels();
+    },
+    validateSave: function () {
+        const name = $("#modelName").val().trim();
+        const apiKey = $("#modelApiKey").val().trim();
+        const tokensPerMinute = Number($("#modelTokensPerMinute").val());
+        const requestsPerMinute = Number($("#modelRequestsPerMinute").val());
+        const requestsPerDay = Number($("#modelRequestsPerDay").val());
+        if (!name) {
+            return "Model name is required.";
+        }
+        if (!Number.isFinite(tokensPerMinute) || tokensPerMinute < 1) {
+            return "Tokens per minute must be at least 1.";
+        }
+        if (!Number.isFinite(requestsPerMinute) || requestsPerMinute < 0) {
+            return "Requests per minute must be 0 or greater.";
+        }
+        if (!Number.isFinite(requestsPerDay) || requestsPerDay < 0) {
+            return "Requests per day must be 0 or greater.";
+        }
+        if (!apiKey) {
+            return "API key is required.";
+        }
+        return null;
+    },
+    renderColumns: function (model) {
+        return [
+            $("<td></td>").text(model.name),
+            $("<td></td>").text(model.enabled ? "Yes" : "No"),
+            $("<td></td>").text(model.tokensPerMinute),
+            $("<td></td>").text(model.requestsPerMinute),
+            $("<td></td>").text(model.requestsPerDay)
+        ];
+    }
 });

@@ -8,7 +8,7 @@ Framework: Java Spring Boot 3 Maven with Java 21 Dependencies: Spring Web, Sprin
 
 Application Logic Design：
 
-1. All request and response handling must be done only in RestController.
+1. All API request and response handling must be done only in RestController. Server-rendered page routes use PageController (see below).
 2. All database operation logic must be done in Service classes, which must use methods provided by Repositories.
 3. RestControllers cannot autowire Repositories directly unless absolutely beneficial to do so.
 4. Service classes cannot query the database directly and must use Repositories methods, unless absolutely necessary.
@@ -67,6 +67,62 @@ RestController:
 5. Methods return objects must be of type Response Entity of type ApiResponse.
 6. All class method logic must be implemented in a try..catch block(s).
 7. Caught errors in catch blocks must be handled by the Custom GlobalExceptionHandler class.
+
+PageController:
+
+1. Must annotate page controller classes with `@Controller` (never `@RestController`).
+2. Class names must end with `PageController` (e.g. `ProjectPageController`).
+3. All dependencies must use constructor injection (never `@Autowired`).
+4. Methods return only Thymeleaf view names (`String`) or `redirect:` URLs — no `ResponseEntity`, no DTOs, no entities.
+5. Page controllers must not contain business logic or database access; they only map GET routes to views.
+6. Use `@GetMapping` with resource-based paths (e.g. `/projects`, `/ai-models`).
+
+Frontend (Server-rendered):
+
+Architecture: Thymeleaf renders the HTML shell and initial server-side data; jQuery handles DOM updates and calls REST APIs under `/api/*` that return `ApiResponse`.
+
+File layout:
+
+1. Page templates: `src/main/resources/templates/<page>.html` (one file per page).
+2. Shared fragments: `src/main/resources/templates/fragments/<name>.html`, included via `th:replace` (e.g. `~{fragments/navbar :: navbar}`, `~{fragments/scripts :: pageScripts('projects.js')}`).
+3. Shared script: `src/main/resources/static/js/common.js` (alerts, `$.ajax` helpers, reusable CRUD list-page factory).
+4. Page scripts: `src/main/resources/static/js/<page>.js` (one file per page, same base name as the template; configures `common.js` helpers).
+5. Custom styles: `src/main/resources/static/css/<page>.css` (one CSS file per page, same base name as the template).
+
+Thymeleaf:
+
+1. Root element: `<html lang="en" xmlns:th="http://www.thymeleaf.org">`.
+2. Use `th:replace` / `th:insert` for layout fragments (navbar, CDN scripts via `fragments/scripts`, headers, footers).
+3. Use `th:text`, `th:each`, `th:if`, `th:attr`, and model attributes when the server must render initial data.
+4. Do not put `<script>` blocks with application logic inside templates; load CDN + `common.js` + `/js/<page>.js` through `fragments/scripts` at the end of `<body>`.
+
+UI assets:
+
+1. Use Bootstrap 5 via Bootswatch CDN (e.g. `https://cdn.jsdelivr.net/npm/bootswatch@5.3.8/dist/brite/bootstrap.min.css`).
+2. Put project-specific overrides in `static/css/`; do not add extra icon or font libraries unless explicitly required.
+
+jQuery:
+
+1. Load jQuery 3.7.1 from CDN only: `https://code.jquery.com/jquery-3.7.1.min.js` (fixed version; no other jQuery versions or local copies).
+2. Wrap all page logic in `$(function () { ... });` as the single entry point.
+3. Use only `$.ajax` for HTTP calls (no `$.get`, `$.post`, `$.getJSON`, or `fetch`).
+4. Prefer jQuery APIs for DOM and events; use vanilla JS only when jQuery cannot do the job.
+5. Inline `<script>` with application logic in `.html` files is prohibited.
+
+AJAX and API consumption:
+
+1. All client calls target `@RestController` endpoints and must handle `ApiResponse` JSON (`result`, `message`, `data`).
+2. On success, read payloads from `response.data` (e.g. in `.done(function (response) { ... })`).
+3. On failure, show `xhr.responseJSON?.message` or a short fallback string.
+4. For `POST` and `PUT`, set `contentType: "application/json"` and `data: JSON.stringify(payload)`.
+5. HTTP mapping: `GET` — list or fetch; `POST` — create; `PUT` — update; `DELETE` — delete. Paths stay resource-based (e.g. `/api/projects`, `/api/projects/{id}`).
+6. Before `DELETE`, require `window.confirm(...)`; abort if the user cancels.
+
+Forms and validation:
+
+1. Validate in JavaScript before AJAX (required fields, trim checks, business rules); show errors via the page alert helper.
+2. Do not rely on HTML5 validation attributes (e.g. `required`) as the primary mechanism.
+3. Reuse `common.js` validation patterns on CRUD list pages (`validateSave` in `initCrudPage` config).
 
 ApiResponse Class (/ApiResponse.java):
 

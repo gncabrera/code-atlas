@@ -1,0 +1,8 @@
+#globalAlert {
+    word-break: break-word;
+}
+
+#estimatedTokens,
+#tokenLimit {
+    font-weight: 600;
+}
