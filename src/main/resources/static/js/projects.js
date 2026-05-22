@@ -1,5 +1,4 @@
 CodeAtlas.initCrudPage({
-    alertSelector: "#projectsAlert",
     tableBodySelector: "#projectsTableBody",
     apiBase: "/api/projects",
     idFieldSelector: "#projectId",

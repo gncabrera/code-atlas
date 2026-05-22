@@ -1,11 +1,52 @@
 (function (global) {
     const CodeAtlas = {};
+    const TOAST_CONTAINER_ID = "globalToastContainer";
 
-    CodeAtlas.showAlert = function (selector, message, isError) {
-        const alert = $(selector);
-        alert.removeClass("d-none alert-success alert-danger")
-            .addClass(isError ? "alert-danger" : "alert-success")
-            .text(message);
+    const TOAST_TYPE_CLASSES = {
+        success: "bg-success text-white",
+        error: "bg-danger text-white",
+        danger: "bg-danger text-white",
+        warning: "bg-warning text-dark",
+        info: "bg-info text-white"
+    };
+
+    CodeAtlas.ensureToastContainer = function () {
+        if ($("#" + TOAST_CONTAINER_ID).length === 0) {
+            $("body").append(
+                `<div class="toast-container position-fixed bottom-0 end-0 p-3" id="${TOAST_CONTAINER_ID}" style="z-index: 1055;"></div>`
+            );
+        }
+    };
+
+    CodeAtlas.showToast = function (message, type) {
+        if (!message) {
+            return;
+        }
+        CodeAtlas.ensureToastContainer();
+        const normalizedType = String(type || "info").toLowerCase();
+        const bgClass = TOAST_TYPE_CLASSES[normalizedType] || TOAST_TYPE_CLASSES.info;
+        const isWarning = normalizedType === "warning";
+        const closeBtnClass = isWarning ? "btn-close" : "btn-close btn-close-white";
+        const toastId = `toast-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+        const $toast = $(`
+            <div class="toast align-items-center ${bgClass} border-0" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="5000" id="${toastId}">
+              <div class="d-flex">
+                <div class="toast-body"></div>
+                <button type="button" class="${closeBtnClass} me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+              </div>
+            </div>
+        `);
+        $toast.find(".toast-body").text(message);
+
+        const $container = $("#" + TOAST_CONTAINER_ID);
+        $container.append($toast);
+
+        const toast = bootstrap.Toast.getOrCreateInstance($toast[0]);
+        $toast.on("hidden.bs.toast", function () {
+            $toast.remove();
+        });
+        toast.show();
     };
 
     CodeAtlas.apiMessage = function (xhr, fallback) {
@@ -60,7 +101,7 @@
     CodeAtlas.initCrudPage = function (config) {
         $(function () {
             function show(message, isError) {
-                CodeAtlas.showAlert(config.alertSelector, message, isError);
+                CodeAtlas.showToast(message, isError ? "danger" : "success");
             }
 
             function loadList() {
@@ -148,6 +189,10 @@
             loadList();
         });
     };
+
+    $(function () {
+        CodeAtlas.ensureToastContainer();
+    });
 
     global.CodeAtlas = CodeAtlas;
 })(window);

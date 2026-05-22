@@ -14,10 +14,9 @@ $(function () {
                 renderApiKeyOptions();
             })
             .fail(function (xhr) {
-                CodeAtlas.showAlert(
-                    "#modelsAlert",
+                CodeAtlas.showToast(
                     CodeAtlas.apiMessage(xhr, "Failed loading API keys."),
-                    true
+                    "danger"
                 );
             });
     }
@@ -41,7 +40,6 @@ $(function () {
 
     loadActiveApiKeys().always(function () {
         CodeAtlas.initCrudPage({
-            alertSelector: "#modelsAlert",
             tableBodySelector: "#modelsTableBody",
             apiBase: "/api/ai-models",
             idFieldSelector: "#modelId",

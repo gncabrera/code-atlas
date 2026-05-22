@@ -7,7 +7,6 @@ $(function () {
     let currentPage = 1;
     let pageSize = 25;
 
-    const $alert = $("#promptHistoryAlert");
     const $tbody = $("#promptHistoryTableBody");
     const $search = $("#promptHistorySearch");
     const $pageSize = $("#promptHistoryPageSize");
@@ -16,10 +15,6 @@ $(function () {
     const $pageLabel = $("#promptHistoryPageLabel");
     const $paginationInfo = $("#promptHistoryPaginationInfo");
     const detailModal = new bootstrap.Modal(document.getElementById("promptHistoryDetailModal"));
-
-    function showAlert(message, isError) {
-        CodeAtlas.showAlert("#promptHistoryAlert", message, isError);
-    }
 
     function truncateText(text) {
         if (!text) {
@@ -226,7 +221,10 @@ $(function () {
                 allItems = [];
                 filteredItems = [];
                 $tbody.empty();
-                showAlert(CodeAtlas.apiMessage(xhr, "Failed loading prompt history."), true);
+                CodeAtlas.showToast(
+                    CodeAtlas.apiMessage(xhr, "Failed loading prompt history."),
+                    "danger"
+                );
                 updatePaginationControls();
             });
     }

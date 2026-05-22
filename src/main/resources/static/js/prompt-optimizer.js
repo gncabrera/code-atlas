@@ -54,10 +54,6 @@ $(function () {
         return Math.ceil(size / 4);
     }
 
-    function showAlert(message, isError) {
-        CodeAtlas.showAlert("#globalAlert", message, isError);
-    }
-
     function selectedProject() {
         const id = $("#projectSelect").val();
         if (!id) {
@@ -283,7 +279,10 @@ $(function () {
                 loadDraftFromLocalStorage();
             })
             .fail(function (xhr) {
-                showAlert(CodeAtlas.apiMessage(xhr, "Failed loading prompt page metadata."), true);
+                CodeAtlas.showToast(
+                    CodeAtlas.apiMessage(xhr, "Failed loading prompt page metadata."),
+                    "danger"
+                );
             });
     }
 
@@ -299,7 +298,7 @@ $(function () {
         const $buildBtn = $(this);
         const userRequest = $("#userRequest").val();
         if (!userRequest || !userRequest.trim()) {
-            showAlert("User request is required.", true);
+            CodeAtlas.showToast("User request is required.", "danger");
             return;
         }
         const payload = {
@@ -319,10 +318,10 @@ $(function () {
                 $("#aiModelPrompt").val(response.data.aiModelPrompt);
                 updateTokenInfo();
                 debouncedSaveDraft();
-                showAlert(response.message || "Preview built.", false);
+                CodeAtlas.showToast(response.message || "Preview built.", "success");
             })
             .fail(function (xhr) {
-                showAlert(CodeAtlas.apiMessage(xhr, "Failed building preview."), true);
+                CodeAtlas.showToast(CodeAtlas.apiMessage(xhr, "Failed building preview."), "danger");
             })
             .always(function () {
                 CodeAtlas.setButtonLoading($buildBtn, false);
@@ -333,17 +332,17 @@ $(function () {
         const $sendBtn = $(this);
         const model = selectedModel();
         if (!model) {
-            showAlert("Select an enabled AI model.", true);
+            CodeAtlas.showToast("Select an enabled AI model.", "danger");
             return;
         }
         const aiModelPrompt = $("#aiModelPrompt").val();
         if (!aiModelPrompt || !aiModelPrompt.trim()) {
-            showAlert("AIModelPrompt is required.", true);
+            CodeAtlas.showToast("AIModelPrompt is required.", "danger");
             return;
         }
         const estimatedTokens = estimateTokens(aiModelPrompt);
         if (model.tokensPerMinute > 0 && estimatedTokens > model.tokensPerMinute) {
-            showAlert("Cannot send. Estimated tokens exceed tokensPerMinute.", true);
+            CodeAtlas.showToast("Cannot send. Estimated tokens exceed tokensPerMinute.", "danger");
             return;
         }
         const confirmed = window.confirm("Send prompt exactly as written to selected AI model?");
@@ -367,10 +366,10 @@ $(function () {
             .done(function (response) {
                 $("#outputPrompt").val(response.data.outputPrompt);
                 debouncedSaveDraft();
-                showAlert(response.message || "Prompt sent.", false);
+                CodeAtlas.showToast(response.message || "Prompt sent.", "success");
             })
             .fail(function (xhr) {
-                showAlert(CodeAtlas.apiMessage(xhr, "Failed sending prompt to model."), true);
+                CodeAtlas.showToast(CodeAtlas.apiMessage(xhr, "Failed sending prompt to model."), "danger");
             })
             .always(function () {
                 setPromptPageLocked(false, $sendBtn);
@@ -380,10 +379,10 @@ $(function () {
     $("#copyOutputBtn").on("click", function () {
         const output = $("#outputPrompt").val() || "";
         if (CodeAtlas.copyToClipboard(output)) {
-            showAlert("Output prompt copied.", false);
+            CodeAtlas.showToast("Output prompt copied.", "info");
             return;
         }
-        showAlert("Copy failed.", true);
+        CodeAtlas.showToast("Copy failed.", "danger");
     });
 
     bindDraftAutoSave();

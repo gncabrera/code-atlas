@@ -2,7 +2,7 @@ $(function () {
     const apiBase = "/api/api-keys";
 
     function show(message, isError) {
-        CodeAtlas.showAlert("#apiKeysAlert", message, isError);
+        CodeAtlas.showToast(message, isError ? "danger" : "success");
     }
 
     function loadList() {
