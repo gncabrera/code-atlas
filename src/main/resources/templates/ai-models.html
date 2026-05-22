@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Code Atlas - AI Models</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.8/dist/brite/bootstrap.min.css">
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main class="container py-4">
+    <h1 class="mb-3">AI Models</h1>
+    <div id="modelsAlert" class="alert d-none" role="alert"></div>
+
+    <div class="card mb-4">
+        <div class="card-header">AI Model Form</div>
+        <div class="card-body">
+            <input id="modelId" type="hidden">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label for="modelName" class="form-label">Model Name</label>
+                    <input id="modelName" class="form-control" type="text" placeholder="gemini-2.5-flash" required>
+                </div>
+                <div class="col-md-4">
+                    <label for="modelTokensPerMinute" class="form-label">Tokens Per Minute</label>
+                    <input id="modelTokensPerMinute" class="form-control" type="number" min="1" required>
+                </div>
+                <div class="col-md-4">
+                    <label for="modelRequestsPerMinute" class="form-label">Requests Per Minute (Info)</label>
+                    <input id="modelRequestsPerMinute" class="form-control" type="number" min="0" required>
+                </div>
+                <div class="col-md-4">
+                    <label for="modelRequestsPerDay" class="form-label">Requests Per Day (Info)</label>
+                    <input id="modelRequestsPerDay" class="form-control" type="number" min="0" required>
+                </div>
+                <div class="col-md-8">
+                    <label for="modelApiKey" class="form-label">API Key</label>
+                    <input id="modelApiKey" class="form-control" type="text" required>
+                </div>
+                <div class="col-12">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="modelEnabled" checked>
+                        <label class="form-check-label" for="modelEnabled">Enabled</label>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-3 d-flex gap-2">
+                <button id="saveModelBtn" class="btn btn-primary">Save</button>
+                <button id="resetModelBtn" class="btn btn-outline-secondary">Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">AI Model List</div>
+        <div class="card-body table-responsive">
+            <table class="table table-striped align-middle">
+                <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Enabled</th>
+                    <th>Tokens/min</th>
+                    <th>Req/min</th>
+                    <th>Req/day</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody id="modelsTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="/js/ai-models.js"></script>
+</body>
+</html>

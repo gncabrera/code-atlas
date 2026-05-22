@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Code Atlas - Projects</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.8/dist/brite/bootstrap.min.css">
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main class="container py-4">
+    <h1 class="mb-3">Projects</h1>
+    <div id="projectsAlert" class="alert d-none" role="alert"></div>
+
+    <div class="card mb-4">
+        <div class="card-header">Project Form</div>
+        <div class="card-body">
+            <input id="projectId" type="hidden">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="projectName" class="form-label">Name</label>
+                    <input id="projectName" class="form-control" type="text" required>
+                </div>
+                <div class="col-md-6">
+                    <label for="projectPath" class="form-label">Path</label>
+                    <input id="projectPath" class="form-control" type="text" required>
+                </div>
+                <div class="col-12">
+                    <label for="projectDescription" class="form-label">Description</label>
+                    <textarea id="projectDescription" class="form-control" rows="3" required></textarea>
+                </div>
+                <div class="col-12">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="projectUseAgentsFile" checked>
+                        <label class="form-check-label" for="projectUseAgentsFile">Enable AGENTS.md support</label>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-3 d-flex gap-2">
+                <button id="saveProjectBtn" class="btn btn-primary">Save</button>
+                <button id="resetProjectBtn" class="btn btn-outline-secondary">Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Project List</div>
+        <div class="card-body table-responsive">
+            <table class="table table-striped align-middle">
+                <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Path</th>
+                    <th>Description</th>
+                    <th>Use AGENTS.md</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody id="projectsTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="/js/projects.js"></script>
+</body>
+</html>
