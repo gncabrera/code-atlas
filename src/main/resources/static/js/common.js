@@ -107,7 +107,11 @@
             function loadList() {
                 CodeAtlas.apiGet(config.apiBase)
                     .done(function (response) {
-                        renderTable(response.data || []);
+                        const items = response.data || [];
+                        renderTable(items);
+                        if (typeof config.onListLoaded === "function") {
+                            config.onListLoaded(items);
+                        }
                     })
                     .fail(function (xhr) {
                         show(CodeAtlas.apiMessage(xhr, config.messages.loadFailed), true);

@@ -43,6 +43,15 @@ CREATE TABLE IF NOT EXISTS prompt_history (
     FOREIGN KEY (ai_model_id) REFERENCES ai_models(id)
 );
 
+CREATE TABLE IF NOT EXISTS skill (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    prompt TEXT NOT NULL,
+    target_path TEXT NOT NULL,
+    description TEXT,
+    category TEXT
+);
+
 INSERT INTO ai_model_api_key (name, api_key, provider, is_active)
 VALUES ('Default Gemini', 'changeme', 'Gemini', 1);
 
