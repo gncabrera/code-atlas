@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -20,6 +21,9 @@ public class GlobalExceptionHandler {
     }
 
     public static void logCaughtException(String context, Exception ex) {
+        if (isIgnoredException(ex)) {
+            return;
+        }
         if (isExpectedException(ex)) {
             log.warn("{}: {}", context, ex.getMessage());
             return;
@@ -47,6 +51,11 @@ public class GlobalExceptionHandler {
         return errorResponseEntity(resolveMessage(ex, "Resource not found."), HttpStatus.NOT_FOUND);
     }
 
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Void> handleNoResourceFoundException(NoResourceFoundException ex) {
+        return ResponseEntity.notFound().build();
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<?>> handleValidationException(MethodArgumentNotValidException ex) {
         String message = ex.getBindingResult().getFieldErrors().stream()
@@ -61,6 +70,10 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<?>> handleException(Exception ex) {
         log.error("Unhandled exception: {}", ex.getMessage(), ex);
         return errorResponseEntity(resolveMessage(ex, "Unexpected server error."), HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    private static boolean isIgnoredException(Throwable ex) {
+        return ex instanceof NoResourceFoundException;
     }
 
     private static boolean isExpectedException(Throwable ex) {
