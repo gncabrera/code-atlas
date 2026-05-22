@@ -70,7 +70,7 @@ $(function () {
     function collectDraftData() {
         return {
             projectSelect: $("#projectSelect").val() || "",
-            promptModeSelect: $("#promptModeSelect").val() || "BALANCED",
+            promptModeSelect: $("#promptModeSelect").val() || "IMPLEMENTATION",
             shouldSendAgentsFile: $("#shouldSendAgentsFile").is(":checked"),
             userRequest: ($("#userRequest").val() || "").trim(),
             aiModelSelect: $("#aiModelSelect").val() || "",

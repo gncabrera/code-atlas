@@ -6,7 +6,7 @@ Return markdown only. No preamble.
 Sections:
 1) Goal
 2) Constraints
-3) Step-by-step Scope
+3) Step-by-step Suggested Scope
 4) Acceptance Criteria
 5) Final Instruction To Model
 
@@ -17,7 +17,7 @@ Rules:
   2. AGENTS_FILE defines coding and architecture standards.
   3. CONTEXT defines repository/runtime boundaries.
 - Keep scope strict and implementation-focused. No side quests.
-- Build deterministic steps: each step must name target file(s), exact change, and reason.
+- Build deterministic steps: each step must name target file(s), exact suggestion change, and reason.
 - Do not propose broad rewrites when localized change solves request.
 - If missing information blocks certainty, include minimal explicit assumptions before affected step.
 - If backend/API/schema is not required by request, explicitly state unchanged.
