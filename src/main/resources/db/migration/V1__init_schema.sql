@@ -32,3 +32,13 @@ CREATE TABLE IF NOT EXISTS prompt_history (
     FOREIGN KEY (project_id) REFERENCES projects(id),
     FOREIGN KEY (ai_model_id) REFERENCES ai_models(id)
 );
+
+INSERT INTO ai_models (name, description, enabled, tokens_per_minute, requests_per_minute, requests_per_day, api_key)
+VALUES
+    ('gemini-3.5-flash', 'Gemini 3.5 Flash (gemini-3.5-flash)', 1, 250000, 5, 20, 'changeme'),
+    ('gemini-2.5-flash', 'Gemini 2.5 Flash (gemini-2.5-flash)', 1, 250000, 5, 20, 'changeme'),
+    ('gemini-3-flash-preview', 'Gemini 3 Flash (gemini-3-flash-preview)', 1, 250000, 5, 20, 'changeme'),
+    ('gemini-2.5-flash-lite', 'Gemini 2.5 Flash Lite (gemini-2.5-flash-lite)', 1, 250000, 5, 20, 'changeme'),
+    ('gemini-3.1-flash-lite', 'Gemini 3.1 Flash Lite (gemini-3.1-flash-lite)', 1, 250000, 15, 500, 'changeme'),
+    ('gemma-4-26b-a4b-it', 'Gemma 4 26B (gemma-4-26b-a4b-it)', 1, 2147483647, 15, 1500, 'changeme'),
+    ('gemma-4-31b-it', 'Gemma 4 31B (gemma-4-31b-it)', 1, 2147483647, 15, 1500, 'changeme');

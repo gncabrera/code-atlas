@@ -4,6 +4,7 @@ CodeAtlas.initCrudPage({
     apiBase: "/api/projects",
     idFieldSelector: "#projectId",
     saveBtnSelector: "#saveProjectBtn",
+    saveLoadingText: "Saving Project...",
     resetBtnSelector: "#resetProjectBtn",
     deleteConfirmMessage: "Delete selected project?",
     messages: {

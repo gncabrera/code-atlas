@@ -109,6 +109,38 @@ jQuery:
 4. Prefer jQuery APIs for DOM and events; use vanilla JS only when jQuery cannot do the job.
 5. Inline `<script>` with application logic in `.html` files is prohibited.
 
+### Button Loading State Standards
+
+All interactive elements (buttons, inputs of type button/submit) that initiate asynchronous actions (such as AJAX POST, PUT, DELETE operations) must display a loading state to prevent double-submits and improve UX.
+
+1. **Behavior Rules**:
+   - On click/trigger, immediately disable the button (`prop('disabled', true)`).
+   - Inject a Bootstrap 5 spinner element alongside appropriate placeholder text (e.g., "Saving...").
+   - Cache original content/HTML structure using jQuery `.data()` so it can be restored exactly.
+   - Always restore the button to its active, original state in both `.done()` and `.fail()` (or within the `.always()` block) of the jQuery AJAX chain.
+
+2. **Standard Implementation Pattern (in `common.js`)**:
+   ```javascript
+   CodeAtlas.setButtonLoading = function ($button, isLoading, loadingText) {
+       const text = loadingText || 'Processing...';
+       if (isLoading) {
+           if (!$button.data('original-html')) {
+               $button.data('original-html', $button.html());
+           }
+           $button.prop('disabled', true);
+           $button.html(`<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>${text}`);
+       } else {
+           const originalHtml = $button.data('original-html');
+           if (originalHtml) {
+               $button.html(originalHtml);
+           }
+           $button.prop('disabled', false);
+       }
+   };
+   ```
+
+3. **CRUD save buttons**: Use `saveLoadingText` in `initCrudPage` config so each page can set its own loading label (e.g. `Saving Project...`).
+
 AJAX and API consumption:
 
 1. All client calls target `@RestController` endpoints and must handle `ApiResponse` JSON (`result`, `message`, `data`).

@@ -2,6 +2,28 @@ $(function () {
     let projects = [];
     let enabledModels = [];
 
+    const promptPageControlSelectors = [
+        "#projectSelect",
+        "#promptModeSelect",
+        "#shouldSendAgentsFile",
+        "#userRequest",
+        "#buildPreviewBtn",
+        "#aiModelSelect",
+        "#aiModelPrompt",
+        "#sendToModelBtn",
+        "#outputPrompt",
+        "#copyOutputBtn"
+    ];
+
+    function setPromptPageLocked(isLocked, $activeButton, loadingText) {
+        promptPageControlSelectors.forEach(function (selector) {
+            $(selector).prop("disabled", isLocked);
+        });
+        if ($activeButton) {
+            CodeAtlas.setButtonLoading($activeButton, isLocked, loadingText);
+        }
+    }
+
     function estimateTokens(content) {
         const size = content ? content.length : 0;
         return Math.ceil(size / 4);
@@ -82,6 +104,7 @@ $(function () {
     });
 
     $("#buildPreviewBtn").on("click", function () {
+        const $buildBtn = $(this);
         const userRequest = $("#userRequest").val();
         if (!userRequest || !userRequest.trim()) {
             showAlert("User request is required.", true);
@@ -93,6 +116,7 @@ $(function () {
             shouldSendAgentsFile: $("#shouldSendAgentsFile").is(":checked"),
             promptMode: $("#promptModeSelect").val()
         };
+        CodeAtlas.setButtonLoading($buildBtn, true, "Building Preview...");
         $.ajax({
             url: "/api/prompts/build-preview",
             method: "POST",
@@ -106,10 +130,14 @@ $(function () {
             })
             .fail(function (xhr) {
                 showAlert(CodeAtlas.apiMessage(xhr, "Failed building preview."), true);
+            })
+            .always(function () {
+                CodeAtlas.setButtonLoading($buildBtn, false);
             });
     });
 
     $("#sendToModelBtn").on("click", function () {
+        const $sendBtn = $(this);
         const model = selectedModel();
         if (!model) {
             showAlert("Select an enabled AI model.", true);
@@ -136,6 +164,7 @@ $(function () {
             shouldSendAgentsFile: $("#shouldSendAgentsFile").is(":checked"),
             promptMode: $("#promptModeSelect").val()
         };
+        setPromptPageLocked(true, $sendBtn, "Sending...");
         $.ajax({
             url: "/api/prompts/send",
             method: "POST",
@@ -148,6 +177,9 @@ $(function () {
             })
             .fail(function (xhr) {
                 showAlert(CodeAtlas.apiMessage(xhr, "Failed sending prompt to model."), true);
+            })
+            .always(function () {
+                setPromptPageLocked(false, $sendBtn);
             });
     });
 

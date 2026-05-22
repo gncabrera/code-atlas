@@ -12,6 +12,25 @@
         return xhr.responseJSON?.message || fallback;
     };
 
+    CodeAtlas.setButtonLoading = function ($button, isLoading, loadingText) {
+        const text = loadingText || "Processing...";
+        if (isLoading) {
+            if (!$button.data("original-html")) {
+                $button.data("original-html", $button.html());
+            }
+            $button.prop("disabled", true);
+            $button.html(
+                `<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>${text}`
+            );
+            return;
+        }
+        const originalHtml = $button.data("original-html");
+        if (originalHtml) {
+            $button.html(originalHtml);
+        }
+        $button.prop("disabled", false);
+    };
+
     CodeAtlas.apiGet = function (url) {
         return $.ajax({
             url: url,
@@ -94,6 +113,7 @@
             }
 
             $(config.saveBtnSelector).on("click", function () {
+                const $saveBtn = $(this);
                 const validationError = config.validateSave();
                 if (validationError) {
                     show(validationError, true);
@@ -103,6 +123,8 @@
                 const payload = config.buildPayload();
                 const method = entityId ? "PUT" : "POST";
                 const endpoint = entityId ? `${config.apiBase}/${entityId}` : config.apiBase;
+                const loadingText = config.saveLoadingText || "Saving...";
+                CodeAtlas.setButtonLoading($saveBtn, true, loadingText);
                 $.ajax({
                     url: endpoint,
                     method: method,
@@ -114,6 +136,8 @@
                     config.clearForm();
                 }).fail(function (xhr) {
                     show(CodeAtlas.apiMessage(xhr, config.messages.saveFailed), true);
+                }).always(function () {
+                    CodeAtlas.setButtonLoading($saveBtn, false);
                 });
             });
 

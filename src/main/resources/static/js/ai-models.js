@@ -15,6 +15,7 @@ $(function () {
         apiBase: "/api/ai-models",
         idFieldSelector: "#modelId",
         saveBtnSelector: "#saveModelBtn",
+        saveLoadingText: "Saving AI Model...",
         resetBtnSelector: "#resetModelBtn",
         deleteConfirmMessage: "Delete selected AI model?",
         messages: {
