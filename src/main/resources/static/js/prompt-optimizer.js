@@ -1,6 +1,12 @@
 $(function () {
+    const LOCAL_STORAGE_KEY = "prompt_optimizer_draft";
+    const DRAFT_SAVE_DELAY_MS = 500;
+    const DRAFT_STATUS_VISIBLE_MS = 2000;
+
     let projects = [];
     let enabledModels = [];
+    let isRestoringDraft = false;
+    let draftStatusHideTimeout = null;
 
     const promptPageControlSelectors = [
         "#projectSelect",
@@ -8,12 +14,31 @@ $(function () {
         "#shouldSendAgentsFile",
         "#userRequest",
         "#buildPreviewBtn",
+        "#btn-clear-prompt",
         "#aiModelSelect",
         "#aiModelPrompt",
         "#sendToModelBtn",
         "#outputPrompt",
         "#copyOutputBtn"
     ];
+
+    const draftFieldSelectors = [
+        "#projectSelect",
+        "#promptModeSelect",
+        "#shouldSendAgentsFile",
+        "#userRequest",
+        "#aiModelSelect",
+        "#aiModelPrompt",
+        "#outputPrompt"
+    ];
+
+    function debounce(func, delay) {
+        let timeout;
+        return function (...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(this, args), delay);
+        };
+    }
 
     function setPromptPageLocked(isLocked, $activeButton, loadingText) {
         promptPageControlSelectors.forEach(function (selector) {
@@ -44,6 +69,170 @@ $(function () {
     function selectedModel() {
         const id = $("#aiModelSelect").val();
         return enabledModels.find(model => String(model.id) === String(id)) || null;
+    }
+
+    function collectDraftData() {
+        return {
+            projectSelect: $("#projectSelect").val() || "",
+            promptModeSelect: $("#promptModeSelect").val() || "BALANCED",
+            shouldSendAgentsFile: $("#shouldSendAgentsFile").is(":checked"),
+            userRequest: ($("#userRequest").val() || "").trim(),
+            aiModelSelect: $("#aiModelSelect").val() || "",
+            aiModelPrompt: ($("#aiModelPrompt").val() || "").trim(),
+            outputPrompt: ($("#outputPrompt").val() || "").trim()
+        };
+    }
+
+    function getDefaultAiModelSelectValue() {
+        const $modelSelect = $("#aiModelSelect");
+        if ($modelSelect.find("option").length === 0) {
+            return "";
+        }
+        return String($modelSelect.find("option").first().val() || "");
+    }
+
+    function isDraftAtDefaults(data) {
+        return !data.userRequest
+            && !data.aiModelPrompt
+            && !data.outputPrompt
+            && !data.projectSelect
+            && data.promptModeSelect === "BALANCED"
+            && data.shouldSendAgentsFile === true
+            && String(data.aiModelSelect || "") === getDefaultAiModelSelectValue();
+    }
+
+    function hideDraftStatus() {
+        if (draftStatusHideTimeout) {
+            clearTimeout(draftStatusHideTimeout);
+            draftStatusHideTimeout = null;
+        }
+        $("#draft-status-container").removeClass("opacity-100").addClass("opacity-0");
+    }
+
+    function showDraftStatus(message) {
+        $("#draft-status-text").text(message);
+        $("#draft-status-container").removeClass("opacity-0").addClass("opacity-100");
+        if (draftStatusHideTimeout) {
+            clearTimeout(draftStatusHideTimeout);
+        }
+        draftStatusHideTimeout = setTimeout(function () {
+            hideDraftStatus();
+            draftStatusHideTimeout = null;
+        }, DRAFT_STATUS_VISIBLE_MS);
+    }
+
+    function saveDraftToLocalStorage() {
+        if (isRestoringDraft) {
+            return;
+        }
+        const data = collectDraftData();
+        try {
+            if (isDraftAtDefaults(data)) {
+                localStorage.removeItem(LOCAL_STORAGE_KEY);
+                hideDraftStatus();
+                return;
+            }
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
+            showDraftStatus("Draft Saved");
+        } catch (error) {
+            hideDraftStatus();
+        }
+    }
+
+    const debouncedSaveDraft = debounce(saveDraftToLocalStorage, DRAFT_SAVE_DELAY_MS);
+
+    function applyDraftField(fieldKey, value) {
+        if (fieldKey === "shouldSendAgentsFile") {
+            $("#shouldSendAgentsFile").prop("checked", Boolean(value));
+            return true;
+        }
+        const $field = $("#" + fieldKey);
+        if (!$field.length) {
+            return false;
+        }
+        if (fieldKey === "aiModelSelect") {
+            if (value && $field.find('option[value="' + value + '"]').length === 0) {
+                return false;
+            }
+            $field.val(value || "");
+            return true;
+        }
+        $field.val(value ?? "");
+        return true;
+    }
+
+    function loadDraftFromLocalStorage() {
+        let rawDraft;
+        try {
+            rawDraft = localStorage.getItem(LOCAL_STORAGE_KEY);
+        } catch (error) {
+            return false;
+        }
+        if (!rawDraft) {
+            return false;
+        }
+        let data;
+        try {
+            data = JSON.parse(rawDraft);
+        } catch (error) {
+            try {
+                localStorage.removeItem(LOCAL_STORAGE_KEY);
+            } catch (removeError) {
+                // ignore storage errors
+            }
+            return false;
+        }
+        if (!data || typeof data !== "object") {
+            return false;
+        }
+        isRestoringDraft = true;
+        let restored = false;
+        const hadContent = !isDraftAtDefaults(data);
+        Object.keys(data).forEach(function (fieldKey) {
+            applyDraftField(fieldKey, data[fieldKey]);
+        });
+        restored = hadContent;
+        isRestoringDraft = false;
+        updateAgentsCheckboxVisibility();
+        updateTokenInfo();
+        if (restored) {
+            showDraftStatus("Draft Restored");
+        }
+        return restored;
+    }
+
+    function resetPromptPageToDefaults() {
+        $("#projectSelect").val("");
+        $("#promptModeSelect").val("BALANCED");
+        $("#shouldSendAgentsFile").prop("checked", true);
+        $("#userRequest").val("");
+        $("#aiModelPrompt").val("");
+        $("#outputPrompt").val("");
+        const $modelSelect = $("#aiModelSelect");
+        if ($modelSelect.find("option").length > 0) {
+            $modelSelect.prop("selectedIndex", 0);
+        } else {
+            $modelSelect.val("");
+        }
+        updateAgentsCheckboxVisibility();
+        updateTokenInfo();
+    }
+
+    function clearDraft() {
+        resetPromptPageToDefaults();
+        try {
+            localStorage.removeItem(LOCAL_STORAGE_KEY);
+        } catch (error) {
+            // ignore storage errors
+        }
+        hideDraftStatus();
+    }
+
+    function bindDraftAutoSave() {
+        $("#userRequest, #aiModelPrompt, #outputPrompt").on("input", debouncedSaveDraft);
+        $("#projectSelect, #promptModeSelect, #aiModelSelect").on("change", debouncedSaveDraft);
+        $("#shouldSendAgentsFile").on("change", debouncedSaveDraft);
+        $("#btn-clear-prompt").on("click", clearDraft);
     }
 
     function updateAgentsCheckboxVisibility() {
@@ -89,6 +278,7 @@ $(function () {
                 enabledModels = response.data.enabledModels || [];
                 populateProjects();
                 populateModels();
+                loadDraftFromLocalStorage();
             })
             .fail(function (xhr) {
                 showAlert(CodeAtlas.apiMessage(xhr, "Failed loading prompt page metadata."), true);
@@ -126,6 +316,7 @@ $(function () {
             .done(function (response) {
                 $("#aiModelPrompt").val(response.data.aiModelPrompt);
                 updateTokenInfo();
+                debouncedSaveDraft();
                 showAlert(response.message || "Preview built.", false);
             })
             .fail(function (xhr) {
@@ -173,6 +364,7 @@ $(function () {
         })
             .done(function (response) {
                 $("#outputPrompt").val(response.data.outputPrompt);
+                debouncedSaveDraft();
                 showAlert(response.message || "Prompt sent.", false);
             })
             .fail(function (xhr) {
@@ -192,5 +384,6 @@ $(function () {
         showAlert("Copy failed.", true);
     });
 
+    bindDraftAutoSave();
     loadMetadata();
 });
