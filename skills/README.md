@@ -45,12 +45,13 @@ Scripts copian docs a `<TargetPath>/.cursor/` y skills a `<TargetPath>/.cursor/s
 
 | Fuente (repo) | Destino |
 |---------------|---------|
-| `skills/STATE_FORMAT.md` | `.cursor/STATE_FORMAT.md` |
+| `skills/agents/STATE_FORMAT.md` | `.cursor/STATE_FORMAT.md` |
 | `WORKFLOW.md` | `.cursor/WORKFLOW.md` |
-| `skills/caveman`, `skills/snapshot` | `.cursor/skills/caveman/`, `snapshot/` |
-| `agent-skills/base/{architect,implement,risk-scan}` | `.cursor/skills/architect/`, etc. |
-| `agent-skills/overlays/auto-mode` o `mode-overlays/auto-mode` | `.cursor/skills/auto-mode/` |
-| `agent-skills/overlays/model-opus` o `model-overlays/model-opus` | `.cursor/skills/model-opus/` |
+| `skills/general/{caveman,ask}` | `.cursor/skills/caveman/`, etc |
+| `skills/agents/snapshot` | `.cursor/skills/snapshot/` |
+| `skills/agents/base/{architect,implement,risk-scan}` | `.cursor/skills/architect/`, etc. |
+| `skills/agents/mode-overlays/{auto-mode}` | `.cursor/skills/auto-mode/`, etc |
+| `skills/agents/model-overlays/{model-opus}` | `.cursor/skills/model-opus/`, etc |
 
 **Layout resultante:**
 
@@ -62,6 +63,7 @@ Scripts copian docs a `<TargetPath>/.cursor/` y skills a `<TargetPath>/.cursor/s
   skills/implement/SKILL.md
   skills/risk-scan/SKILL.md
   skills/caveman/SKILL.md
+  skills/ask/SKILL.md
   skills/snapshot/SKILL.md
   skills/auto-mode/SKILL.md
   skills/model-opus/SKILL.md

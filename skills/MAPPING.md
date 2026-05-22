@@ -2,25 +2,25 @@
 
 ## architect
 
-- Base canónico: `agent-skills/base/architect/SKILL.md`
+- Base canónico: `skills/agents/base/architect/SKILL.md`
 - Delta auto-mode absorbido en overlays:
-  - preguntas obligatorias + wait-for-answers -> `agent-skills/overlays/auto-mode/SKILL.md`
-  - protocolo de análisis profundo + consistency guardrails + alternativas -> `agent-skills/overlays/model-opus/SKILL.md`
+  - preguntas obligatorias + wait-for-answers -> `skills/agents/overlays/auto-mode/SKILL.md`
+  - protocolo de análisis profundo + consistency guardrails + alternativas -> `skills/agents/overlays/model-opus/SKILL.md`
 
 ## implement
 
-- Base canónico: `agent-skills/base/implement/SKILL.md`
+- Base canónico: `skills/agents/base/implement/SKILL.md`
 - Delta auto-mode absorbido en overlays:
-  - intent classifier antes de editar -> `agent-skills/overlays/auto-mode/SKILL.md`
-  - question gate dinámica -> `agent-skills/overlays/auto-mode/SKILL.md`
-  - alternatives trigger + anti-rush checklist + consistency pass + confidence gate -> `agent-skills/overlays/model-opus/SKILL.md`
+  - intent classifier antes de editar -> `skills/agents/overlays/auto-mode/SKILL.md`
+  - question gate dinámica -> `skills/agents/overlays/auto-mode/SKILL.md`
+  - alternatives trigger + anti-rush checklist + consistency pass + confidence gate -> `skills/agents/overlays/model-opus/SKILL.md`
 
 ## risk-scan
 
-- Base canónico: `agent-skills/base/risk-scan/SKILL.md`
+- Base canónico: `skills/agents/base/risk-scan/SKILL.md`
 - Delta auto-mode absorbido en overlays:
-  - ask-first gate -> `agent-skills/overlays/auto-mode/SKILL.md`
-  - evidencia/alternativas/impacto negativo + orden determinístico + impacto completo -> `agent-skills/overlays/model-opus/SKILL.md`
+  - ask-first gate -> `skills/agents/overlays/auto-mode/SKILL.md`
+  - evidencia/alternativas/impacto negativo + orden determinístico + impacto completo -> `skills/agents/overlays/model-opus/SKILL.md`
 
 ## Resolución de conflictos
 
