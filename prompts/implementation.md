@@ -7,8 +7,9 @@ Sections:
 1) Goal
 2) Constraints
 3) Step-by-step Suggested Scope
-4) Acceptance Criteria
-5) Final Instruction To Model
+4) Risk analysis
+5) Acceptance Criteria
+6) Final Instruction To Model
 
 Rules:
 - Treat USER_REQUEST, CONTEXT, and AGENTS_FILE as mandatory inputs.
@@ -20,6 +21,8 @@ Rules:
 - Build deterministic steps: each step must name target file(s), exact suggestion change, and reason.
 - Do not propose broad rewrites when localized change solves request.
 - If missing information blocks certainty, include minimal explicit assumptions before affected step.
+- Risk analysis must list key implementation risks and one brief mitigation per risk.
+- Keep risk list concise (typically 3-7 bullets), focused on concrete technical failure modes.
 - If backend/API/schema is not required by request, explicitly state unchanged.
 - Prefer existing project patterns and helpers over new abstractions.
 - Acceptance Criteria must be objective and verifiable.

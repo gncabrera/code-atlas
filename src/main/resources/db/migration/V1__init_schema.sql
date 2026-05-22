@@ -62,5 +62,5 @@ VALUES
     ('gemini-3-flash-preview', 'Gemini 3 Flash (gemini-3-flash-preview)', 1, 250000, 5, 20, 1),
     ('gemini-2.5-flash-lite', 'Gemini 2.5 Flash Lite (gemini-2.5-flash-lite)', 1, 250000, 5, 20, 1),
     ('gemini-3.1-flash-lite', 'Gemini 3.1 Flash Lite (gemini-3.1-flash-lite)', 1, 250000, 15, 500, 1),
-    ('gemma-4-26b-a4b-it', 'Gemma 4 26B (gemma-4-26b-a4b-it)', 1, 2147483647, 15, 1500, 1),
-    ('gemma-4-31b-it', 'Gemma 4 31B (gemma-4-31b-it)', 1, 2147483647, 15, 1500, 1);
+    ('gemma-4-26b-a4b-it', 'Gemma 4 26B (gemma-4-26b-a4b-it)', 1, 0, 15, 1500, 1),
+    ('gemma-4-31b-it', 'Gemma 4 31B (gemma-4-31b-it)', 1, 0, 15, 1500, 1);
