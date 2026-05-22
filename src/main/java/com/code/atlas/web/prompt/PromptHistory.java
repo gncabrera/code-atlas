@@ -13,7 +13,6 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import lombok.Data;
-import org.hibernate.annotations.CreationTimestamp;
 
 @Entity
 @Table(name = "prompt_history")
@@ -53,7 +52,6 @@ public class PromptHistory {
     @Column(name = "error_message", columnDefinition = "TEXT")
     private String errorMessage;
 
-    @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false, insertable = false)
     private LocalDateTime createdAt;
 }

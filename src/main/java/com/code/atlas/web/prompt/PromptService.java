@@ -1,6 +1,7 @@
 package com.code.atlas.web.prompt;
 
 import com.code.atlas.web.aimodel.AIModel;
+import com.code.atlas.web.aimodel.AIModelApiKey;
 import com.code.atlas.web.aimodel.AIModelService;
 import com.code.atlas.web.project.Project;
 import com.code.atlas.web.project.ProjectService;
@@ -80,11 +81,12 @@ public class PromptService {
         promptHistoryRepository.save(history);
 
         try {
+            String apiKeyValue = resolveApiKeyValue(model);
             HttpOptions httpOptions = HttpOptions.builder()
                     .timeout(timeoutSeconds * 1000)
                     .build();
             Client client = Client.builder()
-                    .apiKey(model.getApiKey())
+                    .apiKey(apiKeyValue)
                     .httpOptions(httpOptions)
                     .build();
             GenerateContentResponse response = client.models.generateContent(model.getName(), exactPrompt, null);
@@ -133,5 +135,20 @@ public class PromptService {
     private int estimateTokens(String input) {
         int characters = input == null ? 0 : input.length();
         return (characters + 3) / 4;
+    }
+
+    private String resolveApiKeyValue(AIModel model) {
+        AIModelApiKey apiKey = model.getAiModelApiKey();
+        if (apiKey == null) {
+            throw new IllegalArgumentException("AI model has no API key assigned.");
+        }
+        if (!apiKey.isActive()) {
+            throw new IllegalArgumentException("Assigned API key is inactive.");
+        }
+        String value = apiKey.getApiKey();
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException("Assigned API key has no value.");
+        }
+        return value.trim();
     }
 }

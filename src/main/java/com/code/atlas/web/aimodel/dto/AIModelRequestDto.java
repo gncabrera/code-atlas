@@ -7,7 +7,7 @@ public record AIModelRequestDto(
         int tokensPerMinute,
         int requestsPerMinute,
         int requestsPerDay,
-        String apiKey
+        AIModelApiKeyDto apiKey
 ) {
     public AIModelRequestDto {
         if (name == null || name.isBlank()) {
@@ -24,9 +24,6 @@ public record AIModelRequestDto(
         }
         if (requestsPerDay < 0) {
             throw new IllegalArgumentException("requestsPerDay cannot be negative.");
-        }
-        if (apiKey == null || apiKey.isBlank()) {
-            throw new IllegalArgumentException("API key is required.");
         }
     }
 }

@@ -41,8 +41,10 @@
                     <input id="modelRequestsPerDay" class="form-control" type="number" min="0">
                 </div>
                 <div class="col-md-8">
-                    <label for="modelApiKey" class="form-label">API Key</label>
-                    <input id="modelApiKey" class="form-control" type="text">
+                    <label for="modelApiKeyLink" class="form-label">API Key Link</label>
+                    <select id="modelApiKeyLink" class="form-select">
+                        <option value="">— None —</option>
+                    </select>
                 </div>
                 <div class="col-12">
                     <div class="form-check">
@@ -70,6 +72,7 @@
                     <th>Tokens/min</th>
                     <th>Req/min</th>
                     <th>Req/day</th>
+                    <th>API Key</th>
                     <th>Actions</th>
                 </tr>
                 </thead>

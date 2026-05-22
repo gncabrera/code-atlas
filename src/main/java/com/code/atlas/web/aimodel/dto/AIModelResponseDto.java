@@ -8,6 +8,6 @@ public record AIModelResponseDto(
         int tokensPerMinute,
         int requestsPerMinute,
         int requestsPerDay,
-        String apiKey
+        AIModelApiKeyDto apiKey
 ) {
 }

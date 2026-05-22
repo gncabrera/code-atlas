@@ -2,9 +2,12 @@ package com.code.atlas.web.aimodel;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -39,7 +42,7 @@ public class AIModel {
     @Column(name = "requests_per_day", nullable = false)
     private int requestsPerDay;
 
-    @NotBlank
-    @Column(name = "api_key", nullable = false)
-    private String apiKey;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "api_key_id")
+    private AIModelApiKey aiModelApiKey;
 }
