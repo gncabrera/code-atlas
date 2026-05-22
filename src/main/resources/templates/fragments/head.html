@@ -1,0 +1,9 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+<th:block th:fragment="pageHead(pageCss)">
+    <link rel="stylesheet" th:href="@{/css/vendor/bootswatch-brite.min.css(v=${assetVersion})}">
+    <link rel="stylesheet" th:href="@{'/css/' + ${pageCss}(v=${assetVersion})}">
+</th:block>
+</head>
+</html>

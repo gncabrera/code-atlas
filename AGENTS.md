@@ -92,18 +92,20 @@ File layout:
 Thymeleaf:
 
 1. Root element: `<html lang="en" xmlns:th="http://www.thymeleaf.org">`.
-2. Use `th:replace` / `th:insert` for layout fragments (navbar, CDN scripts via `fragments/scripts`, headers, footers).
+2. Use `th:replace` / `th:insert` for layout fragments (navbar, `fragments/head`, `fragments/scripts`, headers, footers).
 3. Use `th:text`, `th:each`, `th:if`, `th:attr`, and model attributes when the server must render initial data.
-4. Do not put `<script>` blocks with application logic inside templates; load CDN + `common.js` + `/js/<page>.js` through `fragments/scripts` at the end of `<body>`.
+4. Do not put `<script>` blocks with application logic inside templates; load vendor + `common.js` + `/js/<page>.js` through `fragments/scripts` at the end of `<body>`.
 
 UI assets:
 
-1. Use Bootstrap 5 via Bootswatch CDN (e.g. `https://cdn.jsdelivr.net/npm/bootswatch@5.3.8/dist/brite/bootstrap.min.css`).
-2. Put project-specific overrides in `static/css/`; do not add extra icon or font libraries unless explicitly required.
+1. Bootstrap 5 + Bootswatch Brite theme: `static/css/vendor/bootswatch-brite.min.css` (via `fragments/head`).
+2. jQuery 3.7.1 and Bootstrap bundle JS: `static/js/vendor/` (via `fragments/scripts`).
+3. Put project-specific overrides in `static/css/`; do not add extra icon or font libraries unless explicitly required.
+4. Cache bust: `fragments/head` and `fragments/scripts` always append `?v=<epoch>` to local JS/CSS URLs (epoch from JVM start; restart app to change).
 
 jQuery:
 
-1. Load jQuery 3.7.1 from CDN only: `https://code.jquery.com/jquery-3.7.1.min.js` (fixed version; no other jQuery versions or local copies).
+1. Load jQuery 3.7.1 from `static/js/vendor/jquery-3.7.1.min.js` only (fixed version; no other jQuery versions).
 2. Wrap all page logic in `$(function () { ... });` as the single entry point.
 3. Use only `$.ajax` for HTTP calls (no `$.get`, `$.post`, `$.getJSON`, or `fetch`).
 4. Prefer jQuery APIs for DOM and events; use vanilla JS only when jQuery cannot do the job.
