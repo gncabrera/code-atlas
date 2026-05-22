@@ -38,7 +38,7 @@ Blocking ambiguity -> ask short clarifying question.
 
 ## State update
 
-Same turn as implementation. No separate `/state` handoff.
+Same turn as implementation.
 
 ## Tests/lint
 
