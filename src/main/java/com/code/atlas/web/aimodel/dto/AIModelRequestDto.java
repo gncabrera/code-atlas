@@ -2,6 +2,7 @@ package com.code.atlas.web.aimodel.dto;
 
 public record AIModelRequestDto(
         String name,
+        String description,
         boolean enabled,
         int tokensPerMinute,
         int requestsPerMinute,
@@ -11,6 +12,9 @@ public record AIModelRequestDto(
     public AIModelRequestDto {
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("AI model name is required.");
+        }
+        if (description != null && description.length() > 500) {
+            throw new IllegalArgumentException("Description cannot exceed 500 characters.");
         }
         if (tokensPerMinute <= 0) {
             throw new IllegalArgumentException("tokensPerMinute must be greater than zero.");

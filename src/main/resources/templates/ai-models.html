@@ -23,6 +23,11 @@
                     <label for="modelName" class="form-label">Model Name</label>
                     <input id="modelName" class="form-control" type="text" placeholder="gemini-2.5-flash">
                 </div>
+                <div class="col-12">
+                    <label for="modelDescription" class="form-label">Description</label>
+                    <textarea id="modelDescription" class="form-control" rows="3" maxlength="500"></textarea>
+                    <div id="modelDescriptionCounter" class="form-text text-end">0 / 500</div>
+                </div>
                 <div class="col-md-4">
                     <label for="modelTokensPerMinute" class="form-label">Tokens Per Minute</label>
                     <input id="modelTokensPerMinute" class="form-control" type="number" min="1">
@@ -60,6 +65,7 @@
                 <thead>
                 <tr>
                     <th>Name</th>
+                    <th>Description</th>
                     <th>Enabled</th>
                     <th>Tokens/min</th>
                     <th>Req/min</th>

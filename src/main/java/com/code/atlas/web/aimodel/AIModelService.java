@@ -58,6 +58,7 @@ public class AIModelService {
 
     private void updateEntity(AIModel model, AIModelRequestDto requestDto) {
         model.setName(requestDto.name().trim());
+        model.setDescription(normalizeDescription(requestDto.description()));
         model.setEnabled(requestDto.enabled());
         model.setTokensPerMinute(requestDto.tokensPerMinute());
         model.setRequestsPerMinute(requestDto.requestsPerMinute());
@@ -65,10 +66,18 @@ public class AIModelService {
         model.setApiKey(requestDto.apiKey().trim());
     }
 
+    private String normalizeDescription(String description) {
+        if (description == null) {
+            return "";
+        }
+        return description.trim();
+    }
+
     private AIModelResponseDto toResponseDto(AIModel model) {
         return new AIModelResponseDto(
                 model.getId(),
                 model.getName(),
+                model.getDescription(),
                 model.isEnabled(),
                 model.getTokensPerMinute(),
                 model.getRequestsPerMinute(),
