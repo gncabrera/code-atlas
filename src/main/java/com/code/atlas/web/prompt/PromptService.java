@@ -80,7 +80,9 @@ public class PromptService {
         promptHistoryRepository.save(history);
 
         try {
-            HttpOptions httpOptions = HttpOptions.builder().timeout(timeoutSeconds).build();
+            HttpOptions httpOptions = HttpOptions.builder()
+                    .timeout(timeoutSeconds * 1000)
+                    .build();
             Client client = Client.builder()
                     .apiKey(model.getApiKey())
                     .httpOptions(httpOptions)
@@ -92,6 +94,7 @@ public class PromptService {
             promptHistoryRepository.save(history);
             return new SendPromptResponseDto(outputText, estimatedTokens);
         } catch (Exception ex) {
+            ex.printStackTrace();
             history.setStatus("ERROR");
             history.setErrorMessage(ex.getMessage());
             promptHistoryRepository.save(history);
@@ -108,20 +111,20 @@ public class PromptService {
 
     private String resolveAgentsFileContent(Project project, boolean shouldSendAgentsFile) {
         if (!shouldSendAgentsFile) {
-            return "AGENTS.md not requested.";
+            return "";
         }
         if (project == null) {
-            return "No AGENTS.md found";
+            return "";
         }
         if (!project.isUseAgentsFile()) {
-            return "AGENTS.md disabled for selected project.";
+            return "";
         }
         Path agentsPath = Path.of(project.getPath(), "AGENTS.md").normalize();
         if (!Files.exists(agentsPath)) {
             return "No AGENTS.md found";
         }
         try {
-            return Files.readString(agentsPath);
+            return "AGENTS.md\n\n" + Files.readString(agentsPath);
         } catch (IOException ex) {
             return "No AGENTS.md found";
         }
