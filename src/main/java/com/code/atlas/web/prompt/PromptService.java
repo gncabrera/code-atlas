@@ -5,6 +5,7 @@ import com.code.atlas.web.aimodel.AIModelApiKey;
 import com.code.atlas.web.aimodel.AIModelService;
 import com.code.atlas.web.project.Project;
 import com.code.atlas.web.project.ProjectService;
+import com.code.atlas.web.prompt.context.PromptContextService;
 import com.code.atlas.web.prompt.dto.BuildPreviewRequestDto;
 import com.code.atlas.web.prompt.dto.BuildPreviewResponseDto;
 import com.code.atlas.web.prompt.dto.SendPromptRequestDto;
@@ -22,10 +23,9 @@ import org.springframework.stereotype.Service;
 @Service
 public class PromptService {
 
-    private static final String CONTEXT_PLACEHOLDER = "Context: WIP";
-
     private final PromptTemplateService promptTemplateService;
     private final ProjectService projectService;
+    private final PromptContextService promptContextService;
     private final AIModelService aiModelService;
     private final PromptHistoryRepository promptHistoryRepository;
     private final int timeoutSeconds;
@@ -33,12 +33,14 @@ public class PromptService {
     public PromptService(
             PromptTemplateService promptTemplateService,
             ProjectService projectService,
+            PromptContextService promptContextService,
             AIModelService aiModelService,
             PromptHistoryRepository promptHistoryRepository,
             @Value("${codeatlas.gemini.timeout-seconds:60}") int timeoutSeconds
     ) {
         this.promptTemplateService = promptTemplateService;
         this.projectService = projectService;
+        this.promptContextService = promptContextService;
         this.aiModelService = aiModelService;
         this.promptHistoryRepository = promptHistoryRepository;
         this.timeoutSeconds = timeoutSeconds;
@@ -48,10 +50,11 @@ public class PromptService {
         PromptMode mode = PromptMode.fromNullableValue(requestDto.promptMode());
         Project project = resolveProject(requestDto.projectId());
         String template = promptTemplateService.loadTemplate(mode);
+        String context = promptContextService.buildContext(project, requestDto.userRequest());
         String agentsFileContent = resolveAgentsFileContent(project, requestDto.shouldSendAgentsFile());
         String generatedPrompt = template
                 .replace("{{ USER_REQUEST }}", requestDto.userRequest().trim())
-                .replace("{{ CONTEXT }}", CONTEXT_PLACEHOLDER)
+                .replace("{{ CONTEXT }}", context)
                 .replace("{{ AGENTS_FILE }}", agentsFileContent);
         return new BuildPreviewResponseDto(generatedPrompt, estimateTokens(generatedPrompt));
     }
