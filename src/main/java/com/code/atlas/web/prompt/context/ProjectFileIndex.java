@@ -1,7 +1,9 @@
 package com.code.atlas.web.prompt.context;
 
+import com.code.atlas.web.config.SqliteLocalDateTimeConverter;
 import com.code.atlas.web.project.Project;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -10,7 +12,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import java.time.Instant;
+import java.time.LocalDateTime;
 import lombok.Data;
 
 @Entity
@@ -50,6 +52,7 @@ public class ProjectFileIndex {
     @Column(name = "searchable_text", nullable = false, columnDefinition = "TEXT")
     private String searchableText;
 
+    @Convert(converter = SqliteLocalDateTimeConverter.class)
     @Column(name = "updated_at", nullable = false)
-    private Instant updatedAt;
+    private LocalDateTime updatedAt;
 }

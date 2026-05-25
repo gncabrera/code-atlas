@@ -34,6 +34,13 @@ Entities
 4. Must use FetchType.LAZY for relationships, unless specified in a prompt otherwise.
 5. Annotate entity properties properly according to best practices, e.g., @Size, @NotEmpty, @Email, etc.
 
+SQLite timestamps (Flyway `TEXT` columns):
+
+1. Never use `java.time.Instant` on JPA entities with SQLite; Hibernate may persist epoch millis and SQLite JDBC fails on read (`Error parsing time stamp`).
+2. Always use `java.time.LocalDateTime` mapped to `TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP` in migrations.
+3. **DB-managed** (e.g. `PromptHistory.createdAt`, `AIModelApiKey.createdAt`): `@Column(..., updatable = false, insertable = false)`; let SQLite set the value on insert.
+4. **App-managed** (e.g. `ProjectFileIndex.updatedAt`): `@Column(..., nullable = false)` without `insertable`/`updatable` false; set `LocalDateTime.now()` in the Service on insert/update; add `@Convert(converter = SqliteLocalDateTimeConverter.class)` so Hibernate writes `yyyy-MM-dd HH:mm:ss` (SQLite JDBC cannot read epoch-millis strings in `TEXT` columns).
+
 Repository (DAO):
 
 1. Must annotate repository classes with @Repository.

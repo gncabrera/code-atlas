@@ -9,7 +9,7 @@ import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
-import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HexFormat;
@@ -82,11 +82,11 @@ public class ProjectIndexService {
         if (entries.isEmpty()) {
             return true;
         }
-        Instant newestUpdate = entries.stream()
+        LocalDateTime newestUpdate = entries.stream()
                 .map(ProjectFileIndex::getUpdatedAt)
                 .max(Comparator.naturalOrder())
-                .orElse(Instant.EPOCH);
-        return newestUpdate.isBefore(Instant.now().minus(maxAge));
+                .orElse(LocalDateTime.MIN);
+        return newestUpdate.isBefore(LocalDateTime.now().minus(maxAge));
     }
 
     private void upsertIndexEntry(Project project, Path filePath, String relativePath, ProjectFileIndex existing) {
@@ -96,7 +96,7 @@ public class ProjectIndexService {
             String contentHash = hash(content);
             if (existing != null && existing.getLastModifiedEpoch() == lastModified
                     && contentHash.equals(existing.getContentHash())) {
-                existing.setUpdatedAt(Instant.now());
+                existing.setUpdatedAt(LocalDateTime.now());
                 projectFileIndexRepository.save(existing);
                 return;
             }
@@ -115,7 +115,7 @@ public class ProjectIndexService {
             entity.setSymbols(String.join(",", symbols));
             entity.setEndpointHints(String.join(",", endpointHints));
             entity.setSearchableText(searchableText);
-            entity.setUpdatedAt(Instant.now());
+            entity.setUpdatedAt(LocalDateTime.now());
             projectFileIndexRepository.save(entity);
         } catch (IOException ex) {
             // Skip unreadable files and keep index refresh resilient.

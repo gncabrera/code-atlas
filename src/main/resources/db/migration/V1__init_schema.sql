@@ -53,6 +53,10 @@ CREATE TABLE IF NOT EXISTS skill (
     default_in_output_prompt INTEGER NOT NULL DEFAULT 0
 );
 
+-- SQLite datetime convention: store as TEXT (DEFAULT CURRENT_TIMESTAMP).
+-- JPA entities use java.time.LocalDateTime only (never Instant).
+-- DB-managed: insertable=false, updatable=false on the entity column.
+-- App-managed: service sets LocalDateTime.now() on insert/update.
 CREATE TABLE IF NOT EXISTS project_file_index (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     project_id INTEGER NOT NULL,
@@ -64,6 +68,7 @@ CREATE TABLE IF NOT EXISTS project_file_index (
     symbols TEXT NOT NULL,
     endpoint_hints TEXT NOT NULL,
     searchable_text TEXT NOT NULL,
+    -- App-managed timestamp; JPA writes LocalDateTime (see AGENTS.md SQLite timestamps).
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (project_id) REFERENCES projects(id)
 );

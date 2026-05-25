@@ -28,6 +28,8 @@
 	</scm>
 	<properties>
 		<java.version>21</java.version>
+		<atlas.release.repo>gncabrera/code-atlas</atlas.release.repo>
+		<atlas.jlink.modules>java.base,java.sql,java.naming,java.management,java.instrument,java.security.jgss,java.xml,java.net.http,java.desktop,jdk.unsupported,jdk.crypto.ec</atlas.jlink.modules>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -137,5 +139,156 @@
 			</plugin>
 		</plugins>
 	</build>
+
+	<profiles>
+		<profile>
+			<id>package-dist</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-antrun-plugin</artifactId>
+						<version>3.1.0</version>
+						<executions>
+							<execution>
+								<id>prepare-runtime-dir</id>
+								<phase>prepare-package</phase>
+								<goals>
+									<goal>run</goal>
+								</goals>
+								<configuration>
+									<target>
+										<delete dir="${project.build.directory}/runtime"/>
+									</target>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+
+					<plugin>
+						<groupId>org.codehaus.mojo</groupId>
+						<artifactId>exec-maven-plugin</artifactId>
+						<version>3.5.0</version>
+						<executions>
+							<execution>
+								<id>create-runtime-image</id>
+								<phase>package</phase>
+								<goals>
+									<goal>exec</goal>
+								</goals>
+								<configuration>
+									<executable>${java.home}/bin/jlink</executable>
+									<arguments>
+										<argument>--add-modules</argument>
+										<argument>${atlas.jlink.modules}</argument>
+										<argument>--strip-debug</argument>
+										<argument>--compress</argument>
+										<argument>2</argument>
+										<argument>--no-header-files</argument>
+										<argument>--no-man-pages</argument>
+										<argument>--output</argument>
+										<argument>${project.build.directory}/runtime</argument>
+									</arguments>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-resources-plugin</artifactId>
+						<version>3.3.1</version>
+						<executions>
+							<execution>
+								<id>copy-dist-metadata</id>
+								<phase>prepare-package</phase>
+								<goals>
+									<goal>copy-resources</goal>
+								</goals>
+								<configuration>
+									<outputDirectory>${project.build.directory}/app</outputDirectory>
+									<resources>
+										<resource>
+											<directory>${project.basedir}/src/assembly/metadata</directory>
+											<filtering>true</filtering>
+											<includes>
+												<include>version.txt</include>
+												<include>repo.txt</include>
+											</includes>
+										</resource>
+									</resources>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-dependency-plugin</artifactId>
+						<version>3.8.1</version>
+						<executions>
+							<execution>
+								<id>copy-dist-jar</id>
+								<phase>package</phase>
+								<goals>
+									<goal>copy</goal>
+								</goals>
+								<configuration>
+									<artifactItems>
+										<artifactItem>
+											<groupId>${project.groupId}</groupId>
+											<artifactId>${project.artifactId}</artifactId>
+											<version>${project.version}</version>
+											<type>jar</type>
+											<outputDirectory>${project.build.directory}/app</outputDirectory>
+											<destFileName>code-atlas.jar</destFileName>
+										</artifactItem>
+									</artifactItems>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+
+					<plugin>
+						<groupId>org.apache.maven.plugins</groupId>
+						<artifactId>maven-assembly-plugin</artifactId>
+						<version>3.7.1</version>
+						<executions>
+							<execution>
+								<id>dist-bin</id>
+								<phase>package</phase>
+								<goals>
+									<goal>single</goal>
+								</goals>
+								<configuration>
+									<descriptors>
+										<descriptor>${project.basedir}/src/assembly/bin-assembly.xml</descriptor>
+									</descriptors>
+									<appendAssemblyId>false</appendAssemblyId>
+									<attach>false</attach>
+									<finalName>code-atlas-bin</finalName>
+								</configuration>
+							</execution>
+							<execution>
+								<id>dist-update</id>
+								<phase>package</phase>
+								<goals>
+									<goal>single</goal>
+								</goals>
+								<configuration>
+									<descriptors>
+										<descriptor>${project.basedir}/src/assembly/update-assembly.xml</descriptor>
+									</descriptors>
+									<appendAssemblyId>false</appendAssemblyId>
+									<attach>false</attach>
+									<finalName>code-atlas-update</finalName>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
 
 </project>
