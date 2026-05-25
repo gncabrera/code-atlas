@@ -1,8 +1,6 @@
 package com.code.atlas.web.service;
 
-import com.code.atlas.web.domain.AIModel;
-import com.code.atlas.web.domain.PromptHistory;
-import com.code.atlas.web.domain.Project;
+import com.code.atlas.web.domain.*;
 import com.code.atlas.web.service.dto.PromptHistoryResponseDto;
 import java.util.List;
 
@@ -33,13 +31,40 @@ public class PromptHistoryService {
                 project != null ? project.getName() : null,
                 aiModel.getId(),
                 aiModel.getName(),
-                history.getMode(),
-                history.isShouldSendAgentsFile(),
+                history.getNotes(),
                 history.getEstimatedTokens(),
                 history.getRequestPrompt(),
                 history.getResponsePrompt(),
                 history.getStatus(),
                 history.getErrorMessage(),
                 history.getCreatedAt());
+    }
+
+    public PromptHistory create(Project project, AIModel model, String prompt, String notes) {
+
+        PromptHistory history = new PromptHistory();
+        history.setProject(project);
+        history.setAiModel(model);
+        history.setNotes(notes);
+        history.setEstimatedTokens(PromptService.estimateTokens(prompt));
+        history.setRequestPrompt(prompt);
+        history.setStatus(PromptStatus.PENDING);
+        return promptHistoryRepository.save(history);
+    }
+
+    public void success(PromptHistory history, String outputText) {
+        history.setResponsePrompt(outputText);
+        history.setStatus(PromptStatus.SUCCESS);
+        promptHistoryRepository.save(history);
+    }
+
+    public void error(PromptHistory history, Exception ex) {
+        error(history, ex.getMessage());
+    }
+
+    public void error(PromptHistory history, String message) {
+        history.setStatus(PromptStatus.ERROR);
+        history.setErrorMessage(message);
+        promptHistoryRepository.save(history);
     }
 }

@@ -57,7 +57,7 @@ $(function () {
             item.aiModelName,
             item.requestPrompt,
             item.responsePrompt,
-            item.mode,
+            item.notes,
             item.status,
             item.errorMessage
         ]
@@ -145,11 +145,9 @@ $(function () {
             "<dt class='col-sm-3'>Date</dt><dd class='col-sm-9'>" + formatDate(item.createdAt) + "</dd>" +
             "<dt class='col-sm-3'>Project</dt><dd class='col-sm-9'>" + escapeHtml(projectLabel(item)) + "</dd>" +
             "<dt class='col-sm-3'>AI Model</dt><dd class='col-sm-9'>" + escapeHtml(item.aiModelName || "—") + "</dd>" +
-            "<dt class='col-sm-3'>Mode</dt><dd class='col-sm-9'>" + escapeHtml(item.mode || "—") + "</dd>" +
+            "<dt class='col-sm-3'>Notes</dt><dd class='col-sm-9'>" + escapeHtml(item.notes || "—") + "</dd>" +
             "<dt class='col-sm-3'>Status</dt><dd class='col-sm-9'>" + escapeHtml(item.status || "—") + "</dd>" +
-            "<dt class='col-sm-3'>Tokens</dt><dd class='col-sm-9'>" + item.estimatedTokens + "</dd>" +
-            "<dt class='col-sm-3'>Agents file</dt><dd class='col-sm-9'>" +
-            (item.shouldSendAgentsFile ? "Yes" : "No") + "</dd>"
+            "<dt class='col-sm-3'>Tokens</dt><dd class='col-sm-9'>" + item.estimatedTokens + "</dd>"
         );
         $("#promptHistoryDetailRequest").text(item.requestPrompt || "");
         $("#promptHistoryDetailResponse").text(item.responsePrompt || "(no response)");
@@ -189,7 +187,7 @@ $(function () {
             $row.append($("<td class='text-nowrap'></td>").text(formatDate(item.createdAt)));
             $row.append($("<td></td>").text(projectLabel(item)));
             $row.append($("<td></td>").text(item.aiModelName || "—"));
-            $row.append($("<td></td>").text(item.mode || "—"));
+            $row.append($("<td></td>").text(item.notes || "—"));
             const $status = $("<td></td>");
             $status.append(
                 $("<span class='badge'></span>")
@@ -197,7 +195,6 @@ $(function () {
                     .text(item.status || "—")
             );
             $row.append($status);
-            $row.append($("<td></td>").text(item.shouldSendAgentsFile ? "Yes" : "No"));
             $row.append($("<td></td>").text(item.estimatedTokens));
             $row.append(buildTextCell(item.requestPrompt, item, "Request"));
             $row.append(buildTextCell(item.responsePrompt, item, "Response"));

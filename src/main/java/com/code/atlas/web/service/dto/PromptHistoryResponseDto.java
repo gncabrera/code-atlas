@@ -1,5 +1,7 @@
 package com.code.atlas.web.service.dto;
 
+import com.code.atlas.web.domain.PromptStatus;
+
 import java.time.LocalDateTime;
 
 public record PromptHistoryResponseDto(
@@ -8,12 +10,11 @@ public record PromptHistoryResponseDto(
         String projectName,
         Long aiModelId,
         String aiModelName,
-        String mode,
-        boolean shouldSendAgentsFile,
+        String notes,
         int estimatedTokens,
         String requestPrompt,
         String responsePrompt,
-        String status,
+        PromptStatus status,
         String errorMessage,
         LocalDateTime createdAt
 ) {
@@ -27,13 +28,10 @@ public record PromptHistoryResponseDto(
         if (aiModelName == null || aiModelName.isBlank()) {
             throw new IllegalArgumentException("aiModelName is required.");
         }
-        if (mode == null || mode.isBlank()) {
-            throw new IllegalArgumentException("mode is required.");
-        }
         if (requestPrompt == null) {
             throw new IllegalArgumentException("requestPrompt is required.");
         }
-        if (status == null || status.isBlank()) {
+        if (status == null) {
             throw new IllegalArgumentException("status is required.");
         }
         if (createdAt == null) {

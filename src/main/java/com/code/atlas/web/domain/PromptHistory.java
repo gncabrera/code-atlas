@@ -29,11 +29,8 @@ public class PromptHistory {
     @JoinColumn(name = "ai_model_id", nullable = false)
     private AIModel aiModel;
 
-    @Column(nullable = false)
-    private String mode;
-
-    @Column(name = "should_send_agents_file", nullable = false)
-    private boolean shouldSendAgentsFile;
+    @Column(nullable = true)
+    private String notes;
 
     @Column(name = "estimated_tokens", nullable = false)
     private int estimatedTokens;
@@ -45,7 +42,7 @@ public class PromptHistory {
     private String responsePrompt;
 
     @Column(nullable = false)
-    private String status;
+    private PromptStatus status;
 
     @Column(name = "error_message", columnDefinition = "TEXT")
     private String errorMessage;

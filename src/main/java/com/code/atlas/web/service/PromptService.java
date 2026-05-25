@@ -27,22 +27,22 @@ public class PromptService {
     private final ProjectService projectService;
     private final PromptContextService promptContextService;
     private final AIModelService aiModelService;
-    private final PromptHistoryRepository promptHistoryRepository;
     private final int timeoutSeconds;
+    private final PromptHistoryService promptHistoryService;
 
     public PromptService(
             PromptTemplateService promptTemplateService,
             ProjectService projectService,
             PromptContextService promptContextService,
             AIModelService aiModelService,
-            PromptHistoryRepository promptHistoryRepository,
-            @Value("${codeatlas.gemini.timeout-seconds:60}") int timeoutSeconds
+            @Value("${codeatlas.gemini.timeout-seconds:60}") int timeoutSeconds,
+            PromptHistoryService promptHistoryService
     ) {
         this.promptTemplateService = promptTemplateService;
         this.projectService = projectService;
         this.promptContextService = promptContextService;
         this.aiModelService = aiModelService;
-        this.promptHistoryRepository = promptHistoryRepository;
+        this.promptHistoryService = promptHistoryService;
         this.timeoutSeconds = timeoutSeconds;
     }
 
@@ -73,15 +73,9 @@ public class PromptService {
             );
         }
 
-        PromptHistory history = new PromptHistory();
-        history.setProject(resolveProject(requestDto.projectId()));
-        history.setAiModel(model);
-        history.setMode(PromptMode.fromNullableValue(requestDto.promptMode()).name());
-        history.setShouldSendAgentsFile(requestDto.shouldSendAgentsFile());
-        history.setEstimatedTokens(estimatedTokens);
-        history.setRequestPrompt(exactPrompt);
-        history.setStatus("PENDING");
-        promptHistoryRepository.save(history);
+        Project project = resolveProject(requestDto.projectId());
+        String notes = "shouldSendAgentsFile: " + requestDto.shouldSendAgentsFile() + ". PromptMode: " + PromptMode.fromNullableValue(requestDto.promptMode()).name();
+        PromptHistory history = promptHistoryService.create(project, model, exactPrompt, notes);
 
         try {
             String apiKeyValue = resolveApiKeyValue(model);
@@ -94,15 +88,11 @@ public class PromptService {
                     .build();
             GenerateContentResponse response = client.models.generateContent(model.getName(), exactPrompt, null);
             String outputText = response.text();
-            history.setResponsePrompt(outputText);
-            history.setStatus("SUCCESS");
-            promptHistoryRepository.save(history);
+            promptHistoryService.success(history, outputText);
             return new SendPromptResponseDto(outputText, estimatedTokens);
         } catch (Exception ex) {
-            ex.printStackTrace();
-            history.setStatus("ERROR");
-            history.setErrorMessage(ex.getMessage());
-            promptHistoryRepository.save(history);
+            promptHistoryService.error(history, ex);
+
             throw new IllegalArgumentException("Failed calling AI model: " + ex.getMessage());
         }
     }
@@ -135,7 +125,7 @@ public class PromptService {
         }
     }
 
-    private int estimateTokens(String input) {
+    public static int estimateTokens(String input) {
         int characters = input == null ? 0 : input.length();
         return (characters + 3) / 4;
     }
