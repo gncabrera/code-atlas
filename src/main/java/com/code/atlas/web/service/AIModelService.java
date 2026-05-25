@@ -1,14 +1,16 @@
 package com.code.atlas.web.service;
 
-import com.code.atlas.web.domain.AIModel;
-import com.code.atlas.web.domain.AIModelApiKey;
+import com.code.atlas.web.domain.*;
 import com.code.atlas.web.repository.AIModelApiKeyRepository;
 import com.code.atlas.web.repository.AIModelRepository;
-import com.code.atlas.web.service.dto.AIModelApiKeyDto;
-import com.code.atlas.web.service.dto.AIModelRequestDto;
-import com.code.atlas.web.service.dto.AIModelResponseDto;
+import com.code.atlas.web.service.dto.*;
+import com.google.genai.Client;
+import com.google.genai.types.GenerateContentResponse;
+import com.google.genai.types.HttpOptions;
 import jakarta.transaction.Transactional;
 import java.util.List;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -16,10 +18,20 @@ public class AIModelService {
 
     private final AIModelRepository aiModelRepository;
     private final AIModelApiKeyRepository aiModelApiKeyRepository;
+    private final PromptHistoryService promptHistoryService;
+    private final int timeoutSeconds;
 
-    public AIModelService(AIModelRepository aiModelRepository, AIModelApiKeyRepository aiModelApiKeyRepository) {
+
+    public AIModelService(
+            AIModelRepository aiModelRepository,
+            AIModelApiKeyRepository aiModelApiKeyRepository,
+            PromptHistoryService promptHistoryService,
+            @Value("${codeatlas.gemini.timeout-seconds:60}") int timeoutSeconds
+    ) {
         this.aiModelRepository = aiModelRepository;
         this.aiModelApiKeyRepository = aiModelApiKeyRepository;
+        this.promptHistoryService = promptHistoryService;
+        this.timeoutSeconds = timeoutSeconds;
     }
 
     public List<AIModelResponseDto> getAllModels() {
@@ -116,5 +128,58 @@ public class AIModelService {
                 apiKey.getProvider(),
                 apiKey.isActive()
         );
+    }
+
+    @Transactional
+    public ModelResponseDto sendToModel(Project project, AIModel model, String prompt, String notes) {
+        if (!model.isEnabled()) {
+            throw new IllegalArgumentException("Selected AI model is disabled.");
+        }
+        int estimatedTokens = estimateTokens(prompt);
+        if (model.getTokensPerMinute() > 0 && estimatedTokens > model.getTokensPerMinute()) {
+            throw new IllegalArgumentException(
+                    "Estimated tokens exceed model tokensPerMinute limit."
+            );
+        }
+
+        PromptHistory history = promptHistoryService.create(project, model, prompt, notes);
+
+        try {
+            String apiKeyValue = resolveApiKeyValue(model);
+            HttpOptions httpOptions = HttpOptions.builder()
+                    .timeout(timeoutSeconds * 1000)
+                    .build();
+            Client client = Client.builder()
+                    .apiKey(apiKeyValue)
+                    .httpOptions(httpOptions)
+                    .build();
+            GenerateContentResponse response = client.models.generateContent(model.getName(), prompt, null);
+            String outputText = response.text();
+            promptHistoryService.success(history, outputText);
+            return new ModelResponseDto(outputText, estimatedTokens);
+        } catch (Exception ex) {
+            promptHistoryService.error(history, ex);
+            throw new IllegalArgumentException("Failed calling AI model: " + ex.getMessage());
+        }
+    }
+
+    public static int estimateTokens(String input) {
+        int characters = input == null ? 0 : input.length();
+        return (characters + 3) / 4;
+    }
+
+    private String resolveApiKeyValue(AIModel model) {
+        AIModelApiKey apiKey = model.getAiModelApiKey();
+        if (apiKey == null) {
+            throw new IllegalArgumentException("AI model has no API key assigned.");
+        }
+        if (!apiKey.isActive()) {
+            throw new IllegalArgumentException("Assigned API key is inactive.");
+        }
+        String value = apiKey.getApiKey();
+        if (value == null || value.isBlank()) {
+            throw new IllegalArgumentException("Assigned API key has no value.");
+        }
+        return value.trim();
     }
 }

@@ -46,7 +46,7 @@ public class PromptHistoryService {
         history.setProject(project);
         history.setAiModel(model);
         history.setNotes(notes);
-        history.setEstimatedTokens(PromptService.estimateTokens(prompt));
+        history.setEstimatedTokens(AIModelService.estimateTokens(prompt));
         history.setRequestPrompt(prompt);
         history.setStatus(PromptStatus.PENDING);
         return promptHistoryRepository.save(history);
