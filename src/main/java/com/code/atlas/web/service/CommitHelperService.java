@@ -37,11 +37,19 @@ public class CommitHelperService {
         this.commitTemplate = loadCommitTemplate();
     }
 
-    public CommitHelperMetadataDto getMetadata() {
+    public CommitHelperMetadataDto getMetadata(Long projectId) {
+        String currentBranch = projectId != null ? resolveCurrentBranch(projectId) : null;
         return new CommitHelperMetadataDto(
                 projectService.getAllProjects(),
-                aiModelService.getEnabledModels()
+                aiModelService.getEnabledModels(),
+                currentBranch
         );
+    }
+
+    String resolveCurrentBranch(Long projectId) {
+        Path projectRoot = resolveProjectRoot(projectService.getProjectEntity(projectId));
+        assertGitRepository(projectRoot);
+        return gitProcessRunner.run(projectRoot, List.of("git", "rev-parse", "--abbrev-ref", "HEAD")).trim();
     }
 
     public String generateCommitMessage(Long projectId, Long aiModelId) {

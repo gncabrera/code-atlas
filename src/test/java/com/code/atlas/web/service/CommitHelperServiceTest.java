@@ -1,6 +1,7 @@
 package com.code.atlas.web.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -12,7 +13,9 @@ import static org.mockito.Mockito.when;
 
 import com.code.atlas.web.domain.AIModel;
 import com.code.atlas.web.domain.Project;
+import com.code.atlas.web.service.dto.CommitHelperMetadataDto;
 import com.code.atlas.web.service.dto.ModelResponseDto;
+import com.code.atlas.web.service.dto.ProjectResponseDto;
 import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -61,6 +64,31 @@ class CommitHelperServiceTest {
         model.setName("gemini-test");
         model.setEnabled(true);
         model.setTokensPerMinute(10_000);
+    }
+
+    @Test
+    void getMetadata_withProjectId_returnsCurrentBranch() {
+        when(projectService.getProjectEntity(1L)).thenReturn(project);
+        when(projectService.getAllProjects()).thenReturn(List.of(
+                new ProjectResponseDto(1L, tempDir.toString(), "Test Project", null, false)
+        ));
+        when(aiModelService.getEnabledModels()).thenReturn(List.of());
+        when(gitProcessRunner.run(any(Path.class), any())).thenReturn("true", "feature/autocommit");
+
+        CommitHelperMetadataDto metadata = commitHelperService.getMetadata(1L);
+
+        assertEquals("feature/autocommit", metadata.currentBranch());
+        verify(gitProcessRunner).run(any(Path.class), eq(List.of("git", "rev-parse", "--abbrev-ref", "HEAD")));
+    }
+
+    @Test
+    void getMetadata_withoutProjectId_omitsCurrentBranch() {
+        when(projectService.getAllProjects()).thenReturn(List.of());
+        when(aiModelService.getEnabledModels()).thenReturn(List.of());
+
+        CommitHelperMetadataDto metadata = commitHelperService.getMetadata(null);
+
+        assertNull(metadata.currentBranch());
     }
 
     @Test

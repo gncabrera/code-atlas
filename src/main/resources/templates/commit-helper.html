@@ -15,7 +15,10 @@
 
     <div class="row g-3 mb-4 align-items-end">
         <div class="col-md-4">
-            <label for="projectSelect" class="form-label">Project</label>
+            <label for="projectSelect" class="form-label">
+                Project
+                <span id="currentBranchBadge" class="badge bg-secondary ms-2 d-none"></span>
+            </label>
             <select id="projectSelect" class="form-select">
                 <option value="">Select project</option>
             </select>
@@ -27,7 +30,14 @@
             </select>
         </div>
         <div class="col-md-4">
-            <button type="button" id="generateCommitBtn" class="btn btn-success w-100">Generate Git Commit</button>
+            <label class="form-label d-block">&nbsp;</label>
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <button type="button" id="generateCommitBtn" class="btn btn-success">Generate Git Commit</button>
+                <div class="form-check form-check-inline mb-0">
+                    <input class="form-check-input" type="checkbox" id="autoCommitCheckbox" disabled>
+                    <label class="form-check-label" for="autoCommitCheckbox">Autocommit after generation</label>
+                </div>
+            </div>
         </div>
     </div>
 

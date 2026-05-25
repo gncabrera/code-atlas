@@ -4,6 +4,7 @@ import java.util.List;
 
 public record CommitHelperMetadataDto(
         List<ProjectResponseDto> projects,
-        List<AIModelResponseDto> enabledModels
+        List<AIModelResponseDto> enabledModels,
+        String currentBranch
 ) {
 }
