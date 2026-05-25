@@ -3,6 +3,9 @@ package com.code.atlas.web.prompt.context;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+
+import com.code.atlas.web.service.context.ContextCandidate;
+import com.code.atlas.web.service.context.ContextFormatter;
 import org.junit.jupiter.api.Test;
 
 class ContextFormatterTest {
