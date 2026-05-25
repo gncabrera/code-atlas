@@ -3,10 +3,12 @@ setlocal EnableExtensions EnableDelayedExpansion
 
 cd /d "%~dp0"
 
-set "SILENT=0"
-if /I "%~1"=="--silent" set "SILENT=1"
+echo [update] Checking for updates...
 
-if not exist "app\code-atlas.jar" exit /b 0
+if not exist "app\code-atlas.jar" (
+    echo [update] Skipping update check: app\code-atlas.jar not found
+    exit /b 0
+)
 
 set "REPO=%ATLAS_GITHUB_REPO%"
 if not defined REPO (
@@ -15,17 +17,30 @@ if not defined REPO (
     )
 )
 if not defined REPO set "REPO=gncabrera/code-atlas"
+echo [update] Repository: %REPO%
 
 set "LOCAL_VERSION="
 if exist "app\version.txt" set /p LOCAL_VERSION=<"app\version.txt"
+if defined LOCAL_VERSION (
+    echo [update] Local version: %LOCAL_VERSION%
+) else (
+    echo [update] Local version: unknown
+)
 
 set "WORK_DIR=%CD%\.update-tmp"
 if exist "%WORK_DIR%" rmdir /s /q "%WORK_DIR%"
 mkdir "%WORK_DIR%" >nul 2>&1
-if errorlevel 1 exit /b 1
+if errorlevel 1 (
+    echo [update] Failed to create temporary work directory
+    exit /b 1
+)
 
+echo [update] Fetching latest release info...
 powershell -NoProfile -Command "$ProgressPreference='SilentlyContinue'; Invoke-WebRequest -UseBasicParsing -Uri 'https://api.github.com/repos/%REPO%/releases/latest' -Headers @{ 'User-Agent'='code-atlas-updater' } -OutFile '%WORK_DIR%\release.json'" >nul 2>&1
-if errorlevel 1 goto :cleanup_ok
+if errorlevel 1 (
+    echo [update] Could not fetch latest release info; keeping current installation
+    goto :cleanup_ok
+)
 
 set "LINE_COUNT=0"
 set "REMOTE_VERSION="
@@ -36,18 +51,33 @@ for /f "usebackq delims=" %%i in (`powershell -NoProfile -Command "$release = Ge
     if !LINE_COUNT!==2 set "ASSET_URL=%%i"
 )
 
-if not defined REMOTE_VERSION goto :cleanup_ok
-if not defined ASSET_URL goto :cleanup_ok
+if not defined REMOTE_VERSION (
+    echo [update] Could not parse remote version; keeping current installation
+    goto :cleanup_ok
+)
+if not defined ASSET_URL (
+    echo [update] Update asset not found in latest release; keeping current installation
+    goto :cleanup_ok
+)
 
-if /I "%LOCAL_VERSION%"=="%REMOTE_VERSION%" goto :cleanup_ok
+echo [update] Remote version: %REMOTE_VERSION%
 
-if "%SILENT%"=="0" echo Updating from %LOCAL_VERSION% to %REMOTE_VERSION%
+if /I "%LOCAL_VERSION%"=="%REMOTE_VERSION%" (
+    echo [update] Already up to date ^(%LOCAL_VERSION%^)
+    goto :cleanup_ok
+)
 
+echo [update] Updating from %LOCAL_VERSION% to %REMOTE_VERSION%
+
+echo [update] Downloading update package...
 powershell -NoProfile -Command "$ProgressPreference='SilentlyContinue'; Invoke-WebRequest -UseBasicParsing -Uri '%ASSET_URL%' -Headers @{ 'User-Agent'='code-atlas-updater' } -OutFile '%WORK_DIR%\update.zip'" >nul 2>&1
 if errorlevel 1 goto :cleanup_fail
+echo [update] Download complete
 
+echo [update] Extracting update package...
 powershell -NoProfile -Command "Expand-Archive -Path '%WORK_DIR%\update.zip' -DestinationPath '%WORK_DIR%\extracted' -Force" >nul 2>&1
 if errorlevel 1 goto :cleanup_fail
+echo [update] Extraction complete
 
 set "NEW_APP_DIR="
 for /f "usebackq delims=" %%i in (`powershell -NoProfile -Command "$root = '%WORK_DIR%\extracted'; $candidate = Join-Path $root 'app'; if (Test-Path (Join-Path $candidate 'code-atlas.jar')) { Write-Output $candidate; exit 0 }; $nested = Get-ChildItem -Path $root -Directory | ForEach-Object { Join-Path $_.FullName 'app' } | Where-Object { Test-Path (Join-Path $_ 'code-atlas.jar') } | Select-Object -First 1; if ($nested) { Write-Output $nested; exit 0 }; exit 4"`) do (
@@ -56,6 +86,7 @@ for /f "usebackq delims=" %%i in (`powershell -NoProfile -Command "$root = '%WOR
 
 if not defined NEW_APP_DIR goto :cleanup_fail
 
+echo [update] Applying update...
 if exist "app_old" rmdir /s /q "app_old"
 if exist "%WORK_DIR%\runtime_backup" rmdir /s /q "%WORK_DIR%\runtime_backup"
 
@@ -80,6 +111,7 @@ if not exist "app\repo.txt" (
 )
 
 if exist "app_old" rmdir /s /q "app_old"
+echo [update] Update complete: %REMOTE_VERSION%
 goto :cleanup_ok
 
 :rollback_app
@@ -92,7 +124,7 @@ if exist "%WORK_DIR%\runtime_backup" move "%WORK_DIR%\runtime_backup" "app\runti
 goto :cleanup_fail
 
 :cleanup_fail
-if "%SILENT%"=="0" echo Update failed; keeping current installation.
+echo [update] Update failed; keeping current installation
 set "EXIT_CODE=1"
 goto :cleanup
 

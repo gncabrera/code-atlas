@@ -1,6 +1,7 @@
 $(function () {
     let projects = [];
     let enabledModels = [];
+    let currentBranch = "";
 
     const $projectSelect = $("#projectSelect");
     const $aiModelSelect = $("#aiModelSelect");
@@ -10,6 +11,8 @@ $(function () {
     const $commitBtn = $("#commitBtn");
     const $commitPushBtn = $("#commitPushBtn");
     const $clearCommitBtn = $("#clearCommitBtn");
+    const $currentBranchBadge = $("#currentBranchBadge");
+    const $autoCommitCheckbox = $("#autoCommitCheckbox");
 
     function populateProjects() {
         $projectSelect.empty().append($("<option>", { value: "", text: "Select project" }));
@@ -25,6 +28,36 @@ $(function () {
         });
     }
 
+    function updateProjectDependentState() {
+        const projectId = selectedProjectId();
+        if (!projectId) {
+            currentBranch = "";
+            $currentBranchBadge.addClass("d-none").text("");
+            $autoCommitCheckbox.prop("disabled", true).prop("checked", false);
+            return;
+        }
+
+        $autoCommitCheckbox.prop("disabled", false);
+        loadProjectBranch(projectId);
+    }
+
+    function loadProjectBranch(projectId) {
+        CodeAtlas.apiGet("/api/commit-helper/metadata?projectId=" + projectId)
+            .done(function (response) {
+                currentBranch = response.data.currentBranch || "";
+                if (currentBranch) {
+                    $currentBranchBadge.removeClass("d-none").text(currentBranch);
+                } else {
+                    $currentBranchBadge.addClass("d-none").text("");
+                }
+            })
+            .fail(function (xhr) {
+                currentBranch = "";
+                $currentBranchBadge.addClass("d-none").text("");
+                CodeAtlas.showToast(CodeAtlas.apiMessage(xhr, "Failed to load project branch."), "danger");
+            });
+    }
+
     function loadMetadata() {
         CodeAtlas.apiGet("/api/commit-helper/metadata")
             .done(function (response) {
@@ -32,6 +65,7 @@ $(function () {
                 enabledModels = response.data.enabledModels || [];
                 populateProjects();
                 populateModels();
+                updateProjectDependentState();
             })
             .fail(function (xhr) {
                 CodeAtlas.showToast(CodeAtlas.apiMessage(xhr, "Failed to load commit helper metadata."), "danger");
@@ -83,6 +117,46 @@ $(function () {
         return true;
     }
 
+    function executeAutocommitPush(message) {
+        if (!message) {
+            CodeAtlas.showToast("Commit message empty; autocommit skipped.", "warning");
+            CodeAtlas.setButtonLoading($generateCommitBtn, false);
+            return;
+        }
+
+        CodeAtlas.setButtonLoading($generateCommitBtn, true, "Committing...");
+        $.ajax({
+            url: "/api/commit-helper/push",
+            method: "POST",
+            contentType: "application/json",
+            dataType: "json",
+            data: JSON.stringify({
+                projectId: selectedProjectId(),
+                commitMessage: message
+            })
+        })
+            .done(function (response) {
+                CodeAtlas.showToast(response.message || "Changes committed and pushed.", "success");
+            })
+            .fail(function (xhr) {
+                CodeAtlas.showToast(CodeAtlas.apiMessage(xhr, "Failed to commit and push changes."), "danger");
+            })
+            .always(function () {
+                CodeAtlas.setButtonLoading($generateCommitBtn, false);
+            });
+    }
+
+    $projectSelect.on("change", updateProjectDependentState);
+
+    $autoCommitCheckbox.on("change", function () {
+        if ($autoCommitCheckbox.is(":checked") && currentBranch) {
+            CodeAtlas.showToast(
+                "After generating will commit and push to the branch " + currentBranch,
+                "warning"
+            );
+        }
+    });
+
     $generateCommitBtn.on("click", function () {
         if (!validateGenerateSelection()) {
             return;
@@ -100,13 +174,19 @@ $(function () {
             })
         })
             .done(function (response) {
-                $commitMessageTextArea.val(response.data || "");
+                const message = (response.data || "").trim();
+                $commitMessageTextArea.val(message);
+
+                if ($autoCommitCheckbox.is(":checked")) {
+                    executeAutocommitPush(message);
+                    return;
+                }
+
                 CodeAtlas.showToast(response.message || "Commit message generated.", "success");
+                CodeAtlas.setButtonLoading($generateCommitBtn, false);
             })
             .fail(function (xhr) {
                 CodeAtlas.showToast(CodeAtlas.apiMessage(xhr, "Failed to generate commit message."), "danger");
-            })
-            .always(function () {
                 CodeAtlas.setButtonLoading($generateCommitBtn, false);
             });
     });

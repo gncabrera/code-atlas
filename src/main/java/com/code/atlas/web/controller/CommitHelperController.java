@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -25,9 +26,9 @@ public class CommitHelperController {
     }
 
     @GetMapping("/metadata")
-    public ResponseEntity<ApiResponse<?>> getMetadata() {
+    public ResponseEntity<ApiResponse<?>> getMetadata(@RequestParam(required = false) Long projectId) {
         try {
-            CommitHelperMetadataDto metadata = commitHelperService.getMetadata();
+            CommitHelperMetadataDto metadata = commitHelperService.getMetadata(projectId);
             return ResponseEntity.ok(ApiResponse.success("Commit helper metadata fetched.", metadata));
         } catch (Exception ex) {
             GlobalExceptionHandler.logCaughtException("GET /api/commit-helper/metadata", ex);
