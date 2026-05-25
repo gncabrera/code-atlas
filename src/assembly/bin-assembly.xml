@@ -17,6 +17,7 @@
                 <include>run.bat</include>
                 <include>update.bat</include>
                 <include>run.sh</include>
+                <include>load-config.sh</include>
                 <include>update.sh</include>
             </includes>
             <fileMode>0755</fileMode>
@@ -39,6 +40,13 @@
                 <include>code-atlas.jar</include>
                 <include>version.txt</include>
                 <include>repo.txt</include>
+            </includes>
+        </fileSet>
+        <fileSet>
+            <directory>${project.build.directory}/data</directory>
+            <outputDirectory>/data</outputDirectory>
+            <includes>
+                <include>config.yaml</include>
             </includes>
         </fileSet>
     </fileSets>

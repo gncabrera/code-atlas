@@ -201,6 +201,26 @@
 					</plugin>
 
 					<plugin>
+						<groupId>org.codehaus.mojo</groupId>
+						<artifactId>properties-maven-plugin</artifactId>
+						<version>1.2.1</version>
+						<executions>
+							<execution>
+								<id>read-dist-defaults</id>
+								<phase>prepare-package</phase>
+								<goals>
+									<goal>read-project-properties</goal>
+								</goals>
+								<configuration>
+									<files>
+										<file>${project.basedir}/src/main/resources/application.properties</file>
+									</files>
+								</configuration>
+							</execution>
+						</executions>
+					</plugin>
+
+					<plugin>
 						<groupId>org.apache.maven.plugins</groupId>
 						<artifactId>maven-resources-plugin</artifactId>
 						<version>3.3.1</version>
@@ -220,6 +240,25 @@
 											<includes>
 												<include>version.txt</include>
 												<include>repo.txt</include>
+											</includes>
+										</resource>
+									</resources>
+								</configuration>
+							</execution>
+							<execution>
+								<id>copy-dist-config</id>
+								<phase>prepare-package</phase>
+								<goals>
+									<goal>copy-resources</goal>
+								</goals>
+								<configuration>
+									<outputDirectory>${project.build.directory}/data</outputDirectory>
+									<resources>
+										<resource>
+											<directory>${project.basedir}/src/assembly/metadata</directory>
+											<filtering>true</filtering>
+											<includes>
+												<include>config.yaml</include>
 											</includes>
 										</resource>
 									</resources>
