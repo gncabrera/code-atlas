@@ -6,6 +6,20 @@ Technology stack：
 
 Framework: Java Spring Boot 3 Maven with Java 21 Dependencies: Spring Web, Spring Data JPA, Thymeleaf, Lombok, SQLite driver, Flyway
 
+Package Architecture：
+
+1. All `@RestController` classes must live in package `com.code.atlas.web.controller`.
+2. All PageController classes must live in package `com.code.atlas.web.controller.page`.
+3. All Repository interfaces must live in package `com.code.atlas.web.repository`.
+4. All JPA entity classes must live in package `com.code.atlas.web.domain`.
+5. All service DTO records/classes must live in package `com.code.atlas.web.service.dto`.
+6. All Service classes must live in package `com.code.atlas.web.service`.
+
+Application Entrypoint：
+
+1. Spring Boot main class is `com.code.atlas.web.CodeAtlas` in `CodeAtlas.java`.
+2. Startup, run, and architecture references must point to `CodeAtlas.java` as the app entrypoint.
+
 Application Logic Design：
 
 1. All API request and response handling must be done only in RestController. Server-rendered page routes use PageController (see below).
