@@ -4,12 +4,10 @@ set -eu
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 cd "$SCRIPT_DIR"
 
-SILENT=0
-if [ "${1:-}" = "--silent" ]; then
-  SILENT=1
-fi
+echo "[update] Checking for updates..."
 
 if [ ! -f "app/code-atlas.jar" ]; then
+  echo "[update] Skipping update check: app/code-atlas.jar not found"
   exit 0
 fi
 
@@ -20,10 +18,16 @@ elif [ -f "app/repo.txt" ]; then
 else
   REPO="gncabrera/code-atlas"
 fi
+echo "[update] Repository: $REPO"
 
 LOCAL_VERSION=""
 if [ -f "app/version.txt" ]; then
   LOCAL_VERSION=$(tr -d '\r\n' < "app/version.txt")
+fi
+if [ -n "$LOCAL_VERSION" ]; then
+  echo "[update] Local version: $LOCAL_VERSION"
+else
+  echo "[update] Local version: unknown"
 fi
 
 OS_NAME=$(uname -s)
@@ -37,23 +41,25 @@ if command -v python3 >/dev/null 2>&1; then
 elif command -v python >/dev/null 2>&1; then
   PYTHON_CMD="python"
 else
-  [ "$SILENT" -eq 0 ] && echo "Python missing; skipping update check."
+  echo "[update] Python missing; skipping update check"
   exit 0
 fi
 
 if ! command -v curl >/dev/null 2>&1; then
-  [ "$SILENT" -eq 0 ] && echo "curl missing; skipping update check."
+  echo "[update] curl missing; skipping update check"
   exit 0
 fi
 
 if ! command -v unzip >/dev/null 2>&1; then
-  [ "$SILENT" -eq 0 ] && echo "unzip missing; skipping update check."
+  echo "[update] unzip missing; skipping update check"
   exit 0
 fi
 
 API_URL="https://api.github.com/repos/$REPO/releases/latest"
+echo "[update] Fetching latest release info..."
 RELEASE_JSON=$(curl -fsSL -H "User-Agent: code-atlas-updater" "$API_URL" 2>/dev/null || true)
 if [ -z "$RELEASE_JSON" ]; then
+  echo "[update] Could not fetch latest release info; keeping current installation"
   exit 0
 fi
 
@@ -83,20 +89,27 @@ if not asset_url:
 print(tag)
 print(asset_url)
 PY
-) || exit 0
+) || {
+  echo "[update] Could not parse latest release info; keeping current installation"
+  exit 0
+}
 
 REMOTE_VERSION=$(printf '%s\n' "$PARSED_OUTPUT" | sed -n '1p')
 ASSET_URL=$(printf '%s\n' "$PARSED_OUTPUT" | sed -n '2p')
 
 if [ -z "$REMOTE_VERSION" ] || [ -z "$ASSET_URL" ]; then
+  echo "[update] Update asset not found in latest release; keeping current installation"
   exit 0
 fi
+
+echo "[update] Remote version: $REMOTE_VERSION"
 
 if [ "$LOCAL_VERSION" = "$REMOTE_VERSION" ]; then
+  echo "[update] Already up to date ($LOCAL_VERSION)"
   exit 0
 fi
 
-[ "$SILENT" -eq 0 ] && echo "Updating from $LOCAL_VERSION to $REMOTE_VERSION"
+echo "[update] Updating from $LOCAL_VERSION to $REMOTE_VERSION"
 
 WORK_DIR="$SCRIPT_DIR/.update-tmp"
 rm -rf "$WORK_DIR"
@@ -107,15 +120,19 @@ cleanup() {
 }
 trap cleanup EXIT
 
+echo "[update] Downloading update package..."
 if ! curl -fsSL -H "User-Agent: code-atlas-updater" "$ASSET_URL" -o "$WORK_DIR/update.zip"; then
-  [ "$SILENT" -eq 0 ] && echo "Update download failed."
+  echo "[update] Update download failed; keeping current installation"
   exit 1
 fi
+echo "[update] Download complete"
 
+echo "[update] Extracting update package..."
 if ! unzip -q "$WORK_DIR/update.zip" -d "$WORK_DIR/extracted"; then
-  [ "$SILENT" -eq 0 ] && echo "Update extraction failed."
+  echo "[update] Update extraction failed; keeping current installation"
   exit 1
 fi
+echo "[update] Extraction complete"
 
 NEW_APP_DIR="$WORK_DIR/extracted/app"
 if [ ! -f "$NEW_APP_DIR/code-atlas.jar" ]; then
@@ -123,10 +140,11 @@ if [ ! -f "$NEW_APP_DIR/code-atlas.jar" ]; then
 fi
 
 if [ -z "${NEW_APP_DIR:-}" ] || [ ! -f "$NEW_APP_DIR/code-atlas.jar" ]; then
-  [ "$SILENT" -eq 0 ] && echo "Update payload missing app/code-atlas.jar."
+  echo "[update] Update payload missing app/code-atlas.jar; keeping current installation"
   exit 1
 fi
 
+echo "[update] Applying update..."
 rm -rf "$SCRIPT_DIR/app_old"
 if [ -d "$SCRIPT_DIR/app/runtime" ]; then
   mv "$SCRIPT_DIR/app/runtime" "$WORK_DIR/runtime_backup"
@@ -136,7 +154,7 @@ mv "$SCRIPT_DIR/app" "$SCRIPT_DIR/app_old"
 if ! mv "$NEW_APP_DIR" "$SCRIPT_DIR/app"; then
   rm -rf "$SCRIPT_DIR/app"
   mv "$SCRIPT_DIR/app_old" "$SCRIPT_DIR/app"
-  [ "$SILENT" -eq 0 ] && echo "Update swap failed; rollback complete."
+  echo "[update] Update swap failed; rollback complete"
   exit 1
 fi
 
@@ -149,4 +167,5 @@ if [ ! -f "$SCRIPT_DIR/app/repo.txt" ] && [ -f "$SCRIPT_DIR/app_old/repo.txt" ];
 fi
 
 rm -rf "$SCRIPT_DIR/app_old"
+echo "[update] Update complete: $REMOTE_VERSION"
 exit 0
