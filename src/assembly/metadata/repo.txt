@@ -1,1 +1,1 @@
-${atlas.release.repo}
+@atlas.release.repo@

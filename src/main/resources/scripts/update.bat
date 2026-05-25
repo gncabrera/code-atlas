@@ -16,11 +16,19 @@ if not defined REPO (
         set /p REPO=<"app\repo.txt"
     )
 )
+if defined REPO (
+    echo %REPO%| findstr /C:"${" >nul && set "REPO="
+    if defined REPO echo %REPO%| findstr /C:"@" >nul && set "REPO="
+)
 if not defined REPO set "REPO=gncabrera/code-atlas"
 echo [update] Repository: %REPO%
 
 set "LOCAL_VERSION="
 if exist "app\version.txt" set /p LOCAL_VERSION=<"app\version.txt"
+if defined LOCAL_VERSION (
+    echo %LOCAL_VERSION%| findstr /C:"${" >nul && set "LOCAL_VERSION="
+    if defined LOCAL_VERSION echo %LOCAL_VERSION%| findstr /C:"@" >nul && set "LOCAL_VERSION="
+)
 if defined LOCAL_VERSION (
     echo [update] Local version: %LOCAL_VERSION%
 ) else (

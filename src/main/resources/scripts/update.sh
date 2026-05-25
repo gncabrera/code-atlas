@@ -18,12 +18,23 @@ elif [ -f "app/repo.txt" ]; then
 else
   REPO="gncabrera/code-atlas"
 fi
+case "$REPO" in
+  *'$'*|*'@'*)
+    echo "[update] Invalid repository metadata; using default"
+    REPO="gncabrera/code-atlas"
+    ;;
+esac
 echo "[update] Repository: $REPO"
 
 LOCAL_VERSION=""
 if [ -f "app/version.txt" ]; then
   LOCAL_VERSION=$(tr -d '\r\n' < "app/version.txt")
 fi
+case "$LOCAL_VERSION" in
+  *'$'*|*'@'*)
+    LOCAL_VERSION=""
+    ;;
+esac
 if [ -n "$LOCAL_VERSION" ]; then
   echo "[update] Local version: $LOCAL_VERSION"
 else
