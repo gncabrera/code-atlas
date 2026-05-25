@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Code Atlas - Commit Helper</title>
+    <th:block th:replace="~{fragments/head :: pageHead('commit-helper.css')}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main class="container py-4">
+    <h1 class="mb-3">Commit Helper</h1>
+    <p class="text-muted">Generate a git commit message from project diff and commit or push from the web UI.</p>
+
+    <div class="row g-3 mb-4 align-items-end">
+        <div class="col-md-4">
+            <label for="projectSelect" class="form-label">Project</label>
+            <select id="projectSelect" class="form-select">
+                <option value="">Select project</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <label for="aiModelSelect" class="form-label">AI Model</label>
+            <select id="aiModelSelect" class="form-select">
+                <option value="">Select AI model</option>
+            </select>
+        </div>
+        <div class="col-md-4">
+            <button type="button" id="generateCommitBtn" class="btn btn-success w-100">Generate Git Commit</button>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">Commit Message</div>
+        <div class="card-body">
+            <textarea id="commitMessageTextArea" class="form-control commit-message-textarea" rows="14"
+                      placeholder="Generated commit message will appear here..."></textarea>
+            <div class="d-flex flex-wrap gap-2 mt-3">
+                <button type="button" id="copyCommitBtn" class="btn btn-light">Copy</button>
+                <button type="button" id="commitBtn" class="btn btn-warning">Commit</button>
+                <button type="button" id="commitPushBtn" class="btn btn-danger">Commit &amp; Push</button>
+                <button type="button" id="clearCommitBtn" class="btn btn-outline-danger">Clear</button>
+            </div>
+        </div>
+    </div>
+</main>
+
+<th:block th:replace="~{fragments/scripts :: pageScripts('commit-helper.js')}"></th:block>
+</body>
+</html>

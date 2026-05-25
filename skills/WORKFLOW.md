@@ -12,23 +12,23 @@ Token-saving impl loop. Skills assume @./cursor/STATE_FORMAT.md format.
 | implement (routine edits, scope clear) | composer-2-fast or gpt-5.5-medium | -80% cost |
 | snapshot | composer-2-fast | mechanical |
 | risk-scan pre/post (normal) | Sonnet 4.6 | reasoning |
-| risk-scan post (release crítica auth/pagos/migrations) | Opus 4.7 | only here |
+| risk-scan post (critical release auth/payments/migrations) | Opus 4.7 | only here |
 
 ## Chat hygiene (prompt cache)
 
-- Mantener mismo chat durante feature completa → cache hit ~90% off input.
-- Cerrar chat solo cuando: cambio de modelo | feature done | contexto huele pesado | snapshot tomado.
-- Antes de cerrar: `/snapshot`.
-- Nuevo chat siempre: leer `@implementation/STATE_SNAPSHOT.md` + `@implementation/TASKS.md` primero.
+- Keep the same chat for the full feature → cache hit ~90% off input.
+- Close chat only when: model change | feature done | context feels heavy | snapshot taken.
+- Before closing: `/snapshot`.
+- New chat always: read `@implementation/STATE_SNAPSHOT.md` + `@implementation/TASKS.md` first.
 
 ## State canonical
 
-Fuente única de verdad: `@implementation/{ARCHITECTURE,TASKS,RISKS}.md`.
-Reglas de lectura/formato: ver @./cursor/STATE_FORMAT.md.
-Listados de archivos (`rg --files-with-matches`) no cuentan contra contexto; solo contenido leído cuenta.
+Single source of truth: `@implementation/{ARCHITECTURE,TASKS,RISKS}.md`.
+Read/format rules: see @./cursor/STATE_FORMAT.md.
+File listings (`rg --files-with-matches`) do not count against context; only read content counts.
 
-## Fase 0 - Indexing
-Modelo: Gemini 3.1 Flash Lite - El mas barato que encuentre
+## Phase 0 - Indexing
+Model: Gemini 3.1 Flash Lite - Cheapest you can find
 Input:
 ```
 Feature: soft delete users.
@@ -51,10 +51,10 @@ Output:
 
 
 
-## Fase 1 — Discovery
+## Phase 1 — Discovery
 
-Modelo: Sonnet default. Opus solo si arquitectura ambigua / riesgo alto.
-Utilizar el context de Fase 0
+Model: Sonnet default. Opus only if architecture ambiguous / high risk.
+Use Phase 0 context
 
 ```
 /architect
@@ -77,36 +77,36 @@ Context:
 Don't explore the whole repo, just the Context
 ```
 
-Final esperado: `state written`. Cerrar chat? No — seguir mismo chat para cache.
+Expected final: `state written`. Close chat? No — keep same chat for cache.
 
-## Gate — Audit inicial (risk-scan pre)
+## Gate — Initial audit (risk-scan pre)
 
 Default: SKIP.
-Ejecutar solo si feature toca: auth/session | permisos/tenancy | datos críticos | migraciones | pagos | concurrencia.
-Si `RISKS.md` ya captura riesgos activos → SKIP (duplicación).
+Run only if feature touches: auth/session | permissions/tenancy | critical data | migrations | payments | concurrency.
+If `RISKS.md` already captures active risks → SKIP (duplication).
 
 ```
 /risk-scan pre
 ```
 
-## Fase 2 — Incremental implementation
+## Phase 2 — Incremental implementation
 
-Modelo: Sonnet (boundary/auth) | composer-2-fast (rutina).
-Chunks chicos. Una task por turn.
+Model: Sonnet (boundary/auth) | composer-2-fast (routine).
+Small chunks. One task per turn.
 
 ```
 /implement
 Step: @implementation/TASKS.md#T3
 ```
 
-Reglas built-in: edita directo, actualiza state mismo turn, lint/test focused solo si cheap.
+Built-in rules: edit directly, update state same turn, lint/test focused only if cheap.
 
-- Tambien se puede hacer una implementation full si se quisere
+- You can also do a full implementation if desired
 
 ## Gate — Review (risk-scan post)
 
 Default: SKIP.
-Ejecutar solo: task riesgosa | diff grande / cross-module | test/lint falla | antes de PR.
+Run only: risky task | large diff / cross-module | test/lint fails | before PR.
 
 ```
 /risk-scan post
@@ -115,7 +115,7 @@ Ejecutar solo: task riesgosa | diff grande / cross-module | test/lint falla | an
 ## Gate — Final audit
 
 Default: SKIP.
-Modelo: Sonnet 4.6, o Opus 4.7 solo si release crítica auth/pagos/migrations.
+Model: Sonnet 4.6, or Opus 4.7 only if critical release auth/payments/migrations.
 
 ```
 /risk-scan post
@@ -124,23 +124,23 @@ Modelo: Sonnet 4.6, o Opus 4.7 solo si release crítica auth/pagos/migrations.
 ## Snapshot rotation
 
 Default: SKIP.
-Ejecutar cuando:
-- antes de cambiar modelo/chat
-- después de arquitectura estable, antes de impl larga
-- contexto leído pesa más que snapshot
-- chat huele pesado
+Run when:
+- before changing model/chat
+- after architecture stable, before long impl
+- read context weighs more than snapshot
+- chat feels heavy
 
 ```
 /snapshot
 ```
 
-Usar `@implementation/STATE_SNAPSHOT.md`:
-- inicio nuevo chat
-- después de feature grande
-- después de refactor importante
-- cuando contexto huele pesado
+Use `@implementation/STATE_SNAPSHOT.md`:
+- new chat start
+- after large feature
+- after important refactor
+- when context feels heavy
 
 ## State correction (manual)
 
-El state se actualiza dentro de `/implement`.
-Si hay desync, corregir manualmente en `@implementation/{ARCHITECTURE,TASKS,RISKS}.md`.
+State is updated inside `/implement`.
+If desync, fix manually in `@implementation/{ARCHITECTURE,TASKS,RISKS}.md`.

@@ -4,8 +4,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.code.atlas.web.project.Project;
+import com.code.atlas.web.domain.Project;
 import java.util.List;
+
+import com.code.atlas.web.service.PromptContextService;
+import com.code.atlas.web.service.context.*;
 import org.junit.jupiter.api.Test;
 
 class PromptContextServiceTest {

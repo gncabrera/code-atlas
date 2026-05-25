@@ -3,6 +3,8 @@ package com.code.atlas.web.prompt.context;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.code.atlas.web.service.context.ContextQuery;
+import com.code.atlas.web.service.context.ContextQueryParser;
 import org.junit.jupiter.api.Test;
 
 class ContextQueryParserTest {

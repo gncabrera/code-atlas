@@ -1,0 +1,12 @@
+package com.code.atlas.web.service.dto;
+
+public record SkillDto(
+        Long id,
+        String name,
+        String prompt,
+        String targetPath,
+        String description,
+        String category,
+        boolean defaultInOutputPrompt
+) {
+}
