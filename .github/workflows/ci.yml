@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Verify Constructor Injection (No @Autowired)
+        run: |
+          if rg -F "@Autowired" --glob "src/main/java/**/*.java"; then
+            echo "Error: Detected @Autowired annotation. Use constructor injection instead."
+            exit 1
+          else
+            echo "No @Autowired annotations found. Constructor injection check passed."
+          fi
+
+      - name: Run tests
+        run: mvn -B test
