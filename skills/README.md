@@ -1,50 +1,50 @@
 # Composable Skills (base -> mode -> model)
 
-Objetivo: un solo set canónico, sin duplicar prompts completos por carpeta.
+Goal: one canonical set, without duplicating full prompts per folder.
 
-Orden de composición recomendado:
+Recommended composition order:
 
 1. Base skill (`architect` | `implement` | `risk-scan`)
 2. Mode overlay (`auto-mode`)
 3. Model overlay (`model-opus`)
 
-Invocación manual:
+Manual invocation:
 
 - `/architect /auto-mode /model-opus`
 - `/implement /auto-mode /model-opus`
 - `/risk-scan post /auto-mode /model-opus`
 
-Regla de mantenimiento:
+Maintenance rule:
 
-- Editar comportamiento estable en base.
-- Editar comportamiento operativo en mode.
-- Editar tuning específico del modelo en model.
-- No volver a duplicar skill completo por variante.
+- Edit stable behavior in base.
+- Edit operational behavior in mode.
+- Edit model-specific tuning in model.
+- Do not duplicate a full skill per variant again.
 
-## Install en proyecto destino
+## Install on target project
 
-Scripts copian docs a `<TargetPath>/.cursor/` y skills a `<TargetPath>/.cursor/skills/`.
+Scripts copy docs to `<TargetPath>/.cursor/` and skills to `<TargetPath>/.cursor/skills/`.
 
-**Requisito:** `-TargetPath` obligatorio (raíz del proyecto destino). Abort si ya existe `.cursor/skills`, `STATE_FORMAT.md` o `WORKFLOW.md` bajo `.cursor/`.
+**Requirement:** `-TargetPath` required (target project root). Abort if `.cursor/skills`, `STATE_FORMAT.md`, or `WORKFLOW.md` already exists under `.cursor/`.
 
 **PowerShell:**
 
 ```powershell
-.\scripts\install.ps1 -TargetPath C:\path\to\proyecto
+.\scripts\install.ps1 -TargetPath C:\path\to\project
 ```
 
 **Bash:**
 
 ```bash
-./scripts/install.sh -TargetPath /path/to/proyecto
-# o
-./scripts/install.sh /path/to/proyecto
+./scripts/install.sh -TargetPath /path/to/project
+# or
+./scripts/install.sh /path/to/project
 ```
 
-**Origen → destino**
+**Source → destination**
 
-| Fuente (repo) | Destino |
-|---------------|---------|
+| Source (repo) | Destination |
+|---------------|-------------|
 | `skills/agents/STATE_FORMAT.md` | `.cursor/STATE_FORMAT.md` |
 | `WORKFLOW.md` | `.cursor/WORKFLOW.md` |
 | `skills/general/{caveman,ask}` | `.cursor/skills/caveman/`, etc |
@@ -53,10 +53,10 @@ Scripts copian docs a `<TargetPath>/.cursor/` y skills a `<TargetPath>/.cursor/s
 | `skills/agents/mode-overlays/{auto-mode}` | `.cursor/skills/auto-mode/`, etc |
 | `skills/agents/model-overlays/{model-opus}` | `.cursor/skills/model-opus/`, etc |
 
-**Layout resultante:**
+**Resulting layout:**
 
 ```
-<proyecto>/.cursor/
+<project>/.cursor/
   STATE_FORMAT.md
   WORKFLOW.md
   skills/architect/SKILL.md

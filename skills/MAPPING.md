@@ -1,31 +1,31 @@
-# Mapping actual -> composable
+# Mapping: current → composable
 
 ## architect
 
-- Base canónico: `skills/agents/base/architect/SKILL.md`
-- Delta auto-mode absorbido en overlays:
-  - preguntas obligatorias + wait-for-answers -> `skills/agents/overlays/auto-mode/SKILL.md`
-  - protocolo de análisis profundo + consistency guardrails + alternativas -> `skills/agents/overlays/model-opus/SKILL.md`
+- Canonical base: `skills/agents/base/architect/SKILL.md`
+- auto-mode delta absorbed into overlays:
+  - mandatory questions + wait-for-answers -> `skills/agents/overlays/auto-mode/SKILL.md`
+  - deep analysis protocol + consistency guardrails + alternatives -> `skills/agents/overlays/model-opus/SKILL.md`
 
 ## implement
 
-- Base canónico: `skills/agents/base/implement/SKILL.md`
-- Delta auto-mode absorbido en overlays:
-  - intent classifier antes de editar -> `skills/agents/overlays/auto-mode/SKILL.md`
-  - question gate dinámica -> `skills/agents/overlays/auto-mode/SKILL.md`
+- Canonical base: `skills/agents/base/implement/SKILL.md`
+- auto-mode delta absorbed into overlays:
+  - intent classifier before editing -> `skills/agents/overlays/auto-mode/SKILL.md`
+  - dynamic question gate -> `skills/agents/overlays/auto-mode/SKILL.md`
   - alternatives trigger + anti-rush checklist + consistency pass + confidence gate -> `skills/agents/overlays/model-opus/SKILL.md`
 
 ## risk-scan
 
-- Base canónico: `skills/agents/base/risk-scan/SKILL.md`
-- Delta auto-mode absorbido en overlays:
+- Canonical base: `skills/agents/base/risk-scan/SKILL.md`
+- auto-mode delta absorbed into overlays:
   - ask-first gate -> `skills/agents/overlays/auto-mode/SKILL.md`
-  - evidencia/alternativas/impacto negativo + orden determinístico + impacto completo -> `skills/agents/overlays/model-opus/SKILL.md`
+  - evidence/alternatives/negative impact + deterministic order + full impact -> `skills/agents/overlays/model-opus/SKILL.md`
 
-## Resolución de conflictos
+## Conflict resolution
 
-- Orden fijo: `base -> mode -> model`
-- Si regla colisiona:
-  - seguridad/invariantes base no se relaja
-  - mode ajusta operación (preguntas, gates, formato)
-  - model ajusta profundidad y umbrales
+- Fixed order: `base -> mode -> model`
+- If rules collide:
+  - base security/invariants are not relaxed
+  - mode adjusts operation (questions, gates, format)
+  - model adjusts depth and thresholds
