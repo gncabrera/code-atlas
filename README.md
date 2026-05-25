@@ -244,3 +244,47 @@ Not in scope yet:
 - real tokenizer integration,
 - prompt mode CRUD,
 - automated tests.
+
+## GitHub Actions Release
+
+Workflow file:
+- `.github/workflows/release.yml`
+
+### What it does
+
+- Trigger on push tag `v*` (example `v1.2.3`).
+- Build distribution in matrix:
+  - `ubuntu-latest` -> `code-atlas-bin-linux.zip`, `code-atlas-update-linux.zip`
+  - `windows-latest` -> `code-atlas-bin-windows.zip`, `code-atlas-update-windows.zip`
+  - `macos-latest` -> `code-atlas-bin-macos.zip`, `code-atlas-update-macos.zip`
+- Create GitHub Release with same tag and attach all zip assets.
+- Release policy: fail if release already exists for tag.
+
+### Required setup (one time)
+
+1. Repository -> Settings -> Actions -> General.
+2. In **Workflow permissions**, set **Read and write permissions**.
+3. Ensure Actions are enabled for repository.
+
+No extra PAT secret needed; workflow uses built-in `GITHUB_TOKEN`.
+
+### Execute release
+
+1. Commit and push changes to default branch.
+2. Create tag:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+3. Open Actions tab -> workflow `Release`.
+4. Wait for `build` matrix and `publish` jobs to finish.
+5. Open GitHub Releases and verify attached 6 zip files (3 bin + 3 update).
+
+### Re-run behavior
+
+- If same tag already has release, workflow fails by design.
+- To retry with same version:
+  - delete existing GitHub Release and tag, then push tag again, or
+  - bump version tag (`v1.0.1`) and push new tag.

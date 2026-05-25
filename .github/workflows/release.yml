@@ -1,0 +1,96 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build ${{ matrix.platform.label }}
+    runs-on: ${{ matrix.platform.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+          - runner: ubuntu-latest
+            label: Linux
+            suffix: linux
+          - runner: windows-latest
+            label: Windows
+            suffix: windows
+          - runner: macos-latest
+            label: macOS
+            suffix: macos
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Build distribution
+        run: mvn -B clean package -Ppackage-dist -DskipTests
+
+      - name: Rename artifacts with OS suffix
+        shell: pwsh
+        run: |
+          $suffix = "${{ matrix.platform.suffix }}"
+          Move-Item "target/code-atlas-bin.zip" "target/code-atlas-bin-$suffix.zip" -Force
+          Move-Item "target/code-atlas-update.zip" "target/code-atlas-update-$suffix.zip" -Force
+
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.platform.suffix }}
+          path: |
+            target/code-atlas-bin-${{ matrix.platform.suffix }}.zip
+            target/code-atlas-update-${{ matrix.platform.suffix }}.zip
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub Release
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Fail if release already exists
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "${GITHUB_REF_NAME}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "Release ${GITHUB_REF_NAME} already exists. Failing by policy."
+            exit 1
+          fi
+
+      - name: Create release with generated notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mapfile -t files < <(find dist -type f \( -name "code-atlas-bin-*.zip" -o -name "code-atlas-update-*.zip" \) | sort)
+          if [ "${#files[@]}" -eq 0 ]; then
+            echo "No release files found."
+            exit 1
+          fi
+          gh release create "${GITHUB_REF_NAME}" "${files[@]}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --title "${GITHUB_REF_NAME}" \
+            --latest \
+            --generate-notes
