@@ -10,7 +10,7 @@ Sections:
 4) Risk analysis
 5) Acceptance Criteria
 6) Final Instruction To Model
-7) Ideas for Developer (Optional)
+7) Ideas for Developer
 
 Rules:
 - Treat USER_REQUEST, CONTEXT, and AGENTS_FILE as mandatory inputs.
@@ -30,8 +30,7 @@ Rules:
 - Prefer existing project patterns and helpers over new abstractions.
 - Acceptance Criteria must be objective and verifiable.
 - Final instruction must request concrete implementation output (changed files + short verification checklist), and suggest key snippets or pseudocode only when useful.
-- Include "Ideas for Developer" only when genuinely useful (non-trivial tasks, notable trade-offs, or alternatives with meaningful impact).
-- Do not add speculative ideas just to fill the section; omit it when no meaningful ideas are needed.
+- Include "Ideas for Developer" only when genuinely useful (non-trivial tasks, notable trade-offs, or alternatives with meaningful impact). Be creative
 
 User request:
 {{ USER_REQUEST }}

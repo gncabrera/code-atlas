@@ -114,6 +114,16 @@ class CodeReviewServiceTest {
     }
 
     @Test
+    void parseReviewResponse_rejectsEmptyResponse() {
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> codeReviewService.parseReviewResponse("   ")
+        );
+
+        assertEquals("AI model returned an empty code review response.", ex.getMessage());
+    }
+
+    @Test
     void parseReviewResponse_stripsCodeFenceAndParsesJson() {
         String raw = """
                 ```json

@@ -129,36 +129,7 @@ public class CodeReviewService {
         if (rawResponse == null || rawResponse.isBlank()) {
             throw new IllegalArgumentException("AI model returned an empty code review response.");
         }
-        try {
-            String json = extractJson(rawResponse.trim());
-            return objectMapper.readValue(json, CodeReviewResponseDto.class);
-        } catch (IOException ex) {
-            throw new IllegalArgumentException("Failed parsing code review JSON: " + ex.getMessage(), ex);
-        }
-    }
-
-    private String extractJson(String raw) {
-        String stripped = stripCodeFences(raw);
-        int start = stripped.indexOf('{');
-        int end = stripped.lastIndexOf('}');
-        if (start < 0 || end <= start) {
-            throw new IllegalArgumentException("AI response did not contain valid JSON.");
-        }
-        return stripped.substring(start, end + 1);
-    }
-
-    private String stripCodeFences(String raw) {
-        String trimmed = raw.trim();
-        if (trimmed.startsWith("```")) {
-            int firstNewline = trimmed.indexOf('\n');
-            if (firstNewline > 0) {
-                trimmed = trimmed.substring(firstNewline + 1);
-            }
-        }
-        if (trimmed.endsWith("```")) {
-            trimmed = trimmed.substring(0, trimmed.length() - 3).trim();
-        }
-        return trimmed;
+        return JsonResponseExtractor.parseResponse(rawResponse, CodeReviewResponseDto.class, objectMapper);
     }
 
     private Path resolveProjectRoot(Project project) {

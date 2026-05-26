@@ -30,7 +30,11 @@ Files involved:
 Git diff:
 {{DIFF}}
 
-Return ONLY valid JSON.
+Output format (strict):
+- Return exactly one JSON object matching the schema below.
+- No markdown, code fences, or prose before or after the JSON.
+- No multiple JSON objects or duplicate payloads.
+- String values may contain code snippets; escape quotes and newlines as required by JSON.
 
 Schema:
 {

@@ -68,6 +68,12 @@ Prompt template substitution (`PromptFormatService.formatPrompt`)
 2. Do not use `String.replace` on `{{KEY}}` literals in feature services — inject `PromptFormatService` and pass a parameter map (e.g. `USER_REQUEST`, `CONTEXT`, `AGENTS_FILE`, `DIFF`).
 3. Placeholders match `\{\{\s*KEY\s*\}\}` (flexible whitespace); unknown placeholders stay literal; map values null become empty string.
 
+AI model JSON responses (`JsonResponseExtractor.parseResponse`)
+
+1. All extraction and deserialization of JSON from noisy AI model text must go only through `com.code.atlas.web.service.JsonResponseExtractor.parseResponse(String rawResponse, Class<T> type, ObjectMapper objectMapper)`.
+2. Do not use ad-hoc `indexOf('{')` / `lastIndexOf('}')`, manual markdown fence stripping, or `objectMapper.readValue` on raw model output in feature services — call `parseResponse` with the target DTO type.
+3. Pair with strict “JSON only” rules in prompt templates; the extractor still tolerates fences and prose when models disobey (fence-first candidates, then escape-aware brace scanning, first successful Jackson bind) - See `src/main/resources/prompts/code-review.md` for an example
+
 Prompt optimizer read-only modes (`PromptOptimizerReadOnlyMode`)
 
 1. To change a system prompt optimizer mode (`PromptOptimizerReadOnlyMode`, e.g. `IMPLEMENTATION`), edit the matching file under `src/main/resources/db/seed/prompt-optimizer-modes/` (filename from `templateFileName()` on the enum, e.g. `implementation.md`).
