@@ -68,6 +68,12 @@ Prompt template substitution (`PromptFormatService.formatPrompt`)
 2. Do not use `String.replace` on `{{KEY}}` literals in feature services — inject `PromptFormatService` and pass a parameter map (e.g. `USER_REQUEST`, `CONTEXT`, `AGENTS_FILE`, `DIFF`).
 3. Placeholders match `\{\{\s*KEY\s*\}\}` (flexible whitespace); unknown placeholders stay literal; map values null become empty string.
 
+Prompt optimizer read-only modes (`PromptOptimizerReadOnlyMode`)
+
+1. To change a system prompt optimizer mode (`PromptOptimizerReadOnlyMode`, e.g. `IMPLEMENTATION`), edit the matching file under `src/main/resources/db/seed/prompt-optimizer-modes/` (filename from `templateFileName()` on the enum, e.g. `implementation.md`).
+2. Do not change read-only mode prompts via the admin UI, REST API, or direct SQL for routine updates — `PromptOptimizerModeService` blocks prompt edits on `read_only` rows.
+3. On startup, `PromptOptimizerModeSeedService` inserts missing read-only rows and syncs prompt (and display name) from the classpath seed file when it differs from SQLite; restart the app after editing a seed file.
+
 Entities
 
 1. Must annotate entity classes with @Entity.

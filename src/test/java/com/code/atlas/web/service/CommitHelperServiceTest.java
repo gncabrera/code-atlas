@@ -73,7 +73,7 @@ class CommitHelperServiceTest {
     void getMetadata_withProjectId_returnsCurrentBranch() {
         when(projectService.getProjectEntity(1L)).thenReturn(project);
         when(projectService.getAllProjects()).thenReturn(List.of(
-                new ProjectResponseDto(1L, tempDir.toString(), "Test Project", null, false)
+                new ProjectResponseDto(1L, tempDir.toString(), "Test Project", null, false, true)
         ));
         when(aiModelService.getEnabledModels()).thenReturn(List.of());
         when(gitProcessRunner.run(any(Path.class), any())).thenReturn("true", "feature/autocommit");

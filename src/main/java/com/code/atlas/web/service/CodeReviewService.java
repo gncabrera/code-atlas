@@ -22,6 +22,7 @@ public class CodeReviewService {
     private static final String CODE_REVIEW_TEMPLATE_PATH = "prompts/code-review.md";
     private static final String CODE_REVIEW_NOTES = "Code Review";
     private static final String AGENTS_FILE_KEY = "AGENTS_FILE";
+    private static final String DESIGN_FILE_KEY = "DESIGN_FILE";
     private static final String FILES_KEY = "FILES";
     private static final String DIFF_KEY = "DIFF";
     private static final String TRUNCATION_SUFFIX = "\n\n[diff truncated]";
@@ -75,26 +76,27 @@ public class CodeReviewService {
         assertGitRepository(projectRoot);
 
         String agentsFile = projectService.resolveAgentsFileContent(project);
+        String designFile = projectService.resolveDesignFileContent(project);
         String files = String.join("\n", projectService.getProjectFiles(project));
         String diff = gitProcessRunner.diffBetweenBranches(projectRoot, normalizedBranchA, normalizedBranchB);
         if (diff.isBlank()) {
             throw new IllegalArgumentException("No differences found between the selected branches.");
         }
 
-        String truncatedDiff = truncateDiffForModel(agentsFile, files, diff, model.getTokensPerMinute());
-        String prompt = getFormatPrompt(agentsFile, files, truncatedDiff);
+        String truncatedDiff = truncateDiffForModel(agentsFile, designFile, files, diff, model.getTokensPerMinute());
+        String prompt = getFormatPrompt(agentsFile, designFile, files, truncatedDiff);
 
         ModelResponseDto response = aiModelService.sendToModel(project, model, prompt, CODE_REVIEW_NOTES);
         return parseReviewResponse(response.reponse());
     }
 
-    String truncateDiffForModel(String agentsFile, String files, String diff, int tokensPerMinute) {
+    String truncateDiffForModel(String agentsFile, String designFile, String files, String diff, int tokensPerMinute) {
         if (tokensPerMinute <= 0) {
             return diff;
         }
 
         int wrapperTokens = AIModelService.estimateTokens(
-                getFormatPrompt(agentsFile, files, "")
+                getFormatPrompt(agentsFile, designFile, files, "")
         );
         int availableTokens = tokensPerMinute - wrapperTokens;
         if (availableTokens <= 0) {
@@ -114,9 +116,10 @@ public class CodeReviewService {
         return diff.substring(0, maxDiffChars - suffixLength) + TRUNCATION_SUFFIX;
     }
 
-    private String getFormatPrompt(String agentsFile, String files, String diff) {
+    private String getFormatPrompt(String agentsFile, String designFile, String files, String diff) {
         return promptFormatService.formatPrompt(codeReviewTemplate, Map.of(
                 AGENTS_FILE_KEY, agentsFile,
+                DESIGN_FILE_KEY, designFile,
                 FILES_KEY, files,
                 DIFF_KEY, diff
         ));

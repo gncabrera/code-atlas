@@ -162,7 +162,7 @@ Classpath templates: `src/main/resources/prompts/`
 | security | `security.md` |
 | commit helper | `commit-message.md` |
 
-Edit templates and restart the app to pick up changes.
+Read-only optimizer modes (`db/seed/prompt-optimizer-modes/*.md`) sync into SQLite on startup when the classpath file differs from the stored prompt (or the row is missing). Edit the `.md`, restart the app. Custom (non–read-only) modes are DB-only and are not re-seeded.
 
 ## Architecture
 

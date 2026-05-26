@@ -6,6 +6,7 @@ import com.code.atlas.web.repository.PromptOptimizerModeRepository;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -27,18 +28,43 @@ public class PromptOptimizerModeSeedService {
     public void seedReadOnlyModes() {
         for (PromptOptimizerReadOnlyMode readOnlyMode : PromptOptimizerReadOnlyMode.values()) {
             String code = readOnlyMode.name();
-            if (promptOptimizerModeRepository.existsByCode(code)) {
+            String seedPrompt = loadSeedPrompt(readOnlyMode.templateFileName());
+            Optional<PromptOptimizerMode> existing = promptOptimizerModeRepository.findByCode(code);
+            if (existing.isEmpty()) {
+                promptOptimizerModeRepository.save(newReadOnlyMode(code, readOnlyMode, seedPrompt));
                 continue;
             }
-            String prompt = loadSeedPrompt(readOnlyMode.templateFileName());
-            PromptOptimizerMode mode = new PromptOptimizerMode();
-            mode.setCode(code);
-            mode.setName(readOnlyMode.displayName());
-            mode.setPrompt(prompt);
-            mode.setHidden(false);
-            mode.setReadOnly(true);
-            promptOptimizerModeRepository.save(mode);
+            PromptOptimizerMode mode = existing.get();
+            if (syncReadOnlyModeFromSeed(mode, readOnlyMode, seedPrompt)) {
+                mode.setReadOnly(true);
+                promptOptimizerModeRepository.save(mode);
+            }
         }
+    }
+
+    private static PromptOptimizerMode newReadOnlyMode(
+            String code, PromptOptimizerReadOnlyMode readOnlyMode, String seedPrompt) {
+        PromptOptimizerMode mode = new PromptOptimizerMode();
+        mode.setCode(code);
+        mode.setName(readOnlyMode.displayName());
+        mode.setPrompt(seedPrompt);
+        mode.setHidden(false);
+        mode.setReadOnly(true);
+        return mode;
+    }
+
+    private static boolean syncReadOnlyModeFromSeed(
+            PromptOptimizerMode mode, PromptOptimizerReadOnlyMode readOnlyMode, String seedPrompt) {
+        boolean changed = false;
+        if (!readOnlyMode.displayName().equals(mode.getName())) {
+            mode.setName(readOnlyMode.displayName());
+            changed = true;
+        }
+        if (!seedPrompt.equals(mode.getPrompt())) {
+            mode.setPrompt(seedPrompt);
+            changed = true;
+        }
+        return changed;
     }
 
     private String loadSeedPrompt(String templateFileName) {

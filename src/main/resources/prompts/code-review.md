@@ -21,6 +21,9 @@ Rules:
 Project context:
 {{AGENTS_FILE}}
 
+UI and frontend standards:
+{{DESIGN_FILE}}
+
 Files involved:
 {{FILES}}
 

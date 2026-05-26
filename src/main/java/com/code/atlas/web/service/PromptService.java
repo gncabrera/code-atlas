@@ -40,10 +40,12 @@ public class PromptService {
         String template = mode.getPrompt();
         String context = promptContextService.buildContext(project, requestDto.userRequest());
         String agentsFileContent = requestDto.shouldSendAgentsFile() ? projectService.resolveAgentsFileContent(project) : "";
+        String designFileContent = requestDto.shouldSendDesignFile() ? projectService.resolveDesignFileContent(project) : "";
         Map<String, String> parameters = Map.of(
                 "USER_REQUEST", requestDto.userRequest(),
                 "CONTEXT", context,
-                "AGENTS_FILE", agentsFileContent
+                "AGENTS_FILE", agentsFileContent,
+                "DESIGN_FILE", designFileContent
         );
         String generatedPrompt = promptFormatService.formatPrompt(template, parameters);
         return new BuildPreviewResponseDto(generatedPrompt, AIModelService.estimateTokens(generatedPrompt));
@@ -55,7 +57,9 @@ public class PromptService {
         String exactPrompt = requestDto.aiModelPrompt();
         Project project = resolveProject(requestDto.projectId());
         String modeLabel = resolveModeLabel(requestDto.promptModeId());
-        String notes = "shouldSendAgentsFile: " + requestDto.shouldSendAgentsFile() + ". PromptMode: " + modeLabel;
+        String notes = "shouldSendAgentsFile: " + requestDto.shouldSendAgentsFile()
+                + ". shouldSendDesignFile: " + requestDto.shouldSendDesignFile()
+                + ". PromptMode: " + modeLabel;
         ModelResponseDto modelResponseDto = aiModelService.sendToModel(project, model, exactPrompt, notes);
         return new SendPromptResponseDto(modelResponseDto.reponse(), modelResponseDto.estimatedTokens());
     }

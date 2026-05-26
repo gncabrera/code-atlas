@@ -5,6 +5,7 @@ public record SendPromptRequestDto(
         Long aiModelId,
         String aiModelPrompt,
         boolean shouldSendAgentsFile,
+        boolean shouldSendDesignFile,
         Long promptModeId
 ) {
     public SendPromptRequestDto {

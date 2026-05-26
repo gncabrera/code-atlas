@@ -71,7 +71,7 @@ class CodeReviewServiceTest {
     void getMetadata_withProjectId_returnsBranches() {
         when(projectService.getProjectEntity(1L)).thenReturn(project);
         when(projectService.getAllProjects()).thenReturn(List.of(
-                new ProjectResponseDto(1L, tempDir.toString(), "Test Project", null, false)
+                new ProjectResponseDto(1L, tempDir.toString(), "Test Project", null, false, true)
         ));
         when(aiModelService.getEnabledModels()).thenReturn(List.of());
         when(gitProcessRunner.run(any(Path.class), any())).thenReturn("true");
@@ -106,7 +106,7 @@ class CodeReviewServiceTest {
     @Test
     void truncateDiff_respectsTokenBudget() {
         String largeDiff = "x".repeat(100_000);
-        String truncated = codeReviewService.truncateDiffForModel("", "", largeDiff, 2_000);
+        String truncated = codeReviewService.truncateDiffForModel("", "", "", largeDiff, 2_000);
 
         assertTrue(truncated.length() < largeDiff.length());
         assertTrue(truncated.endsWith("[diff truncated]"));
@@ -141,6 +141,7 @@ class CodeReviewServiceTest {
         when(projectService.getProjectEntity(1L)).thenReturn(project);
         when(aiModelService.getModelEntity(2L)).thenReturn(model);
         when(projectService.resolveAgentsFileContent(project)).thenReturn("agents");
+        when(projectService.resolveDesignFileContent(project)).thenReturn("");
         when(projectService.getProjectFiles(project)).thenReturn(List.of("src/Main.java"));
         when(gitProcessRunner.run(any(Path.class), any())).thenReturn("true");
         when(gitProcessRunner.diffBetweenBranches(any(Path.class), eq("main"), eq("feature/x")))

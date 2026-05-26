@@ -4,6 +4,7 @@ public record BuildPreviewRequestDto(
         Long projectId,
         String userRequest,
         boolean shouldSendAgentsFile,
+        boolean shouldSendDesignFile,
         Long promptModeId
 ) {
     public BuildPreviewRequestDto {
