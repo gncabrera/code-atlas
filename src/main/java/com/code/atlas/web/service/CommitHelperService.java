@@ -74,6 +74,7 @@ public class CommitHelperService {
     }
 
     public void executeCommit(Long projectId, String message) {
+        message = cleanMessage(message);
         Path projectRoot = resolveProjectRoot(projectService.getProjectEntity(projectId));
         assertGitRepository(projectRoot);
         gitProcessRunner.run(projectRoot, List.of("git", "add", "-A"));
@@ -81,11 +82,16 @@ public class CommitHelperService {
     }
 
     public void executeCommitAndPush(Long projectId, String message) {
+        message = cleanMessage(message);
         Path projectRoot = resolveProjectRoot(projectService.getProjectEntity(projectId));
         assertGitRepository(projectRoot);
         gitProcessRunner.run(projectRoot, List.of("git", "add", "-A"));
         gitProcessRunner.run(projectRoot, List.of("git", "commit", "-m", message.trim()));
         gitProcessRunner.run(projectRoot, List.of("git", "push"));
+    }
+
+    private String cleanMessage(String message) {
+        return message.replaceAll("\"", "'");
     }
 
     String truncateDiffForModel(String diff, int tokensPerMinute) {
