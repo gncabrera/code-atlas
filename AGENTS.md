@@ -85,9 +85,21 @@ RestController:
 2. Must specify class-level API routes with @RequestMapping, e.g. ("/api/user").
 3. Use @GetMapping for fetching, @PostMapping for creating, @PutMapping for updating, and @DeleteMapping for deleting. Keep paths resource-based (e.g., '/users/{id}'), avoiding verbs like '/create', '/update', '/delete', '/get', or '/edit'
 4. All dependencies in class methods must be autowired with a constructor, unless specified otherwise.
-5. Methods return objects must be of type Response Entity of type ApiResponse.
-6. All class method logic must be implemented in a try..catch block(s).
-7. Caught errors in catch blocks must be handled by `GlobalExceptionHandler`: call `logCaughtException(context, ex)` before `errorResponseEntity(...)`, and use `resolveMessage(ex, fallback)` for the API `message` (never swallow exceptions without logging).
+5. Methods return objects must be of type `ResponseEntity<ApiResponse<?>>`.
+6. Every mapped endpoint method must wrap its full body in a top-level `try { ... } catch (Exception ex) { ... }` (no silent failures, no logic outside the try for the main flow).
+7. **Forbidden in `com.code.atlas.web.controller` REST classes**: `ex.printStackTrace()`, `System.out.println`, `System.err.println`, and direct SLF4J/logger usage — logging goes only through `GlobalExceptionHandler.logCaughtException`.
+8. **Catch block order** (mandatory):
+   1. `GlobalExceptionHandler.logCaughtException("<HTTP_METHOD> <full-path>", ex)` — first statement; context uses uppercase method and literal path with `{id}` placeholders (e.g. `GET /api/projects/{id}`, `POST /api/skills/install`).
+   2. `return GlobalExceptionHandler.errorResponseEntity(GlobalExceptionHandler.resolveMessage(ex, "Request failed."), HttpStatus.BAD_REQUEST);`
+9. Use uniform fallback `"Request failed."` in `resolveMessage` unless a prompt specifies otherwise. Never return hardcoded error messages without `resolveMessage`.
+10. Import order: `com.code.atlas.web.api` → `com.code.atlas.web.service` → `com.code.atlas.web.service.dto` → `java.*` → `org.springframework.*`. No wildcard Spring web imports.
+
+**REST controller verification checklist** (before merge):
+
+- [ ] Grep `com.code.atlas.web.controller` for `printStackTrace`, `System.out`, `System.err` — zero hits.
+- [ ] Each `@GetMapping` / `@PostMapping` / `@PutMapping` / `@DeleteMapping` method has one top-level try-catch.
+- [ ] Every catch calls `logCaughtException` then `errorResponseEntity(resolveMessage(...), BAD_REQUEST)`.
+- [ ] Context strings match `METHOD /api/...` including class `@RequestMapping` prefix and sub-path.
 
 PageController:
 

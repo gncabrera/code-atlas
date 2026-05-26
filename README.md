@@ -1,290 +1,236 @@
 # Code Atlas
 
-Internal web application to transform raw implementation requests into deterministic, implementation-ready prompts, then send those prompts to frontier coding models.
+[![CI](https://github.com/gncabrera/code-atlas/actions/workflows/ci.yml/badge.svg)](https://github.com/gncabrera/code-atlas/actions/workflows/ci.yml)
+![Java 21](https://img.shields.io/badge/Java-21-blue)
+![Spring Boot 3](https://img.shields.io/badge/Spring%20Boot-3.5-green)
 
-## Why This Project Exists
+Web app that turns raw implementation requests into structured, implementation-ready prompts, then sends them to frontier coding models with predictable, auditable behavior.
 
-Teams often lose time and tokens because raw requests are:
-- incomplete,
-- inconsistent in structure,
-- hard to validate before model execution.
+## Table of Contents
 
-Code Atlas exists to fix that.
+- [Screenshots](#screenshots)
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [Configuration](#configuration)
+- [Pages and Capabilities](#pages-and-capabilities)
+- [REST API](#rest-api)
+- [Prompt Templates](#prompt-templates)
+- [Architecture](#architecture)
+- [Database](#database)
+- [Security](#security)
+- [Troubleshooting](#troubleshooting)
+- [Development](#development)
+- [Contributing](#contributing)
+- [License](#license)
 
-Project goal:
-- convert noisy requests into structured prompts,
-- keep prompt generation deterministic (template-based, no hidden AI rewrite),
-- reduce unnecessary token spend,
-- make model calls predictable and auditable.
+## Screenshots
 
-## Core Principles
+![Prompt Optimizer](docs/images/prompt-optimizer.png)
 
-- Deterministic prompt building (`buildPreview`) from external templates.
-- Exact prompt sending (`sendToModel`) with zero backend rewrite.
-- Lightweight token control (`estimatedTokens = characters / 4`).
-- Clean architecture: Controller -> Service -> Repository.
-- Hybrid app: Thymeleaf UI + REST API.
-- Minimal dependencies, simple extensible design.
+![Commit Helper](docs/images/commit-helper.png)
 
-## Tech Stack
+![Skills](docs/images/skills.png)
 
-Backend:
-- Java 21
-- Spring Boot 3
-- Spring Web
-- Spring Data JPA
-- Flyway
-- SQLite
-- Lombok
-- Google GenAI Java SDK (Gemini)
+## Features
 
-Frontend:
-- Thymeleaf
-- jQuery
-- Bootstrap + Bootswatch Brite theme
+- **Deterministic prompt preview** — template concatenation only; no hidden AI rewrite on build.
+- **Exact model send** — `sendToModel` uses the prompt textarea as-is.
+- **Project-aware context** — indexed file retrieval and optional `AGENTS.md` injection.
+- **Token guard** — estimated tokens (`characters / 4`) compared to model `tokensPerMinute`.
+- **CRUD** — projects, AI models, API keys, skills.
+- **Commit Helper** — git diff → AI commit message → commit / push.
+- **Skills install** — write skill prompt files into a project tree.
+- **Prompt history** — SQLite audit of requests and responses.
+- **Hybrid UI** — Thymeleaf pages + JSON REST under `/api/*`.
 
-## Implemented Features
-
-### 1) Prompt Optimizer
-
-Page: `/prompt-optimizer`
-
-- **Your Prompt (UserRequest)** textarea.
-- **Build Preview** button (deterministic template concatenation).
-- **AIModelPrompt** editable textarea.
-- **AI Model selector** (enabled models only).
-- **Token estimation** display and validation.
-- **Send To AIModel** with confirmation alert.
-- **OutputPrompt** editable textarea + copy button.
-
-Behavior:
-- `buildPreview`: replaces template vars (`USER_REQUEST`, `CONTEXT`, `AGENTS_FILE`).
-- `sendToModel`: sends exact textarea content as-is.
-- sending blocked when estimated tokens exceed selected model `tokensPerMinute`.
-
-### 2) Projects CRUD
-
-Page: `/projects`  
-API base: `/api/projects`
-
-Entity fields:
-- `id`
-- `path`
-- `name`
-- `description`
-- `useAgentsFile`
-
-Rules:
-- path required,
-- path must exist on disk,
-- `useAgentsFile` controls AGENTS.md behavior for that project.
-
-### 3) AI Models CRUD
-
-Page: `/ai-models`  
-API base: `/api/ai-models`
-
-Entity fields:
-- `id`
-- `name`
-- `enabled`
-- `tokensPerMinute`
-- `requestsPerMinute` (informational)
-- `requestsPerDay` (informational)
-- `apiKey` (stored plaintext in SQLite by design)
-
-Rules:
-- duplicates API keys allowed,
-- only `tokensPerMinute` enforced.
-
-### 4) Prompt History Persistence
-
-Prompt requests/responses stored in SQLite (`prompt_history`) with:
-- project/model relation,
-- prompt mode,
-- token estimate,
-- status (`PENDING`, `SUCCESS`, `ERROR`),
-- error message,
-- timestamp.
-
-### 5) Prompt Modes Ready (No CRUD Yet)
-
-Prepared modes:
-- cheap
-- balanced
-- architect
-- implementation
-- reviewer
-- refactor
-- security
-
-Templates are external and editable:
-- `prompts/cheap.md`
-- `prompts/balanced.md`
-- `prompts/architect.md`
-- `prompts/implementation.md`
-- `prompts/reviewer.md`
-- `prompts/refactor.md`
-- `prompts/security.md`
-
-## AGENTS.md Integration
-
-When building preview:
-- if `shouldSendAgentsFile = true` and selected project has `useAgentsFile = true`,
-- backend tries reading `<Project.path>/AGENTS.md`.
-
-If missing:
-- uses fallback text: `No AGENTS.md found`.
-
-## API Endpoints (Main)
-
-Prompt:
-- `GET /api/prompts/metadata`
-- `POST /api/prompts/build-preview`
-- `POST /api/prompts/send`
-
-Projects:
-- `GET /api/projects`
-- `GET /api/projects/{id}`
-- `POST /api/projects`
-- `PUT /api/projects/{id}`
-- `DELETE /api/projects/{id}`
-
-AI Models:
-- `GET /api/ai-models?enabledOnly=true|false`
-- `GET /api/ai-models/{id}`
-- `POST /api/ai-models`
-- `PUT /api/ai-models/{id}`
-- `DELETE /api/ai-models/{id}`
-
-## Architecture Snapshot
-
-```
-Browser (Thymeleaf + jQuery)
-   -> Thymeleaf Page Controllers (views)
-   -> REST Controllers (JSON API)
-      -> Services (business logic)
-         -> Repositories (JPA)
-            -> SQLite (Flyway-managed schema)
-```
-
-## Database
-
-Flyway migration:
-- `src/main/resources/db/migration/V1__init_schema.sql`
-
-Tables:
-- `projects`
-- `ai_models`
-- `prompt_history`
-- `flyway_schema_history`
-
-## Run Locally
+## Quick Start
 
 ### Requirements
 
 - JDK 21
 - Maven 3.9+
 
-### Start
+### Run from source
 
 ```bash
 mvn -DskipTests spring-boot:run
 ```
 
-Open:
-- `http://localhost:8080/prompt-optimizer`
+Open [http://localhost:8088/prompt-optimizer](http://localhost:8088/prompt-optimizer) (default port in `application.properties`).
+
+### First-time setup
+
+1. **API Keys** (`/api-keys`) — create a Gemini key record; replace the seeded `changeme` value from migration `V1`.
+2. **AI Models** (`/ai-models`) — enable models and link each to an API key.
+3. **Projects** (`/projects`) — register local repo paths (must exist on disk).
+
+Prebuilt platform zips (when published) attach to [GitHub Releases](https://github.com/gncabrera/code-atlas/releases). Release automation lives in `.github/workflows/release.yml`.
 
 ## Configuration
 
-Main config file:
-- `src/main/resources/application.properties`
+File: `src/main/resources/application.properties`
 
-Current defaults:
-- SQLite file: `./code-atlas.db`
-- server port: `8080`
-- Flyway enabled
-- Gemini timeout: `codeatlas.gemini.timeout-seconds=60`
+| Property | Default | Purpose |
+|----------|---------|---------|
+| `server.port` | `8088` | HTTP port |
+| `atlas.data.dir` | `data` | SQLite and logs directory |
+| `spring.datasource.url` | `jdbc:sqlite:${atlas.data.dir}/app.db` | Application database |
+| `codeatlas.gemini.timeout-seconds` | `90` | Gemini HTTP timeout |
+
+Override at runtime:
+
+```bash
+mvn -DskipTests spring-boot:run -Dspring-boot.run.arguments="--atlas.data.dir=./my-data"
+```
+
+Distribution bundles use `data/` next to the launcher scripts (`src/main/resources/scripts/run.sh`, `run.bat`).
+
+## Pages and Capabilities
+
+| Route | Purpose |
+|-------|---------|
+| `/`, `/prompt-optimizer` | Build preview, edit prompt, send to model |
+| `/commit-helper` | Generate commit message from git diff; commit or push |
+| `/skills` | Manage skills; install into project paths |
+| `/projects` | Project CRUD and `useAgentsFile` flag |
+| `/ai-models` | Model CRUD, rate limits, API key link |
+| `/api-keys` | Provider API key CRUD |
+| `/admin/prompt-history` | Read-only prompt audit list |
+
+### Prompt Optimizer
+
+- Select **project**, **prompt mode**, and whether to include **AGENTS.md**.
+- **Build Preview** loads `src/main/resources/prompts/<mode>.md` and substitutes `{{ USER_REQUEST }}`, `{{ CONTEXT }}`, `{{ AGENTS_FILE }}`.
+- **CONTEXT** comes from `PromptContextService` (project file index + query parsing).
+- **Send To AIModel** posts the exact preview text; blocked when estimated tokens exceed the model limit.
+
+Prompt modes: `cheap`, `balanced`, `architect`, `implementation`, `reviewer`, `refactor`, `security` (default when unset: `balanced`).
+
+### Projects
+
+- Fields: `path`, `name`, `description`, `useAgentsFile`.
+- Path must exist; when `useAgentsFile` is true and preview requests agents file, backend reads `<path>/AGENTS.md` or a fallback message.
+
+### AI Models and API Keys
+
+- Models reference `ai_model_api_key` via `apiKeyId` (no inline key on the model row).
+- Enforced limit: `tokensPerMinute` on send. `requestsPerMinute` / `requestsPerDay` are informational.
+- Providers are stored on API key records (Gemini used for model calls today).
+
+### Skills
+
+- Catalog entries: name, prompt body, `targetPath` (relative to project root), optional description/category, `defaultInOutputPrompt`.
+- **Install** (`POST /api/skills/install`) writes files under the selected project with path-traversal checks.
+
+### Commit Helper
+
+- Requires a git repository at the project path.
+- **Generate** builds a prompt from `prompts/commit-message.md` and working-tree diff (truncated to model token budget).
+- **Commit** / **Commit and push** run `git` via `GitProcessRunner`.
+
+### Prompt History
+
+- Records project, model, notes, estimated tokens, request/response text, status (`PENDING`, `SUCCESS`, `ERROR`), timestamps.
+- Admin UI is read-only; API list at `/api/prompt-history`.
+
+## REST API
+
+All JSON endpoints return `ApiResponse` (`result`, `message`, `data`).
+
+| Area | Base path | Notes |
+|------|-----------|--------|
+| Prompts | `/api/prompts` | `GET /metadata`, `POST /build-preview`, `POST /send` |
+| Projects | `/api/projects` | CRUD |
+| AI models | `/api/ai-models` | CRUD; `GET ?enabledOnly=true` |
+| API keys | `/api/api-keys` | CRUD |
+| Skills | `/api/skills` | CRUD + `POST /install` |
+| Commit helper | `/api/commit-helper` | `GET /metadata`, `POST /generate`, `POST /commit`, `POST /push` |
+| Prompt history | `/api/prompt-history` | `GET` list |
+
+## Prompt Templates
+
+Classpath templates: `src/main/resources/prompts/`
+
+| Mode | File |
+|------|------|
+| cheap | `cheap.md` |
+| balanced | `balanced.md` |
+| architect | `architect.md` |
+| implementation | `implementation.md` |
+| reviewer | `reviewer.md` |
+| refactor | `refactor.md` |
+| security | `security.md` |
+| commit helper | `commit-message.md` |
+
+Edit templates and restart the app to pick up changes.
+
+## Architecture
+
+```
+Browser (Thymeleaf + jQuery)
+  → Page controllers (views)
+  → REST controllers (/api/*)
+    → Services
+      → Repositories (JPA)
+        → SQLite (Flyway)
+```
+
+Entrypoint: `com.code.atlas.web.CodeAtlas` (`CodeAtlas.java`).
+
+**Coding standards, package layout, REST error handling, SQLite timestamp rules, and frontend conventions** are defined in [AGENTS.md](AGENTS.md). Do not duplicate those rules here.
+
+## Database
+
+Flyway migrations: `src/main/resources/db/migration/`
+
+| Migration | Content |
+|-----------|---------|
+| `V1__init_schema.sql` | `projects`, `ai_model_api_key`, `ai_models`, `prompt_history`, `skill`, `project_file_index` + seed data |
+| `V2__seed_skills.sql` | Default skill rows |
+
+Schema authority is Flyway (`spring.jpa.hibernate.ddl-auto=none`).
+
+## Security
+
+- No authentication in the default deployment — treat as **internal tooling**.
+- API keys are stored in SQLite as plaintext by design for this MVP.
+- Do not expose on public networks without auth, TLS, and a secrets strategy.
+- Commit Helper executes `git` against configured project paths — only register trusted directories.
 
 ## Troubleshooting
 
-### Error: `KotlinModule not found`
+### `KotlinModule not found`
 
-Cause:
-- Jackson module auto-loading expects Kotlin module when using current dependency graph.
+Jackson may auto-load the Kotlin module. Dependency `jackson-module-kotlin` is already on the classpath via `pom.xml`.
 
-Fix:
-- include `com.fasterxml.jackson.module:jackson-module-kotlin` (already added).
+### JPA / SQLite type validation errors
 
-### JPA schema validation mismatch with SQLite INTEGER/BIGINT
+Use Flyway for schema; keep `spring.jpa.hibernate.ddl-auto=none`.
 
-Cause:
-- strict Hibernate validation conflicts with SQLite type behavior.
+### `Error parsing time stamp` on SQLite reads
 
-Fix:
-- use Flyway as schema authority,
-- keep `spring.jpa.hibernate.ddl-auto=none` (already set).
+Entity timestamps must use `LocalDateTime` per [AGENTS.md](AGENTS.md) (never `Instant` on SQLite entities).
 
-## Security Notes
+### Port already in use
 
-- Internal app; no authentication by project decision.
-- API keys stored plaintext intentionally for this internal MVP.
-- Avoid exposing this app publicly without adding auth and secret management.
+Change `server.port` or stop the process bound to `8088`.
 
-## Current Scope and Non-Goals
-
-In scope:
-- deterministic preview,
-- direct Gemini send,
-- CRUD for Projects/AI Models,
-- token-per-minute guard.
-
-Not in scope yet:
-- auth/roles,
-- real tokenizer integration,
-- prompt mode CRUD,
-- automated tests.
-
-## GitHub Actions Release
-
-Workflow file:
-- `.github/workflows/release.yml`
-
-### What it does
-
-- Trigger on push tag `v*` (example `v1.2.3`).
-- Build distribution in matrix:
-  - `ubuntu-latest` -> `code-atlas-bin-linux.zip`, `code-atlas-update-linux.zip`
-  - `windows-latest` -> `code-atlas-bin-windows.zip`, `code-atlas-update-windows.zip`
-  - `macos-latest` -> `code-atlas-bin-macos.zip`, `code-atlas-update-macos.zip`
-- Create GitHub Release with same tag and attach all zip assets.
-- Release policy: fail if release already exists for tag.
-
-### Required setup (one time)
-
-1. Repository -> Settings -> Actions -> General.
-2. In **Workflow permissions**, set **Read and write permissions**.
-3. Ensure Actions are enabled for repository.
-
-No extra PAT secret needed; workflow uses built-in `GITHUB_TOKEN`.
-
-### Execute release
-
-1. Commit and push changes to default branch.
-2. Create tag:
+## Development
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+mvn test
+mvn -DskipTests spring-boot:run
 ```
 
-3. Open Actions tab -> workflow `Release`.
-4. Wait for `build` matrix and `publish` jobs to finish.
-5. Open GitHub Releases and verify attached 6 zip files (3 bin + 3 update).
+See [AGENTS.md](AGENTS.md) before changing controllers, services, migrations, or static assets.
 
-### Re-run behavior
+## Contributing
 
-- If same tag already has release, workflow fails by design.
-- To retry with same version:
-  - delete existing GitHub Release and tag, then push tag again, or
-  - bump version tag (`v1.0.1`) and push new tag.
+1. Fork and branch from `main` or `develop`.
+2. Keep changes aligned with [AGENTS.md](AGENTS.md).
+3. Run `mvn test` and ensure CI passes.
+4. Open a pull request with a short description and test notes.
+
+## License
+
+[MIT](LICENSE)
