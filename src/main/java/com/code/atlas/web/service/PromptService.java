@@ -7,6 +7,8 @@ import com.code.atlas.web.service.dto.*;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
+import java.util.Map;
+
 @Service
 public class PromptService {
 
@@ -14,17 +16,19 @@ public class PromptService {
     private final ProjectService projectService;
     private final PromptContextService promptContextService;
     private final AIModelService aiModelService;
+    private final PromptFormatService promptFormatService;
 
     public PromptService(
             PromptOptimizerModeService promptOptimizerModeService,
             ProjectService projectService,
             PromptContextService promptContextService,
-            AIModelService aiModelService
+            AIModelService aiModelService, PromptFormatService promptFormatService
     ) {
         this.promptOptimizerModeService = promptOptimizerModeService;
         this.projectService = projectService;
         this.promptContextService = promptContextService;
         this.aiModelService = aiModelService;
+        this.promptFormatService = promptFormatService;
     }
 
     public BuildPreviewResponseDto buildPreview(BuildPreviewRequestDto requestDto) {
@@ -36,10 +40,12 @@ public class PromptService {
         String template = mode.getPrompt();
         String context = promptContextService.buildContext(project, requestDto.userRequest());
         String agentsFileContent = requestDto.shouldSendAgentsFile() ? projectService.resolveAgentsFileContent(project) : "";
-        String generatedPrompt = template
-                .replace("{{ USER_REQUEST }}", requestDto.userRequest().trim())
-                .replace("{{ CONTEXT }}", context)
-                .replace("{{ AGENTS_FILE }}", agentsFileContent);
+        Map<String, String> parameters = Map.of(
+                "USER_REQUEST", requestDto.userRequest(),
+                "CONTEXT", context,
+                "AGENTS_FILE", agentsFileContent
+        );
+        String generatedPrompt = promptFormatService.formatPrompt(template, parameters);
         return new BuildPreviewResponseDto(generatedPrompt, AIModelService.estimateTokens(generatedPrompt));
     }
 

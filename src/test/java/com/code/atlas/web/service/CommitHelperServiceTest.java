@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verify;
@@ -26,6 +25,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
@@ -39,6 +39,9 @@ class CommitHelperServiceTest {
 
     @Mock
     private GitProcessRunner gitProcessRunner;
+
+    @Spy
+    private PromptFormatService promptFormatService = new PromptFormatService();
 
     @InjectMocks
     private CommitHelperService commitHelperService;
@@ -106,8 +109,8 @@ class CommitHelperServiceTest {
     void generateCommitMessage_callsGitDiffAndAiModel() {
         when(projectService.getProjectEntity(1L)).thenReturn(project);
         when(aiModelService.getModelEntity(2L)).thenReturn(model);
-        when(gitProcessRunner.run(any(Path.class), any())).thenReturn("true", "");
-        when(gitProcessRunner.runAllowDiffExit(any(Path.class), any())).thenReturn("diff line");
+        when(gitProcessRunner.run(any(Path.class), any())).thenReturn("true");
+        when(gitProcessRunner.collectWorkingTreeDiff(any(Path.class))).thenReturn("diff line");
         when(aiModelService.sendToModel(eq(project), eq(model), any(), eq("Commit Helper")))
                 .thenReturn(new ModelResponseDto("feat(api): add commit helper", 42));
 
@@ -115,8 +118,7 @@ class CommitHelperServiceTest {
 
         assertEquals("feat(api): add commit helper", message);
         verify(gitProcessRunner).run(any(Path.class), eq(List.of("git", "rev-parse", "--is-inside-work-tree")));
-        verify(gitProcessRunner).runAllowDiffExit(any(Path.class), eq(List.of("git", "diff", "HEAD")));
-        verify(gitProcessRunner).run(any(Path.class), eq(List.of("git", "ls-files", "--others", "--exclude-standard")));
+        verify(gitProcessRunner).collectWorkingTreeDiff(any(Path.class));
         verify(aiModelService).sendToModel(eq(project), eq(model), any(), eq("Commit Helper"));
     }
 
@@ -124,8 +126,8 @@ class CommitHelperServiceTest {
     void generateCommitMessage_rejectsEmptyDiff() {
         when(projectService.getProjectEntity(1L)).thenReturn(project);
         when(aiModelService.getModelEntity(2L)).thenReturn(model);
-        when(gitProcessRunner.run(any(Path.class), any())).thenReturn("true", "");
-        when(gitProcessRunner.runAllowDiffExit(any(Path.class), any())).thenReturn("   ");
+        when(gitProcessRunner.run(any(Path.class), any())).thenReturn("true");
+        when(gitProcessRunner.collectWorkingTreeDiff(any(Path.class))).thenReturn("   ");
 
         IllegalArgumentException ex = assertThrows(
                 IllegalArgumentException.class,
@@ -137,18 +139,7 @@ class CommitHelperServiceTest {
 
     @Test
     void collectWorkingTreeDiff_includesUntrackedFiles() {
-        when(gitProcessRunner.runAllowDiffExit(any(Path.class), eq(List.of("git", "diff", "HEAD"))))
-                .thenReturn("tracked diff");
-        when(gitProcessRunner.run(any(Path.class), eq(List.of("git", "ls-files", "--others", "--exclude-standard"))))
-                .thenReturn("new-file.txt");
-        when(gitProcessRunner.runAllowDiffExit(
-                any(Path.class),
-                argThat(command -> command.size() == 5
-                        && "git".equals(command.get(0))
-                        && "diff".equals(command.get(1))
-                        && "--no-index".equals(command.get(2))
-                        && "new-file.txt".equals(command.get(4)))
-        )).thenReturn("untracked diff");
+        when(gitProcessRunner.collectWorkingTreeDiff(any(Path.class))).thenReturn("tracked diff\nuntracked diff");
 
         String diff = gitProcessRunner.collectWorkingTreeDiff(tempDir);
 

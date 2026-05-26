@@ -11,29 +11,33 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 
 @Service
 public class CommitHelperService {
 
     private static final String COMMIT_TEMPLATE_PATH = "prompts/commit-message.md";
-    private static final String DIFF_PLACEHOLDER = "{{DIFF}}";
+    private static final String DIFF_PARAMETER_KEY = "DIFF";
     private static final String TRUNCATION_SUFFIX = "\n\n[diff truncated]";
     private static final String COMMIT_HELPER_NOTES = "Commit Helper";
 
     private final ProjectService projectService;
     private final AIModelService aiModelService;
     private final GitProcessRunner gitProcessRunner;
+    private final PromptFormatService promptFormatService;
     private final String commitTemplate;
 
     public CommitHelperService(
             ProjectService projectService,
             AIModelService aiModelService,
-            GitProcessRunner gitProcessRunner
+            GitProcessRunner gitProcessRunner,
+            PromptFormatService promptFormatService
     ) {
         this.projectService = projectService;
         this.aiModelService = aiModelService;
         this.gitProcessRunner = gitProcessRunner;
+        this.promptFormatService = promptFormatService;
         this.commitTemplate = loadCommitTemplate();
     }
 
@@ -64,7 +68,7 @@ public class CommitHelperService {
         }
 
         String truncatedDiff = truncateDiffForModel(diff, model.getTokensPerMinute());
-        String prompt = commitTemplate.replace(DIFF_PLACEHOLDER, truncatedDiff);
+        String prompt = promptFormatService.formatPrompt(commitTemplate, Map.of(DIFF_PARAMETER_KEY, truncatedDiff));
         ModelResponseDto response = aiModelService.sendToModel(project, model, prompt, COMMIT_HELPER_NOTES);
         return response.reponse().trim();
     }
@@ -89,7 +93,9 @@ public class CommitHelperService {
             return diff;
         }
 
-        int wrapperTokens = AIModelService.estimateTokens(commitTemplate.replace(DIFF_PLACEHOLDER, ""));
+        int wrapperTokens = AIModelService.estimateTokens(
+                promptFormatService.formatPrompt(commitTemplate, Map.of(DIFF_PARAMETER_KEY, ""))
+        );
         int availableTokens = tokensPerMinute - wrapperTokens;
         if (availableTokens <= 0) {
             throw new IllegalArgumentException("Commit prompt template exceeds model tokensPerMinute limit.");

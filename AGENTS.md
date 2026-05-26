@@ -62,6 +62,12 @@ Projects (`ProjectService`)
 2. Other services load a project via `getProjectEntity` or list/detail DTOs from `ProjectService`.
 3. File indexing and context retrieval stay in `ProjectIndexService` and related context classes; they consume `Project` entities obtained through `ProjectService`.
 
+Prompt template substitution (`PromptFormatService.formatPrompt`)
+
+1. All `{{…}}` placeholder substitution in prompt templates must go only through `com.code.atlas.web.service.PromptFormatService.formatPrompt(String template, Map<String, String> parameters)`.
+2. Do not use `String.replace` on `{{KEY}}` literals in feature services — inject `PromptFormatService` and pass a parameter map (e.g. `USER_REQUEST`, `CONTEXT`, `AGENTS_FILE`, `DIFF`).
+3. Placeholders match `\{\{\s*KEY\s*\}\}` (flexible whitespace); unknown placeholders stay literal; map values null become empty string.
+
 Entities
 
 1. Must annotate entity classes with @Entity.
