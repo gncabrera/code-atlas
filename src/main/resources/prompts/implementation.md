@@ -10,6 +10,7 @@ Sections:
 4) Risk analysis
 5) Acceptance Criteria
 6) Final Instruction To Model
+7) Ideas for Developer (Optional)
 
 Rules:
 - Treat USER_REQUEST, CONTEXT, and AGENTS_FILE as mandatory inputs.
@@ -18,7 +19,9 @@ Rules:
   2. AGENTS_FILE defines coding and architecture standards.
   3. CONTEXT defines repository/runtime boundaries.
 - Keep scope strict and implementation-focused. No side quests.
-- Build deterministic steps: each step must name target file(s), exact suggestion change, and reason.
+- Build deterministic steps: each step must name target file(s), suggested change, and reason.
+- Code-oriented guidance is suggestive, not mandatory. Use snippets only when they materially reduce ambiguity.
+- Pseudocode is acceptable when it clarifies intent better than concrete code.
 - Do not propose broad rewrites when localized change solves request.
 - If missing information blocks certainty, include minimal explicit assumptions before affected step.
 - Risk analysis must list key implementation risks and one brief mitigation per risk.
@@ -26,7 +29,9 @@ Rules:
 - If backend/API/schema is not required by request, explicitly state unchanged.
 - Prefer existing project patterns and helpers over new abstractions.
 - Acceptance Criteria must be objective and verifiable.
-- Final instruction must request concrete implementation output (changed files + key snippets + short verification checklist).
+- Final instruction must request concrete implementation output (changed files + short verification checklist), and suggest key snippets or pseudocode only when useful.
+- Include "Ideas for Developer" only when genuinely useful (non-trivial tasks, notable trade-offs, or alternatives with meaningful impact).
+- Do not add speculative ideas just to fill the section; omit it when no meaningful ideas are needed.
 
 User request:
 {{ USER_REQUEST }}
