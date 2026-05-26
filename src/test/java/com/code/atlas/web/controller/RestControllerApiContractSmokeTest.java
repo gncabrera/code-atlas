@@ -4,12 +4,14 @@ import com.code.atlas.web.config.DevAssetModelAdvice;
 import com.code.atlas.web.controller.support.ApiResponseContractSupport;
 import com.code.atlas.web.service.AIModelApiKeyService;
 import com.code.atlas.web.service.AIModelService;
+import com.code.atlas.web.service.CodeReviewService;
 import com.code.atlas.web.service.CommitHelperService;
 import com.code.atlas.web.service.ProjectService;
 import com.code.atlas.web.service.PromptHistoryService;
 import com.code.atlas.web.service.PromptOptimizerModeService;
 import com.code.atlas.web.service.PromptService;
 import com.code.atlas.web.service.SkillService;
+import com.code.atlas.web.service.dto.CodeReviewMetadataDto;
 import com.code.atlas.web.service.dto.CommitHelperMetadataDto;
 import com.code.atlas.web.service.dto.PromptPageMetadataDto;
 import java.util.List;
@@ -241,6 +243,36 @@ class RestControllerApiContractSmokeTest {
                     .andExpect(jsonPath("$.result").value("success"))
                     .andExpect(jsonPath("$.message").value("Prompt optimizer modes fetched."))
                     .andExpect(jsonPath("$.data").isArray())
+                    .andExpect(ApiResponseContractSupport.strictSuccessContract());
+        }
+    }
+
+    @Nested
+    @WebMvcTest(
+            controllers = CodeReviewRestController.class,
+            excludeFilters = @ComponentScan.Filter(
+                    type = FilterType.ASSIGNABLE_TYPE,
+                    classes = DevAssetModelAdvice.class
+            )
+    )
+    class CodeReviewRestControllerSmoke {
+
+        @Autowired
+        private MockMvc mockMvc;
+
+        @MockBean
+        private CodeReviewService codeReviewService;
+
+        @Test
+        void metadataEndpointReturnsApiResponseContract() throws Exception {
+            when(codeReviewService.getMetadata(null))
+                    .thenReturn(new CodeReviewMetadataDto(List.of(), List.of(), List.of()));
+
+            mockMvc.perform(get("/api/code-review/metadata"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.result").value("success"))
+                    .andExpect(jsonPath("$.message").value("Code review metadata fetched."))
+                    .andExpect(jsonPath("$.data.branches").isArray())
                     .andExpect(ApiResponseContractSupport.strictSuccessContract());
         }
     }

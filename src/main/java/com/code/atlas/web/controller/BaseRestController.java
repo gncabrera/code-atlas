@@ -6,7 +6,7 @@ import org.jetbrains.annotations.NotNull;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
-public class BaseRestController {
+public abstract class BaseRestController {
     @NotNull
     public ResponseEntity<ApiResponse<?>> handledException(String context, Exception ex) {
         GlobalExceptionHandler.logCaughtException(context, ex);

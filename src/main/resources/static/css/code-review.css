@@ -1,0 +1,19 @@
+.code-review-score {
+    line-height: 1;
+}
+
+.finding-card .finding-details {
+    display: none;
+}
+
+.finding-card.is-expanded .finding-details {
+    display: block;
+}
+
+.finding-card.is-filtered-out {
+    display: none !important;
+}
+
+.severity-filter.active {
+    font-weight: 600;
+}

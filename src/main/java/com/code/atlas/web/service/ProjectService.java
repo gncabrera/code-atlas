@@ -17,9 +17,11 @@ import org.springframework.stereotype.Service;
 public class ProjectService {
 
     private final ProjectRepository projectRepository;
+    private final GitProcessRunner gitProcessRunner;
 
-    public ProjectService(ProjectRepository projectRepository) {
+    public ProjectService(ProjectRepository projectRepository, GitProcessRunner gitProcessRunner) {
         this.projectRepository = projectRepository;
+        this.gitProcessRunner = gitProcessRunner;
     }
 
     public List<ProjectResponseDto> getAllProjects() {
@@ -83,6 +85,25 @@ public class ProjectService {
                 project.getDescription(),
                 project.isUseAgentsFile()
         );
+    }
+
+    public List<String> getProjectFiles(Project project) {
+        if (project == null || project.getPath() == null || project.getPath().isBlank()) {
+            return List.of();
+        }
+        Path projectRoot = Paths.get(project.getPath()).normalize();
+        if (!Files.exists(projectRoot) || !Files.isDirectory(projectRoot)) {
+            return List.of();
+        }
+        try {
+            String isRepo = gitProcessRunner.run(projectRoot, List.of("git", "rev-parse", "--is-inside-work-tree"));
+            if (!"true".equalsIgnoreCase(isRepo.trim())) {
+                return List.of();
+            }
+            return gitProcessRunner.listTrackedFiles(projectRoot);
+        } catch (IllegalArgumentException ex) {
+            return List.of();
+        }
     }
 
     public String resolveAgentsFileContent(Project project) {
