@@ -79,6 +79,7 @@ $(function () {
             projectSelect: $("#projectSelect").val() || "",
             promptModeSelect: $("#promptModeSelect").val() || getDefaultPromptModeId(),
             shouldSendAgentsFile: $("#shouldSendAgentsFile").is(":checked"),
+            shouldSendDesignFile: $("#shouldSendDesignFile").is(":checked"),
             userRequest: ($("#userRequest").val() || "").trim(),
             aiModelSelect: $("#aiModelSelect").val() || "",
             aiModelPrompt: ($("#aiModelPrompt").val() || "").trim(),
@@ -127,6 +128,7 @@ $(function () {
             && !data.projectSelect
             && String(data.promptModeSelect || "") === getDefaultPromptModeId()
             && data.shouldSendAgentsFile === true
+            && data.shouldSendDesignFile === true
             && String(data.aiModelSelect || "") === getDefaultAiModelSelectValue()
             && skillIdsEqual(data.skillMultiselect, getDefaultSkillIds(loadedSkills));
     }
@@ -174,6 +176,10 @@ $(function () {
     function applyDraftField(fieldKey, value) {
         if (fieldKey === "shouldSendAgentsFile") {
             $("#shouldSendAgentsFile").prop("checked", Boolean(value));
+            return true;
+        }
+        if (fieldKey === "shouldSendDesignFile") {
+            $("#shouldSendDesignFile").prop("checked", Boolean(value));
             return true;
         }
         if (fieldKey === "skillMultiselect") {
@@ -240,7 +246,7 @@ $(function () {
         });
         restored = hadContent;
         isRestoringDraft = false;
-        updateAgentsCheckboxVisibility();
+        updateProjectFileCheckboxVisibility();
         updateTokenInfo();
         if (restored) {
             showDraftStatus("Draft Restored");
@@ -249,7 +255,10 @@ $(function () {
     }
 
     function resetPromptPageToDefaults() {
+        $("#projectSelect").val("");
+        $("#promptModeSelect").val(getDefaultPromptModeId());
         $("#shouldSendAgentsFile").prop("checked", true);
+        $("#shouldSendDesignFile").prop("checked", true);
         $("#userRequest").val("");
         $("#aiModelPrompt").val("");
         $("#outputPrompt").val("");
@@ -260,7 +269,7 @@ $(function () {
             $modelSelect.val("");
         }
         applySkillMultiselectSelection(getDefaultSkillIds(loadedSkills));
-        updateAgentsCheckboxVisibility();
+        updateProjectFileCheckboxVisibility();
         updateTokenInfo();
     }
 
@@ -277,7 +286,7 @@ $(function () {
     function bindDraftAutoSave() {
         $("#userRequest, #aiModelPrompt, #outputPrompt").on("input", debouncedSaveDraft);
         $("#projectSelect, #promptModeSelect, #aiModelSelect").on("change", debouncedSaveDraft);
-        $("#shouldSendAgentsFile").on("change", debouncedSaveDraft);
+        $("#shouldSendAgentsFile, #shouldSendDesignFile").on("change", debouncedSaveDraft);
         $("#skillMultiselect").on("change", debouncedSaveDraft);
         $("#btn-clear-prompt").on("click", clearDraft);
     }
@@ -293,14 +302,20 @@ $(function () {
         }
     }
 
-    function updateAgentsCheckboxVisibility() {
+    function updateProjectFileCheckboxVisibility() {
         const project = selectedProject();
         if (project && !project.useAgentsFile) {
             $("#agentsCheckboxWrapper").addClass("d-none");
             $("#shouldSendAgentsFile").prop("checked", false);
-            return;
+        } else {
+            $("#agentsCheckboxWrapper").removeClass("d-none");
         }
-        $("#agentsCheckboxWrapper").removeClass("d-none");
+        if (project && !project.useDesignFile) {
+            $("#designCheckboxWrapper").addClass("d-none");
+            $("#shouldSendDesignFile").prop("checked", false);
+        } else {
+            $("#designCheckboxWrapper").removeClass("d-none");
+        }
     }
 
     function updateTokenInfo() {
@@ -319,7 +334,7 @@ $(function () {
         projects.forEach(project => {
             select.append($("<option>", {value: project.id, text: project.name}));
         });
-        updateAgentsCheckboxVisibility();
+        updateProjectFileCheckboxVisibility();
     }
 
     function populateModels() {
@@ -375,7 +390,7 @@ $(function () {
     }
 
     $("#projectSelect").on("change", function () {
-        updateAgentsCheckboxVisibility();
+        updateProjectFileCheckboxVisibility();
     });
 
     $("#aiModelSelect, #aiModelPrompt").on("change keyup", function () {
@@ -398,6 +413,7 @@ $(function () {
             projectId: $("#projectSelect").val() || null,
             userRequest: userRequest,
             shouldSendAgentsFile: $("#shouldSendAgentsFile").is(":checked"),
+            shouldSendDesignFile: $("#shouldSendDesignFile").is(":checked"),
             promptModeId: Number(promptModeId)
         };
         CodeAtlas.setButtonLoading($buildBtn, true, "Building Preview...");
@@ -448,6 +464,7 @@ $(function () {
             aiModelId: model.id,
             aiModelPrompt: aiModelPrompt,
             shouldSendAgentsFile: $("#shouldSendAgentsFile").is(":checked"),
+            shouldSendDesignFile: $("#shouldSendDesignFile").is(":checked"),
             promptModeId: promptModeId ? Number(promptModeId) : null
         };
         setPromptPageLocked(true, $sendBtn, "Sending...");
