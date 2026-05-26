@@ -1,17 +1,15 @@
 package com.code.atlas.web.controller;
 
 import com.code.atlas.web.api.ApiResponse;
-import com.code.atlas.web.api.GlobalExceptionHandler;
 import com.code.atlas.web.service.AIModelService;
 import com.code.atlas.web.service.ProjectService;
+import com.code.atlas.web.service.PromptOptimizerModeService;
 import com.code.atlas.web.service.PromptService;
 import com.code.atlas.web.service.dto.BuildPreviewRequestDto;
 import com.code.atlas.web.service.dto.BuildPreviewResponseDto;
 import com.code.atlas.web.service.dto.PromptPageMetadataDto;
 import com.code.atlas.web.service.dto.SendPromptRequestDto;
 import com.code.atlas.web.service.dto.SendPromptResponseDto;
-
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,11 +24,18 @@ public class PromptController extends BaseRestController {
     private final PromptService promptService;
     private final ProjectService projectService;
     private final AIModelService aiModelService;
+    private final PromptOptimizerModeService promptOptimizerModeService;
 
-    public PromptController(PromptService promptService, ProjectService projectService, AIModelService aiModelService) {
+    public PromptController(
+            PromptService promptService,
+            ProjectService projectService,
+            AIModelService aiModelService,
+            PromptOptimizerModeService promptOptimizerModeService
+    ) {
         this.promptService = promptService;
         this.projectService = projectService;
         this.aiModelService = aiModelService;
+        this.promptOptimizerModeService = promptOptimizerModeService;
     }
 
     @GetMapping("/metadata")
@@ -38,7 +43,8 @@ public class PromptController extends BaseRestController {
         try {
             PromptPageMetadataDto metadata = new PromptPageMetadataDto(
                     projectService.getAllProjects(),
-                    aiModelService.getEnabledModels()
+                    aiModelService.getEnabledModels(),
+                    promptOptimizerModeService.getVisibleModes()
             );
             return ResponseEntity.ok(ApiResponse.success("Prompt metadata fetched.", metadata));
         } catch (Exception ex) {

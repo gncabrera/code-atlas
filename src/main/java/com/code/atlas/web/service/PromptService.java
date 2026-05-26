@@ -1,49 +1,39 @@
 package com.code.atlas.web.service;
 
 import com.code.atlas.web.domain.AIModel;
-import com.code.atlas.web.domain.AIModelApiKey;
-import com.code.atlas.web.domain.PromptHistory;
-import com.code.atlas.web.domain.PromptMode;
+import com.code.atlas.web.domain.PromptOptimizerMode;
 import com.code.atlas.web.domain.Project;
 import com.code.atlas.web.service.dto.*;
-import com.code.atlas.web.repository.PromptHistoryRepository;
-import com.google.genai.Client;
-import com.google.genai.types.GenerateContentResponse;
-import com.google.genai.types.HttpOptions;
 import jakarta.transaction.Transactional;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
 public class PromptService {
 
-    private final PromptTemplateService promptTemplateService;
+    private final PromptOptimizerModeService promptOptimizerModeService;
     private final ProjectService projectService;
     private final PromptContextService promptContextService;
     private final AIModelService aiModelService;
-    private final PromptHistoryService promptHistoryService;
 
     public PromptService(
-            PromptTemplateService promptTemplateService,
+            PromptOptimizerModeService promptOptimizerModeService,
             ProjectService projectService,
             PromptContextService promptContextService,
-            AIModelService aiModelService,
-            PromptHistoryService promptHistoryService
+            AIModelService aiModelService
     ) {
-        this.promptTemplateService = promptTemplateService;
+        this.promptOptimizerModeService = promptOptimizerModeService;
         this.projectService = projectService;
         this.promptContextService = promptContextService;
         this.aiModelService = aiModelService;
-        this.promptHistoryService = promptHistoryService;
     }
 
     public BuildPreviewResponseDto buildPreview(BuildPreviewRequestDto requestDto) {
-        PromptMode mode = PromptMode.fromNullableValue(requestDto.promptMode());
+        PromptOptimizerMode mode = promptOptimizerModeService.getModeEntity(requestDto.promptModeId());
+        if (mode.isHidden()) {
+            throw new IllegalArgumentException("Selected prompt mode is not available.");
+        }
         Project project = resolveProject(requestDto.projectId());
-        String template = promptTemplateService.loadTemplate(mode);
+        String template = mode.getPrompt();
         String context = promptContextService.buildContext(project, requestDto.userRequest());
         String agentsFileContent = requestDto.shouldSendAgentsFile() ? projectService.resolveAgentsFileContent(project) : "";
         String generatedPrompt = template
@@ -58,9 +48,18 @@ public class PromptService {
         AIModel model = aiModelService.getModelEntity(requestDto.aiModelId());
         String exactPrompt = requestDto.aiModelPrompt();
         Project project = resolveProject(requestDto.projectId());
-        String notes = "shouldSendAgentsFile: " + requestDto.shouldSendAgentsFile() + ". PromptMode: " + PromptMode.fromNullableValue(requestDto.promptMode()).name();
+        String modeLabel = resolveModeLabel(requestDto.promptModeId());
+        String notes = "shouldSendAgentsFile: " + requestDto.shouldSendAgentsFile() + ". PromptMode: " + modeLabel;
         ModelResponseDto modelResponseDto = aiModelService.sendToModel(project, model, exactPrompt, notes);
         return new SendPromptResponseDto(modelResponseDto.reponse(), modelResponseDto.estimatedTokens());
+    }
+
+    private String resolveModeLabel(Long promptModeId) {
+        if (promptModeId == null) {
+            return "UNKNOWN";
+        }
+        PromptOptimizerMode mode = promptOptimizerModeService.getModeEntity(promptModeId);
+        return mode.getCode();
     }
 
     private Project resolveProject(Long projectId) {
@@ -69,8 +68,4 @@ public class PromptService {
         }
         return projectService.getProjectEntity(projectId);
     }
-
-
-
-
 }

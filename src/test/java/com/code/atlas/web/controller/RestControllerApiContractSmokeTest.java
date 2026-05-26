@@ -7,6 +7,7 @@ import com.code.atlas.web.service.AIModelService;
 import com.code.atlas.web.service.CommitHelperService;
 import com.code.atlas.web.service.ProjectService;
 import com.code.atlas.web.service.PromptHistoryService;
+import com.code.atlas.web.service.PromptOptimizerModeService;
 import com.code.atlas.web.service.PromptService;
 import com.code.atlas.web.service.SkillService;
 import com.code.atlas.web.service.dto.CommitHelperMetadataDto;
@@ -195,10 +196,14 @@ class RestControllerApiContractSmokeTest {
         @MockBean
         private AIModelService aiModelService;
 
+        @MockBean
+        private PromptOptimizerModeService promptOptimizerModeService;
+
         @Test
         void metadataEndpointReturnsApiResponseContract() throws Exception {
             when(projectService.getAllProjects()).thenReturn(List.of());
             when(aiModelService.getEnabledModels()).thenReturn(List.of());
+            when(promptOptimizerModeService.getVisibleModes()).thenReturn(List.of());
 
             mockMvc.perform(get("/api/prompts/metadata"))
                     .andExpect(status().isOk())
@@ -206,6 +211,36 @@ class RestControllerApiContractSmokeTest {
                     .andExpect(jsonPath("$.message").value("Prompt metadata fetched."))
                     .andExpect(jsonPath("$.data.projects").isArray())
                     .andExpect(jsonPath("$.data.enabledModels").isArray())
+                    .andExpect(jsonPath("$.data.promptModes").isArray())
+                    .andExpect(ApiResponseContractSupport.strictSuccessContract());
+        }
+    }
+
+    @Nested
+    @WebMvcTest(
+            controllers = PromptOptimizerModeController.class,
+            excludeFilters = @ComponentScan.Filter(
+                    type = FilterType.ASSIGNABLE_TYPE,
+                    classes = DevAssetModelAdvice.class
+            )
+    )
+    class PromptOptimizerModeControllerSmoke {
+
+        @Autowired
+        private MockMvc mockMvc;
+
+        @MockBean
+        private PromptOptimizerModeService promptOptimizerModeService;
+
+        @Test
+        void listEndpointReturnsApiResponseContract() throws Exception {
+            when(promptOptimizerModeService.getAllModes()).thenReturn(List.of());
+
+            mockMvc.perform(get("/api/admin/prompt-optimizer-modes"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.result").value("success"))
+                    .andExpect(jsonPath("$.message").value("Prompt optimizer modes fetched."))
+                    .andExpect(jsonPath("$.data").isArray())
                     .andExpect(ApiResponseContractSupport.strictSuccessContract());
         }
     }

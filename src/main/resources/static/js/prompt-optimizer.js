@@ -5,6 +5,7 @@ $(function () {
 
     let projects = [];
     let enabledModels = [];
+    let promptModes = [];
     let skillsById = {};
     let loadedSkills = [];
     let pendingDraftSkillIds = null;
@@ -74,7 +75,7 @@ $(function () {
     function collectDraftData() {
         return {
             projectSelect: $("#projectSelect").val() || "",
-            promptModeSelect: $("#promptModeSelect").val() || "IMPLEMENTATION",
+            promptModeSelect: $("#promptModeSelect").val() || getDefaultPromptModeId(),
             shouldSendAgentsFile: $("#shouldSendAgentsFile").is(":checked"),
             userRequest: ($("#userRequest").val() || "").trim(),
             aiModelSelect: $("#aiModelSelect").val() || "",
@@ -122,7 +123,7 @@ $(function () {
             && !data.aiModelPrompt
             && !data.outputPrompt
             && !data.projectSelect
-            && data.promptModeSelect === "BALANCED"
+            && String(data.promptModeSelect || "") === getDefaultPromptModeId()
             && data.shouldSendAgentsFile === true
             && String(data.aiModelSelect || "") === getDefaultAiModelSelectValue()
             && skillIdsEqual(data.skillMultiselect, getDefaultSkillIds(loadedSkills));
@@ -188,6 +189,16 @@ $(function () {
             $field.val(value || "");
             return true;
         }
+        if (fieldKey === "promptModeSelect") {
+            if (!/^\d+$/.test(String(value || ""))) {
+                return false;
+            }
+            if ($field.find('option[value="' + value + '"]').length === 0) {
+                return false;
+            }
+            $field.val(String(value));
+            return true;
+        }
         $field.val(value ?? "");
         return true;
     }
@@ -237,7 +248,7 @@ $(function () {
 
     function resetPromptPageToDefaults() {
         $("#projectSelect").val("");
-        $("#promptModeSelect").val("BALANCED");
+        $("#promptModeSelect").val(getDefaultPromptModeId());
         $("#shouldSendAgentsFile").prop("checked", true);
         $("#userRequest").val("");
         $("#aiModelPrompt").val("");
@@ -320,13 +331,38 @@ $(function () {
         updateTokenInfo();
     }
 
+    function getDefaultPromptModeId() {
+        const balanced = promptModes.find(function (mode) {
+            return mode.code === "BALANCED";
+        });
+        if (balanced) {
+            return String(balanced.id);
+        }
+        return promptModes.length > 0 ? String(promptModes[0].id) : "";
+    }
+
+    function populatePromptModes() {
+        const select = $("#promptModeSelect");
+        select.empty();
+        if (!promptModes.length) {
+            select.append($("<option>", {value: "", text: "No modes available"}));
+            return;
+        }
+        promptModes.forEach(function (mode) {
+            select.append($("<option>", {value: mode.id, text: mode.name}));
+        });
+        select.val(getDefaultPromptModeId());
+    }
+
     function loadMetadata() {
         CodeAtlas.apiGet("/api/prompts/metadata")
             .done(function (response) {
                 projects = response.data.projects || [];
                 enabledModels = response.data.enabledModels || [];
+                promptModes = response.data.promptModes || [];
                 populateProjects();
                 populateModels();
+                populatePromptModes();
                 loadDraftFromLocalStorage();
                 loadSkills();
             })
@@ -353,11 +389,16 @@ $(function () {
             CodeAtlas.showToast("User request is required.", "danger");
             return;
         }
+        const promptModeId = $("#promptModeSelect").val();
+        if (!promptModeId) {
+            CodeAtlas.showToast("Select a prompt mode.", "danger");
+            return;
+        }
         const payload = {
             projectId: $("#projectSelect").val() || null,
             userRequest: userRequest,
             shouldSendAgentsFile: $("#shouldSendAgentsFile").is(":checked"),
-            promptMode: $("#promptModeSelect").val()
+            promptModeId: Number(promptModeId)
         };
         CodeAtlas.setButtonLoading($buildBtn, true, "Building Preview...");
         $.ajax({
@@ -401,12 +442,13 @@ $(function () {
         if (!confirmed) {
             return;
         }
+        const promptModeId = $("#promptModeSelect").val();
         const payload = {
             projectId: $("#projectSelect").val() || null,
             aiModelId: model.id,
             aiModelPrompt: aiModelPrompt,
             shouldSendAgentsFile: $("#shouldSendAgentsFile").is(":checked"),
-            promptMode: $("#promptModeSelect").val()
+            promptModeId: promptModeId ? Number(promptModeId) : null
         };
         setPromptPageLocked(true, $sendBtn, "Sending...");
         $.ajax({
