@@ -255,8 +255,6 @@ $(function () {
     }
 
     function resetPromptPageToDefaults() {
-        $("#projectSelect").val("");
-        $("#promptModeSelect").val(getDefaultPromptModeId());
         $("#shouldSendAgentsFile").prop("checked", true);
         $("#shouldSendDesignFile").prop("checked", true);
         $("#userRequest").val("");
