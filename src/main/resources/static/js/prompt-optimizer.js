@@ -376,8 +376,24 @@ $(function () {
                 populateProjects();
                 populateModels();
                 populatePromptModes();
-                loadDraftFromLocalStorage();
-                loadSkills();
+                const applyStoredPreferences = function () {
+                    if (!window.CodeAtlasUserPreferences) {
+                        loadDraftFromLocalStorage();
+                        loadSkills();
+                        return;
+                    }
+                    CodeAtlasUserPreferences.applyPreferenceFields([
+                        { field: "promptOptimizerDefaultPromptModeId", selectId: "promptModeSelect" },
+                        { field: "promptOptimizerDefaultAiModelId", selectId: "aiModelSelect" }
+                    ]);
+                    loadDraftFromLocalStorage();
+                    loadSkills();
+                };
+                if (window.CodeAtlasUserPreferences) {
+                    CodeAtlasUserPreferences.whenLoaded().always(applyStoredPreferences);
+                } else {
+                    applyStoredPreferences();
+                }
             })
             .fail(function (xhr) {
                 CodeAtlas.showToast(

@@ -77,16 +77,28 @@ $(function () {
                 enabledModels = response.data.enabledModels || [];
                 populateProjects();
                 populateModels();
-                if (projectId) {
-                    branches = response.data.branches || [];
-                    populateBranches(branches);
+                const applyStoredPreferences = function () {
+                    if (window.CodeAtlasUserPreferences) {
+                        CodeAtlasUserPreferences.applyPreferenceFields([
+                            { field: "codeReviewDefaultAiModelId", selectId: "modelSelect" }
+                        ]);
+                    }
+                    if (projectId) {
+                        branches = response.data.branches || [];
+                        populateBranches(branches);
+                    } else {
+                        resetBranches();
+                    }
+                    if (projectId) {
+                        $project.val(String(projectId));
+                    }
+                    checkFormState();
+                };
+                if (window.CodeAtlasUserPreferences) {
+                    CodeAtlasUserPreferences.whenLoaded().always(applyStoredPreferences);
                 } else {
-                    resetBranches();
+                    applyStoredPreferences();
                 }
-                if (projectId) {
-                    $project.val(String(projectId));
-                }
-                checkFormState();
             })
             .fail(function (xhr) {
                 CodeAtlas.showToast(CodeAtlas.apiMessage(xhr, "Failed to load code review metadata."), "danger");

@@ -65,7 +65,19 @@ $(function () {
                 enabledModels = response.data.enabledModels || [];
                 populateProjects();
                 populateModels();
-                updateProjectDependentState();
+                const applyStoredPreferences = function () {
+                    if (window.CodeAtlasUserPreferences) {
+                        CodeAtlasUserPreferences.applyPreferenceFields([
+                            { field: "commitHelperDefaultAiModelId", selectId: "aiModelSelect" }
+                        ]);
+                    }
+                    updateProjectDependentState();
+                };
+                if (window.CodeAtlasUserPreferences) {
+                    CodeAtlasUserPreferences.whenLoaded().always(applyStoredPreferences);
+                } else {
+                    applyStoredPreferences();
+                }
             })
             .fail(function (xhr) {
                 CodeAtlas.showToast(CodeAtlas.apiMessage(xhr, "Failed to load commit helper metadata."), "danger");
