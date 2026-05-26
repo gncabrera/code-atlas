@@ -20,25 +20,28 @@
             <select id="projectSelect" class="form-select">
                 <option value="">No project</option>
             </select>
+            <div class="form-text">Select a project for file context retrieval.</div>
         </div>
         <div class="col-md-4">
             <label for="promptModeSelect" class="form-label">Prompt Mode</label>
             <select id="promptModeSelect" class="form-select">
-                <option value="BALANCED" selected>balanced</option>
-                <option value="CHEAP">cheap</option>
-                <option value="ARCHITECT">architect</option>
-                <option value="IMPLEMENTATION">implementation</option>
-                <option value="REVIEWER">reviewer</option>
-                <option value="REFACTOR">refactor</option>
-                <option value="SECURITY">security</option>
+                <option value="">Loading modes...</option>
             </select>
         </div>
         <div class="col-md-4 d-flex align-items-end">
-            <div id="agentsCheckboxWrapper" class="form-check">
-                <input class="form-check-input" type="checkbox" value="" id="shouldSendAgentsFile" checked>
-                <label class="form-check-label" for="shouldSendAgentsFile">
-                    Send Project AGENTS.md
-                </label>
+            <div>
+                <div id="agentsCheckboxWrapper" class="form-check">
+                    <input class="form-check-input" type="checkbox" value="" id="shouldSendAgentsFile" checked>
+                    <label class="form-check-label" for="shouldSendAgentsFile">
+                        Send Project AGENTS.md
+                    </label>
+                </div>
+                <div id="designCheckboxWrapper" class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" value="" id="shouldSendDesignFile" checked>
+                    <label class="form-check-label" for="shouldSendDesignFile">
+                        Send Project DESIGN.md
+                    </label>
+                </div>
             </div>
         </div>
     </div>
@@ -111,6 +114,6 @@
     </div>
 </main>
 
-<th:block th:replace="~{fragments/scripts :: pageScriptsWithVendor('prompt-optimizer.js', 'vendor/bootstrap-multiselect.js')}"></th:block>
+<th:block th:replace="~{fragments/scripts :: pageScriptsWithPreferences('prompt-optimizer.js', 'vendor/bootstrap-multiselect.js')}"></th:block>
 </body>
 </html>

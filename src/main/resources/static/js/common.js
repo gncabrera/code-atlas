@@ -1,7 +1,6 @@
 (function (global) {
     const CodeAtlas = {};
     const TOAST_CONTAINER_ID = "globalToastContainer";
-
     const TOAST_TYPE_CLASSES = {
         success: "bg-success text-white",
         error: "bg-danger text-white",
@@ -77,6 +76,33 @@
             url: url,
             method: "GET",
             dataType: "json"
+        });
+    };
+
+    function dismissibleAlertsApi() {
+        return global.CodeAtlasDismissibleAlerts || null;
+    }
+
+    CodeAtlas.initDismissibleAlerts = function () {
+        const api = dismissibleAlertsApi();
+        const dismissed = api ? api.readDismissedAlerts() : {};
+        $("[data-alert-id]").each(function () {
+            const $alert = $(this);
+            const alertElement = $alert[0];
+            const alertId = String($alert.data("alert-id") || "").trim();
+            if (!alertId) {
+                return;
+            }
+            const shouldPersist = api ? api.shouldPersistAlert(alertElement) : true;
+            if (shouldPersist && dismissed[alertId]) {
+                $alert.remove();
+                return;
+            }
+            $alert.on("closed.bs.alert", function () {
+                if (shouldPersist && api) {
+                    api.writeDismissedAlert(alertId);
+                }
+            });
         });
     };
 
@@ -196,6 +222,7 @@
 
     $(function () {
         CodeAtlas.ensureToastContainer();
+        CodeAtlas.initDismissibleAlerts();
     });
 
     global.CodeAtlas = CodeAtlas;

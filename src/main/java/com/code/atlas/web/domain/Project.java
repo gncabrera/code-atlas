@@ -32,4 +32,7 @@ public class Project {
 
     @Column(name = "use_agents_file", nullable = false)
     private boolean useAgentsFile;
+
+    @Column(name = "use_design_file", nullable = false)
+    private boolean useDesignFile = true;
 }

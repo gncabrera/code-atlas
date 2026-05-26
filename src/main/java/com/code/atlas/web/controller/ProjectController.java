@@ -3,8 +3,8 @@ package com.code.atlas.web.controller;
 import com.code.atlas.web.api.ApiResponse;
 import com.code.atlas.web.api.GlobalExceptionHandler;
 import com.code.atlas.web.service.ProjectService;
-import com.code.atlas.web.service.SkillService;
-import com.code.atlas.web.service.dto.*;
+import com.code.atlas.web.service.dto.ProjectRequestDto;
+import com.code.atlas.web.service.dto.ProjectResponseDto;
 
 import java.util.List;
 
@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/projects")
-public class ProjectController {
+public class ProjectController extends BaseRestController {
 
     private final ProjectService projectService;
 
@@ -35,10 +35,7 @@ public class ProjectController {
             List<ProjectResponseDto> projects = projectService.getAllProjects();
             return ResponseEntity.ok(ApiResponse.success("Projects fetched.", projects));
         } catch (Exception ex) {
-            GlobalExceptionHandler.logCaughtException("GET /api/projects", ex);
-            return GlobalExceptionHandler.errorResponseEntity(
-                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
-                    HttpStatus.BAD_REQUEST);
+            return handledException("GET /api/projects", ex);
         }
     }
 
@@ -48,10 +45,7 @@ public class ProjectController {
             ProjectResponseDto project = projectService.getProjectById(id);
             return ResponseEntity.ok(ApiResponse.success("Project fetched.", project));
         } catch (Exception ex) {
-            GlobalExceptionHandler.logCaughtException("GET /api/projects/{id}", ex);
-            return GlobalExceptionHandler.errorResponseEntity(
-                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
-                    HttpStatus.BAD_REQUEST);
+            return handledException("GET /api/projects/{id}", ex);
         }
     }
 
@@ -61,10 +55,7 @@ public class ProjectController {
             ProjectResponseDto created = projectService.createProject(requestDto);
             return new ResponseEntity<>(ApiResponse.success("Project created.", created), HttpStatus.CREATED);
         } catch (Exception ex) {
-            GlobalExceptionHandler.logCaughtException("POST /api/projects", ex);
-            return GlobalExceptionHandler.errorResponseEntity(
-                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
-                    HttpStatus.BAD_REQUEST);
+            return handledException("POST /api/projects", ex);
         }
     }
 
@@ -74,10 +65,7 @@ public class ProjectController {
             ProjectResponseDto updated = projectService.updateProject(id, requestDto);
             return ResponseEntity.ok(ApiResponse.success("Project updated.", updated));
         } catch (Exception ex) {
-            GlobalExceptionHandler.logCaughtException("PUT /api/projects/{id}", ex);
-            return GlobalExceptionHandler.errorResponseEntity(
-                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
-                    HttpStatus.BAD_REQUEST);
+            return handledException("PUT /api/projects/{id}", ex);
         }
     }
 
@@ -87,10 +75,7 @@ public class ProjectController {
             projectService.deleteProject(id);
             return ResponseEntity.ok(ApiResponse.success("Project deleted.", null));
         } catch (Exception ex) {
-            GlobalExceptionHandler.logCaughtException("DELETE /api/projects/{id}", ex);
-            return GlobalExceptionHandler.errorResponseEntity(
-                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
-                    HttpStatus.BAD_REQUEST);
+            return handledException("DELETE /api/projects/{id}", ex);
         }
     }
 }

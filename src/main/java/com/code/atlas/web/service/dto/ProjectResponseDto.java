@@ -5,6 +5,7 @@ public record ProjectResponseDto(
         String path,
         String name,
         String description,
-        boolean useAgentsFile
+        boolean useAgentsFile,
+        boolean useDesignFile
 ) {
 }

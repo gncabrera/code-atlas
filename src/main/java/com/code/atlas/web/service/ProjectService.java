@@ -5,6 +5,8 @@ import com.code.atlas.web.repository.ProjectRepository;
 import com.code.atlas.web.service.dto.ProjectRequestDto;
 import com.code.atlas.web.service.dto.ProjectResponseDto;
 import jakarta.transaction.Transactional;
+
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -15,9 +17,11 @@ import org.springframework.stereotype.Service;
 public class ProjectService {
 
     private final ProjectRepository projectRepository;
+    private final GitProcessRunner gitProcessRunner;
 
-    public ProjectService(ProjectRepository projectRepository) {
+    public ProjectService(ProjectRepository projectRepository, GitProcessRunner gitProcessRunner) {
         this.projectRepository = projectRepository;
+        this.gitProcessRunner = gitProcessRunner;
     }
 
     public List<ProjectResponseDto> getAllProjects() {
@@ -38,6 +42,7 @@ public class ProjectService {
         project.setName(requestDto.name().trim());
         project.setDescription(requestDto.description().trim());
         project.setUseAgentsFile(requestDto.useAgentsFile());
+        project.setUseDesignFile(requestDto.useDesignFile());
         return toResponseDto(projectRepository.save(project));
     }
 
@@ -50,6 +55,7 @@ public class ProjectService {
         project.setName(requestDto.name().trim());
         project.setDescription(requestDto.description().trim());
         project.setUseAgentsFile(requestDto.useAgentsFile());
+        project.setUseDesignFile(requestDto.useDesignFile());
         return toResponseDto(projectRepository.save(project));
     }
 
@@ -79,7 +85,63 @@ public class ProjectService {
                 project.getPath(),
                 project.getName(),
                 project.getDescription(),
-                project.isUseAgentsFile()
+                project.isUseAgentsFile(),
+                project.isUseDesignFile()
         );
+    }
+
+    public List<String> getProjectFiles(Project project) {
+        if (project == null || project.getPath() == null || project.getPath().isBlank()) {
+            return List.of();
+        }
+        Path projectRoot = Paths.get(project.getPath()).normalize();
+        if (!Files.exists(projectRoot) || !Files.isDirectory(projectRoot)) {
+            return List.of();
+        }
+        try {
+            String isRepo = gitProcessRunner.run(projectRoot, List.of("git", "rev-parse", "--is-inside-work-tree"));
+            if (!"true".equalsIgnoreCase(isRepo.trim())) {
+                return List.of();
+            }
+            return gitProcessRunner.listTrackedFiles(projectRoot);
+        } catch (IllegalArgumentException ex) {
+            return List.of();
+        }
+    }
+
+    public String resolveAgentsFileContent(Project project) {
+        if (project == null) {
+            return "";
+        }
+        if (!project.isUseAgentsFile()) {
+            return "";
+        }
+        Path agentsPath = Path.of(project.getPath(), "AGENTS.md").normalize();
+        if (!Files.exists(agentsPath)) {
+            return "No AGENTS.md found";
+        }
+        try {
+            return "AGENTS.md\n\n" + Files.readString(agentsPath);
+        } catch (IOException ex) {
+            return "No AGENTS.md found";
+        }
+    }
+
+    public String resolveDesignFileContent(Project project) {
+        if (project == null) {
+            return "";
+        }
+        if (!project.isUseDesignFile()) {
+            return "";
+        }
+        Path designPath = Path.of(project.getPath(), "DESIGN.md").normalize();
+        if (!Files.exists(designPath)) {
+            return "No DESIGN.md found";
+        }
+        try {
+            return "DESIGN.md\n\n" + Files.readString(designPath);
+        } catch (IOException ex) {
+            return "No DESIGN.md found";
+        }
     }
 }

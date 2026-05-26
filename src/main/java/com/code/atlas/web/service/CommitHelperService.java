@@ -11,29 +11,33 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Map;
 import org.springframework.stereotype.Service;
 
 @Service
 public class CommitHelperService {
 
     private static final String COMMIT_TEMPLATE_PATH = "prompts/commit-message.md";
-    private static final String DIFF_PLACEHOLDER = "{{DIFF}}";
+    private static final String DIFF_PARAMETER_KEY = "DIFF";
     private static final String TRUNCATION_SUFFIX = "\n\n[diff truncated]";
     private static final String COMMIT_HELPER_NOTES = "Commit Helper";
 
     private final ProjectService projectService;
     private final AIModelService aiModelService;
     private final GitProcessRunner gitProcessRunner;
+    private final PromptFormatService promptFormatService;
     private final String commitTemplate;
 
     public CommitHelperService(
             ProjectService projectService,
             AIModelService aiModelService,
-            GitProcessRunner gitProcessRunner
+            GitProcessRunner gitProcessRunner,
+            PromptFormatService promptFormatService
     ) {
         this.projectService = projectService;
         this.aiModelService = aiModelService;
         this.gitProcessRunner = gitProcessRunner;
+        this.promptFormatService = promptFormatService;
         this.commitTemplate = loadCommitTemplate();
     }
 
@@ -58,18 +62,19 @@ public class CommitHelperService {
         Path projectRoot = resolveProjectRoot(project);
 
         assertGitRepository(projectRoot);
-        String diff = collectWorkingTreeDiff(projectRoot);
+        String diff = gitProcessRunner.collectWorkingTreeDiff(projectRoot);
         if (diff.isBlank()) {
             throw new IllegalArgumentException("No uncommitted changes found for project.");
         }
 
         String truncatedDiff = truncateDiffForModel(diff, model.getTokensPerMinute());
-        String prompt = commitTemplate.replace(DIFF_PLACEHOLDER, truncatedDiff);
+        String prompt = promptFormatService.formatPrompt(commitTemplate, Map.of(DIFF_PARAMETER_KEY, truncatedDiff));
         ModelResponseDto response = aiModelService.sendToModel(project, model, prompt, COMMIT_HELPER_NOTES);
         return response.reponse().trim();
     }
 
     public void executeCommit(Long projectId, String message) {
+        message = cleanMessage(message);
         Path projectRoot = resolveProjectRoot(projectService.getProjectEntity(projectId));
         assertGitRepository(projectRoot);
         gitProcessRunner.run(projectRoot, List.of("git", "add", "-A"));
@@ -77,6 +82,7 @@ public class CommitHelperService {
     }
 
     public void executeCommitAndPush(Long projectId, String message) {
+        message = cleanMessage(message);
         Path projectRoot = resolveProjectRoot(projectService.getProjectEntity(projectId));
         assertGitRepository(projectRoot);
         gitProcessRunner.run(projectRoot, List.of("git", "add", "-A"));
@@ -84,12 +90,18 @@ public class CommitHelperService {
         gitProcessRunner.run(projectRoot, List.of("git", "push"));
     }
 
+    private String cleanMessage(String message) {
+        return message.replaceAll("\"", "'");
+    }
+
     String truncateDiffForModel(String diff, int tokensPerMinute) {
         if (tokensPerMinute <= 0) {
             return diff;
         }
 
-        int wrapperTokens = AIModelService.estimateTokens(commitTemplate.replace(DIFF_PLACEHOLDER, ""));
+        int wrapperTokens = AIModelService.estimateTokens(
+                promptFormatService.formatPrompt(commitTemplate, Map.of(DIFF_PARAMETER_KEY, ""))
+        );
         int availableTokens = tokensPerMinute - wrapperTokens;
         if (availableTokens <= 0) {
             throw new IllegalArgumentException("Commit prompt template exceeds model tokensPerMinute limit.");
@@ -108,48 +120,9 @@ public class CommitHelperService {
         return diff.substring(0, maxDiffChars - suffixLength) + TRUNCATION_SUFFIX;
     }
 
-    String collectWorkingTreeDiff(Path projectRoot) {
-        StringBuilder diff = new StringBuilder();
-        appendDiffSection(diff, gitProcessRunner.runAllowDiffExit(projectRoot, List.of("git", "diff", "HEAD")));
 
-        String untrackedFiles = gitProcessRunner.run(
-                projectRoot,
-                List.of("git", "ls-files", "--others", "--exclude-standard")
-        );
-        if (!untrackedFiles.isBlank()) {
-            String nullDevice = nullDevicePath();
-            for (String file : untrackedFiles.split("\n")) {
-                String relativePath = file.trim();
-                if (relativePath.isEmpty()) {
-                    continue;
-                }
-                appendDiffSection(
-                        diff,
-                        gitProcessRunner.runAllowDiffExit(
-                                projectRoot,
-                                List.of("git", "diff", "--no-index", nullDevice, relativePath)
-                        )
-                );
-            }
-        }
 
-        return diff.toString().trim();
-    }
 
-    private void appendDiffSection(StringBuilder diff, String section) {
-        if (section == null || section.isBlank()) {
-            return;
-        }
-        if (!diff.isEmpty()) {
-            diff.append("\n");
-        }
-        diff.append(section.trim());
-    }
-
-    private String nullDevicePath() {
-        String osName = System.getProperty("os.name", "").toLowerCase();
-        return osName.contains("win") ? "NUL" : "/dev/null";
-    }
 
     private Path resolveProjectRoot(Project project) {
         Path projectRoot = Paths.get(project.getPath()).normalize();

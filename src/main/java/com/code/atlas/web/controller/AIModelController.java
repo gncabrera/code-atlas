@@ -1,10 +1,11 @@
 package com.code.atlas.web.controller;
 
+import com.code.atlas.web.api.ApiResponse;
+import com.code.atlas.web.api.GlobalExceptionHandler;
 import com.code.atlas.web.service.AIModelService;
 import com.code.atlas.web.service.dto.AIModelRequestDto;
 import com.code.atlas.web.service.dto.AIModelResponseDto;
-import com.code.atlas.web.api.ApiResponse;
-import com.code.atlas.web.api.GlobalExceptionHandler;
+
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/ai-models")
-public class AIModelController {
+public class AIModelController extends BaseRestController {
 
     private final AIModelService aiModelService;
 
@@ -36,10 +37,7 @@ public class AIModelController {
                     : aiModelService.getAllModels();
             return ResponseEntity.ok(ApiResponse.success("AI models fetched.", models));
         } catch (Exception ex) {
-            GlobalExceptionHandler.logCaughtException("GET /api/ai-models", ex);
-            return GlobalExceptionHandler.errorResponseEntity(
-                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
-                    HttpStatus.BAD_REQUEST);
+            return handledException("GET /api/ai-models", ex);
         }
     }
 
@@ -49,10 +47,7 @@ public class AIModelController {
             AIModelResponseDto model = aiModelService.getModelById(id);
             return ResponseEntity.ok(ApiResponse.success("AI model fetched.", model));
         } catch (Exception ex) {
-            GlobalExceptionHandler.logCaughtException("GET /api/ai-models/{id}", ex);
-            return GlobalExceptionHandler.errorResponseEntity(
-                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
-                    HttpStatus.BAD_REQUEST);
+            return handledException("GET /api/ai-models/{id}", ex);
         }
     }
 
@@ -62,10 +57,7 @@ public class AIModelController {
             AIModelResponseDto created = aiModelService.createModel(requestDto);
             return new ResponseEntity<>(ApiResponse.success("AI model created.", created), HttpStatus.CREATED);
         } catch (Exception ex) {
-            GlobalExceptionHandler.logCaughtException("POST /api/ai-models", ex);
-            return GlobalExceptionHandler.errorResponseEntity(
-                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
-                    HttpStatus.BAD_REQUEST);
+            return handledException("POST /api/ai-models", ex);
         }
     }
 
@@ -75,10 +67,7 @@ public class AIModelController {
             AIModelResponseDto updated = aiModelService.updateModel(id, requestDto);
             return ResponseEntity.ok(ApiResponse.success("AI model updated.", updated));
         } catch (Exception ex) {
-            GlobalExceptionHandler.logCaughtException("PUT /api/ai-models/{id}", ex);
-            return GlobalExceptionHandler.errorResponseEntity(
-                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
-                    HttpStatus.BAD_REQUEST);
+            return handledException("PUT /api/ai-models/{id}", ex);
         }
     }
 
@@ -88,10 +77,7 @@ public class AIModelController {
             aiModelService.deleteModel(id);
             return ResponseEntity.ok(ApiResponse.success("AI model deleted.", null));
         } catch (Exception ex) {
-            GlobalExceptionHandler.logCaughtException("DELETE /api/ai-models/{id}", ex);
-            return GlobalExceptionHandler.errorResponseEntity(
-                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
-                    HttpStatus.BAD_REQUEST);
+            return handledException("DELETE /api/ai-models/{id}", ex);
         }
     }
 }

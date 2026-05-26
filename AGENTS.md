@@ -40,6 +40,46 @@ class MyClass {
 }
 ```
 
+Canonical services
+
+Centralize cross-cutting integrations in these classes. Do not duplicate their responsibilities elsewhere unless absolutely necessary (brief justification in code review).
+
+Git (`GitProcessRunner`)
+
+1. All git CLI execution (subprocess `git`, `ProcessBuilder`, `Runtime.exec`) must go only through `com.code.atlas.web.service.GitProcessRunner`.
+2. Do not run git commands from controllers, other services, or utilities — extend `GitProcessRunner` (new methods or helpers) when new git capabilities are needed.
+3. Feature services must not assemble or run raw `git` command lists — add named workflow methods on `GitProcessRunner` (commit, push, diff, etc.) and call those from feature code.
+
+AI model inference (`AIModelService.sendToModel`)
+
+1. All live calls to an AI provider (e.g. Gemini `Client.generateContent`) must go only through `AIModelService.sendToModel(Project, AIModel, String prompt, String notes)`.
+2. Do not import `com.google.genai` or construct API clients outside `AIModelService`.
+3. Other code prepares prompts and resolves `Project` / `AIModel`, then calls `sendToModel`. CRUD, metadata, and `AIModelService.estimateTokens` remain in `AIModelService` as today.
+
+Projects (`ProjectService`)
+
+1. Project CRUD, path validation, `getProjectEntity`, and `resolveAgentsFileContent` belong only in `com.code.atlas.web.service.ProjectService`.
+2. Other services load a project via `getProjectEntity` or list/detail DTOs from `ProjectService`.
+3. File indexing and context retrieval stay in `ProjectIndexService` and related context classes; they consume `Project` entities obtained through `ProjectService`.
+
+Prompt template substitution (`PromptFormatService.formatPrompt`)
+
+1. All `{{…}}` placeholder substitution in prompt templates must go only through `com.code.atlas.web.service.PromptFormatService.formatPrompt(String template, Map<String, String> parameters)`.
+2. Do not use `String.replace` on `{{KEY}}` literals in feature services — inject `PromptFormatService` and pass a parameter map (e.g. `USER_REQUEST`, `CONTEXT`, `AGENTS_FILE`, `DIFF`).
+3. Placeholders match `\{\{\s*KEY\s*\}\}` (flexible whitespace); unknown placeholders stay literal; map values null become empty string.
+
+AI model JSON responses (`JsonResponseExtractor.parseResponse`)
+
+1. All extraction and deserialization of JSON from noisy AI model text must go only through `com.code.atlas.web.service.JsonResponseExtractor.parseResponse(String rawResponse, Class<T> type, ObjectMapper objectMapper)`.
+2. Do not use ad-hoc `indexOf('{')` / `lastIndexOf('}')`, manual markdown fence stripping, or `objectMapper.readValue` on raw model output in feature services — call `parseResponse` with the target DTO type.
+3. Pair with strict “JSON only” rules in prompt templates; the extractor still tolerates fences and prose when models disobey (fence-first candidates, then escape-aware brace scanning, first successful Jackson bind) - See `src/main/resources/prompts/code-review.md` for an example
+
+Prompt optimizer read-only modes (`PromptOptimizerReadOnlyMode`)
+
+1. To change a system prompt optimizer mode (`PromptOptimizerReadOnlyMode`, e.g. `IMPLEMENTATION`), edit the matching file under `src/main/resources/db/seed/prompt-optimizer-modes/` (filename from `templateFileName()` on the enum, e.g. `implementation.md`).
+2. Do not change read-only mode prompts via the admin UI, REST API, or direct SQL for routine updates — `PromptOptimizerModeService` blocks prompt edits on `read_only` rows.
+3. On startup, `PromptOptimizerModeSeedService` inserts missing read-only rows and syncs prompt (and display name) from the classpath seed file when it differs from SQLite; restart the app after editing a seed file.
+
 Entities
 
 1. Must annotate entity classes with @Entity.
@@ -85,9 +125,21 @@ RestController:
 2. Must specify class-level API routes with @RequestMapping, e.g. ("/api/user").
 3. Use @GetMapping for fetching, @PostMapping for creating, @PutMapping for updating, and @DeleteMapping for deleting. Keep paths resource-based (e.g., '/users/{id}'), avoiding verbs like '/create', '/update', '/delete', '/get', or '/edit'
 4. All dependencies in class methods must be autowired with a constructor, unless specified otherwise.
-5. Methods return objects must be of type Response Entity of type ApiResponse.
-6. All class method logic must be implemented in a try..catch block(s).
-7. Caught errors in catch blocks must be handled by `GlobalExceptionHandler`: call `logCaughtException(context, ex)` before `errorResponseEntity(...)`, and use `resolveMessage(ex, fallback)` for the API `message` (never swallow exceptions without logging).
+5. Methods return objects must be of type `ResponseEntity<ApiResponse<?>>`.
+6. Every mapped endpoint method must wrap its full body in a top-level `try { ... } catch (Exception ex) { ... }` (no silent failures, no logic outside the try for the main flow).
+7. **Forbidden in `com.code.atlas.web.controller` REST classes**: `ex.printStackTrace()`, `System.out.println`, `System.err.println`, and direct SLF4J/logger usage — logging goes only through `GlobalExceptionHandler.logCaughtException`.
+8. **Catch block order** (mandatory):
+   1. `GlobalExceptionHandler.logCaughtException("<HTTP_METHOD> <full-path>", ex)` — first statement; context uses uppercase method and literal path with `{id}` placeholders (e.g. `GET /api/projects/{id}`, `POST /api/skills/install`).
+   2. `return GlobalExceptionHandler.errorResponseEntity(GlobalExceptionHandler.resolveMessage(ex, "Request failed."), HttpStatus.BAD_REQUEST);`
+9. Use uniform fallback `"Request failed."` in `resolveMessage` unless a prompt specifies otherwise. Never return hardcoded error messages without `resolveMessage`.
+10. Import order: `com.code.atlas.web.api` → `com.code.atlas.web.service` → `com.code.atlas.web.service.dto` → `java.*` → `org.springframework.*`. No wildcard Spring web imports.
+
+**REST controller verification checklist** (before merge):
+
+- [ ] Grep `com.code.atlas.web.controller` for `printStackTrace`, `System.out`, `System.err` — zero hits.
+- [ ] Each `@GetMapping` / `@PostMapping` / `@PutMapping` / `@DeleteMapping` method has one top-level try-catch.
+- [ ] Every catch calls `logCaughtException` then `errorResponseEntity(resolveMessage(...), BAD_REQUEST)`.
+- [ ] Context strings match `METHOD /api/...` including class `@RequestMapping` prefix and sub-path.
 
 PageController:
 
@@ -100,84 +152,8 @@ PageController:
 
 Frontend (Server-rendered):
 
-Architecture: Thymeleaf renders the HTML shell and initial server-side data; jQuery handles DOM updates and calls REST APIs under `/api/*` that return `ApiResponse`.
-
-File layout:
-
-1. Page templates: `src/main/resources/templates/<page>.html` (one file per page).
-2. Shared fragments: `src/main/resources/templates/fragments/<name>.html`, included via `th:replace` (e.g. `~{fragments/navbar :: navbar}`, `~{fragments/scripts :: pageScripts('projects.js')}`).
-3. Shared script: `src/main/resources/static/js/common.js` (alerts, `$.ajax` helpers, reusable CRUD list-page factory).
-4. Page scripts: `src/main/resources/static/js/<page>.js` (one file per page, same base name as the template; configures `common.js` helpers).
-5. Custom styles: `src/main/resources/static/css/<page>.css` (one CSS file per page, same base name as the template).
-
-Thymeleaf:
-
-1. Root element: `<html lang="en" xmlns:th="http://www.thymeleaf.org">`.
-2. Use `th:replace` / `th:insert` for layout fragments (navbar, `fragments/head`, `fragments/scripts`, headers, footers).
-3. Use `th:text`, `th:each`, `th:if`, `th:attr`, and model attributes when the server must render initial data.
-4. Do not put `<script>` blocks with application logic inside templates; load vendor + `common.js` + `/js/<page>.js` through `fragments/scripts` at the end of `<body>`.
-
-UI assets:
-
-1. Bootstrap 5 + Bootswatch Brite theme: `static/css/vendor/bootswatch-brite.min.css` (via `fragments/head`).
-2. jQuery 3.7.1 and Bootstrap bundle JS: `static/js/vendor/` (via `fragments/scripts`).
-3. Put project-specific overrides in `static/css/`; do not add extra icon or font libraries unless explicitly required.
-4. Cache bust: `fragments/head` and `fragments/scripts` always append `?v=<epoch>` to local JS/CSS URLs (epoch from JVM start; restart app to change).
-
-jQuery:
-
-1. Load jQuery 3.7.1 from `static/js/vendor/jquery-3.7.1.min.js` only (fixed version; no other jQuery versions).
-2. Wrap all page logic in `$(function () { ... });` as the single entry point.
-3. Use only `$.ajax` for HTTP calls (no `$.get`, `$.post`, `$.getJSON`, or `fetch`).
-4. Prefer jQuery APIs for DOM and events; use vanilla JS only when jQuery cannot do the job.
-5. Inline `<script>` with application logic in `.html` files is prohibited.
-
-### Button Loading State Standards
-
-All interactive elements (buttons, inputs of type button/submit) that initiate asynchronous actions (such as AJAX POST, PUT, DELETE operations) must display a loading state to prevent double-submits and improve UX.
-
-1. **Behavior Rules**:
-   - On click/trigger, immediately disable the button (`prop('disabled', true)`).
-   - Inject a Bootstrap 5 spinner element alongside appropriate placeholder text (e.g., "Saving...").
-   - Cache original content/HTML structure using jQuery `.data()` so it can be restored exactly.
-   - Always restore the button to its active, original state in both `.done()` and `.fail()` (or within the `.always()` block) of the jQuery AJAX chain.
-
-2. **Standard Implementation Pattern (in `common.js`)**:
-   ```javascript
-   CodeAtlas.setButtonLoading = function ($button, isLoading, loadingText) {
-       const text = loadingText || 'Processing...';
-       if (isLoading) {
-           if (!$button.data('original-html')) {
-               $button.data('original-html', $button.html());
-           }
-           $button.prop('disabled', true);
-           $button.html(`<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>${text}`);
-       } else {
-           const originalHtml = $button.data('original-html');
-           if (originalHtml) {
-               $button.html(originalHtml);
-           }
-           $button.prop('disabled', false);
-       }
-   };
-   ```
-
-3. **CRUD save buttons**: Use `saveLoadingText` in `initCrudPage` config so each page can set its own loading label (e.g. `Saving Project...`).
-
-AJAX and API consumption:
-
-1. All client calls target `@RestController` endpoints and must handle `ApiResponse` JSON (`result`, `message`, `data`).
-2. On success, read payloads from `response.data` (e.g. in `.done(function (response) { ... })`).
-3. On failure, show `xhr.responseJSON?.message` or a short fallback string.
-4. For `POST` and `PUT`, set `contentType: "application/json"` and `data: JSON.stringify(payload)`.
-5. HTTP mapping: `GET` — list or fetch; `POST` — create; `PUT` — update; `DELETE` — delete. Paths stay resource-based (e.g. `/api/projects`, `/api/projects/{id}`).
-6. Before `DELETE`, require `window.confirm(...)`; abort if the user cancels.
-
-Forms and validation:
-
-1. Validate in JavaScript before AJAX (required fields, trim checks, business rules); show errors via the page alert helper.
-2. Do not rely on HTML5 validation attributes (e.g. `required`) as the primary mechanism.
-3. Reuse `common.js` validation patterns on CRUD list pages (`validateSave` in `initCrudPage` config).
+Frontend UI rules moved to `DESIGN.md`.
+Use `DESIGN.md` as single source for template/js/css constraints, AJAX/UI behavior, loading state, and dismissible alert standards.
 
 ApiResponse Class (/ApiResponse.java):
 

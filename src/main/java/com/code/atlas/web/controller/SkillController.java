@@ -7,15 +7,23 @@ import com.code.atlas.web.service.dto.SkillCreateRequest;
 import com.code.atlas.web.service.dto.SkillDto;
 import com.code.atlas.web.service.dto.SkillInstallRequest;
 import com.code.atlas.web.service.dto.SkillUpdateRequest;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
 @RestController
 @RequestMapping("/api/skills")
-public class SkillController {
+public class SkillController extends BaseRestController {
 
     private final SkillService skillService;
 
@@ -29,10 +37,7 @@ public class SkillController {
             List<SkillDto> skills = skillService.getAllSkills();
             return ResponseEntity.ok(ApiResponse.success("Skills fetched.", skills));
         } catch (Exception ex) {
-            GlobalExceptionHandler.logCaughtException("GET /api/skills", ex);
-            return GlobalExceptionHandler.errorResponseEntity(
-                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
-                    HttpStatus.BAD_REQUEST);
+            return handledException("GET /api/skills", ex);
         }
     }
 
@@ -42,10 +47,7 @@ public class SkillController {
             SkillDto skill = skillService.getSkillById(id);
             return ResponseEntity.ok(ApiResponse.success("Skill fetched.", skill));
         } catch (Exception ex) {
-            GlobalExceptionHandler.logCaughtException("GET /api/skills/{id}", ex);
-            return GlobalExceptionHandler.errorResponseEntity(
-                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
-                    HttpStatus.BAD_REQUEST);
+            return handledException("GET /api/skills/{id}", ex);
         }
     }
 
@@ -55,10 +57,7 @@ public class SkillController {
             SkillDto created = skillService.createSkill(request);
             return new ResponseEntity<>(ApiResponse.success("Skill created.", created), HttpStatus.CREATED);
         } catch (Exception ex) {
-            GlobalExceptionHandler.logCaughtException("POST /api/skills", ex);
-            return GlobalExceptionHandler.errorResponseEntity(
-                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
-                    HttpStatus.BAD_REQUEST);
+            return handledException("POST /api/skills", ex);
         }
     }
 
@@ -68,10 +67,7 @@ public class SkillController {
             SkillDto updated = skillService.updateSkill(id, request);
             return ResponseEntity.ok(ApiResponse.success("Skill updated.", updated));
         } catch (Exception ex) {
-            GlobalExceptionHandler.logCaughtException("PUT /api/skills/{id}", ex);
-            return GlobalExceptionHandler.errorResponseEntity(
-                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
-                    HttpStatus.BAD_REQUEST);
+            return handledException("PUT /api/skills/{id}", ex);
         }
     }
 
@@ -81,10 +77,7 @@ public class SkillController {
             skillService.deleteSkill(id);
             return ResponseEntity.ok(ApiResponse.success("Skill deleted.", null));
         } catch (Exception ex) {
-            GlobalExceptionHandler.logCaughtException("DELETE /api/skills/{id}", ex);
-            return GlobalExceptionHandler.errorResponseEntity(
-                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
-                    HttpStatus.BAD_REQUEST);
+            return handledException("DELETE /api/skills/{id}", ex);
         }
     }
 
@@ -94,10 +87,7 @@ public class SkillController {
             skillService.installSkills(request);
             return ResponseEntity.ok(ApiResponse.success("Skills installed.", null));
         } catch (Exception ex) {
-            GlobalExceptionHandler.logCaughtException("POST /api/skills/install", ex);
-            return GlobalExceptionHandler.errorResponseEntity(
-                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
-                    HttpStatus.BAD_REQUEST);
+            return handledException("POST /api/skills/install", ex);
         }
     }
 }

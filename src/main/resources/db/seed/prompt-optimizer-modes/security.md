@@ -29,3 +29,5 @@ User request:
 {{ CONTEXT }}
 
 {{ AGENTS_FILE }}
+
+{{ DESIGN_FILE }}

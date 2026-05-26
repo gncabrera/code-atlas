@@ -19,6 +19,7 @@ CodeAtlas.initCrudPage({
         $("#projectPath").val("");
         $("#projectDescription").val("");
         $("#projectUseAgentsFile").prop("checked", true);
+        $("#projectUseDesignFile").prop("checked", true);
     },
     fillForm: function (project) {
         $("#projectId").val(project.id);
@@ -26,13 +27,15 @@ CodeAtlas.initCrudPage({
         $("#projectPath").val(project.path);
         $("#projectDescription").val(project.description);
         $("#projectUseAgentsFile").prop("checked", project.useAgentsFile);
+        $("#projectUseDesignFile").prop("checked", project.useDesignFile);
     },
     buildPayload: function () {
         return {
             name: $("#projectName").val().trim(),
             path: $("#projectPath").val().trim(),
             description: $("#projectDescription").val().trim(),
-            useAgentsFile: $("#projectUseAgentsFile").is(":checked")
+            useAgentsFile: $("#projectUseAgentsFile").is(":checked"),
+            useDesignFile: $("#projectUseDesignFile").is(":checked")
         };
     },
     validateSave: function () {
@@ -55,7 +58,8 @@ CodeAtlas.initCrudPage({
             $("<td></td>").text(project.name),
             $("<td></td>").text(project.path),
             $("<td></td>").text(project.description),
-            $("<td></td>").text(project.useAgentsFile ? "Yes" : "No")
+            $("<td></td>").text(project.useAgentsFile ? "Yes" : "No"),
+            $("<td></td>").text(project.useDesignFile ? "Yes" : "No")
         ];
     }
 });

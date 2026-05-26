@@ -1,0 +1,55 @@
+.code-review-score {
+    line-height: 1;
+}
+
+.finding-card {
+    border-left-width: 4px;
+}
+
+.finding-card[data-severity="HIGH"] {
+    border-left-color: var(--bs-danger) !important;
+}
+
+.finding-card[data-severity="MEDIUM"] {
+    border-left-color: var(--bs-warning) !important;
+}
+
+.finding-card[data-severity="LOW"] {
+    border-left-color: var(--bs-info) !important;
+}
+
+.finding-card .card-body {
+    padding: 1rem 1.25rem;
+}
+
+.finding-card .finding-details {
+    display: none;
+}
+
+.finding-card.is-expanded .finding-details {
+    display: block;
+}
+
+.finding-card.is-filtered-out {
+    display: none !important;
+}
+
+.severity-filter.active {
+    font-weight: 600;
+}
+
+.finding-location {
+    word-break: break-word;
+}
+
+.suggested-patch {
+    max-height: 22rem;
+    overflow: auto;
+    white-space: pre;
+}
+
+@media (max-width: 991.98px) {
+    .code-review-score {
+        font-size: 2.5rem;
+    }
+}

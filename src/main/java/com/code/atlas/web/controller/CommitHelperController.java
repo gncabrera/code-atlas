@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/commit-helper")
-public class CommitHelperController {
+public class CommitHelperController extends BaseRestController {
 
     private final CommitHelperService commitHelperService;
 
@@ -31,10 +31,7 @@ public class CommitHelperController {
             CommitHelperMetadataDto metadata = commitHelperService.getMetadata(projectId);
             return ResponseEntity.ok(ApiResponse.success("Commit helper metadata fetched.", metadata));
         } catch (Exception ex) {
-            GlobalExceptionHandler.logCaughtException("GET /api/commit-helper/metadata", ex);
-            return GlobalExceptionHandler.errorResponseEntity(
-                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
-                    HttpStatus.BAD_REQUEST);
+            return handledException("GET /api/commit-helper/metadata", ex);
         }
     }
 
@@ -47,10 +44,7 @@ public class CommitHelperController {
             );
             return ResponseEntity.ok(ApiResponse.success("Commit message generated.", commitMessage));
         } catch (Exception ex) {
-            GlobalExceptionHandler.logCaughtException("POST /api/commit-helper/generate", ex);
-            return GlobalExceptionHandler.errorResponseEntity(
-                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
-                    HttpStatus.BAD_REQUEST);
+            return handledException("POST /api/commit-helper/generate", ex);
         }
     }
 
@@ -60,10 +54,7 @@ public class CommitHelperController {
             commitHelperService.executeCommit(requestDto.projectId(), requestDto.commitMessage());
             return ResponseEntity.ok(ApiResponse.success("Changes committed.", null));
         } catch (Exception ex) {
-            GlobalExceptionHandler.logCaughtException("POST /api/commit-helper/commit", ex);
-            return GlobalExceptionHandler.errorResponseEntity(
-                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
-                    HttpStatus.BAD_REQUEST);
+            return handledException("POST /api/commit-helper/commit", ex);
         }
     }
 
@@ -73,10 +64,7 @@ public class CommitHelperController {
             commitHelperService.executeCommitAndPush(requestDto.projectId(), requestDto.commitMessage());
             return ResponseEntity.ok(ApiResponse.success("Changes committed and pushed.", null));
         } catch (Exception ex) {
-            GlobalExceptionHandler.logCaughtException("POST /api/commit-helper/push", ex);
-            return GlobalExceptionHandler.errorResponseEntity(
-                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
-                    HttpStatus.BAD_REQUEST);
+            return handledException("POST /api/commit-helper/push", ex);
         }
     }
 }

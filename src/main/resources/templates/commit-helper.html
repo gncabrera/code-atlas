@@ -12,6 +12,11 @@
 <main class="container py-4">
     <h1 class="mb-3">Commit Helper</h1>
     <p class="text-muted">Generate a git commit message from project diff and commit or push from the web UI.</p>
+    <div class="alert alert-warning alert-dismissible fade show" role="alert" data-alert-id="commit-helper.irreversible-warning">
+        <i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>
+        Commit and Push run real git on the server — irreversible.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
 
     <div class="row g-3 mb-4 align-items-end">
         <div class="col-md-4">
@@ -56,6 +61,6 @@
     </div>
 </main>
 
-<th:block th:replace="~{fragments/scripts :: pageScripts('commit-helper.js')}"></th:block>
+<th:block th:replace="~{fragments/scripts :: pageScriptsWithPreferences('commit-helper.js', null)}"></th:block>
 </body>
 </html>

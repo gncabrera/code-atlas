@@ -1,0 +1,1 @@
+ALTER TABLE projects ADD COLUMN use_design_file INTEGER NOT NULL DEFAULT 1;

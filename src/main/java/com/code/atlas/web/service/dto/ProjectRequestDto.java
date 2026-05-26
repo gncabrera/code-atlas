@@ -4,7 +4,8 @@ public record ProjectRequestDto(
         String path,
         String name,
         String description,
-        boolean useAgentsFile
+        boolean useAgentsFile,
+        boolean useDesignFile
 ) {
     public ProjectRequestDto {
         if (path == null || path.isBlank()) {

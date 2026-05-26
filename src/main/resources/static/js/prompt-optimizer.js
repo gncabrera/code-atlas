@@ -5,6 +5,7 @@ $(function () {
 
     let projects = [];
     let enabledModels = [];
+    let promptModes = [];
     let skillsById = {};
     let loadedSkills = [];
     let pendingDraftSkillIds = null;
@@ -15,6 +16,7 @@ $(function () {
         "#projectSelect",
         "#promptModeSelect",
         "#shouldSendAgentsFile",
+        "#shouldSendDesignFile",
         "#userRequest",
         "#buildPreviewBtn",
         "#btn-clear-prompt",
@@ -30,6 +32,7 @@ $(function () {
         "#projectSelect",
         "#promptModeSelect",
         "#shouldSendAgentsFile",
+        "#shouldSendDesignFile",
         "#userRequest",
         "#aiModelSelect",
         "#aiModelPrompt",
@@ -74,8 +77,9 @@ $(function () {
     function collectDraftData() {
         return {
             projectSelect: $("#projectSelect").val() || "",
-            promptModeSelect: $("#promptModeSelect").val() || "IMPLEMENTATION",
+            promptModeSelect: $("#promptModeSelect").val() || getDefaultPromptModeId(),
             shouldSendAgentsFile: $("#shouldSendAgentsFile").is(":checked"),
+            shouldSendDesignFile: $("#shouldSendDesignFile").is(":checked"),
             userRequest: ($("#userRequest").val() || "").trim(),
             aiModelSelect: $("#aiModelSelect").val() || "",
             aiModelPrompt: ($("#aiModelPrompt").val() || "").trim(),
@@ -122,8 +126,9 @@ $(function () {
             && !data.aiModelPrompt
             && !data.outputPrompt
             && !data.projectSelect
-            && data.promptModeSelect === "BALANCED"
+            && String(data.promptModeSelect || "") === getDefaultPromptModeId()
             && data.shouldSendAgentsFile === true
+            && data.shouldSendDesignFile === true
             && String(data.aiModelSelect || "") === getDefaultAiModelSelectValue()
             && skillIdsEqual(data.skillMultiselect, getDefaultSkillIds(loadedSkills));
     }
@@ -173,6 +178,10 @@ $(function () {
             $("#shouldSendAgentsFile").prop("checked", Boolean(value));
             return true;
         }
+        if (fieldKey === "shouldSendDesignFile") {
+            $("#shouldSendDesignFile").prop("checked", Boolean(value));
+            return true;
+        }
         if (fieldKey === "skillMultiselect") {
             applySkillMultiselectSelection(Array.isArray(value) ? value.map(String) : []);
             return true;
@@ -186,6 +195,16 @@ $(function () {
                 return false;
             }
             $field.val(value || "");
+            return true;
+        }
+        if (fieldKey === "promptModeSelect") {
+            if (!/^\d+$/.test(String(value || ""))) {
+                return false;
+            }
+            if ($field.find('option[value="' + value + '"]').length === 0) {
+                return false;
+            }
+            $field.val(String(value));
             return true;
         }
         $field.val(value ?? "");
@@ -227,7 +246,7 @@ $(function () {
         });
         restored = hadContent;
         isRestoringDraft = false;
-        updateAgentsCheckboxVisibility();
+        updateProjectFileCheckboxVisibility();
         updateTokenInfo();
         if (restored) {
             showDraftStatus("Draft Restored");
@@ -236,9 +255,8 @@ $(function () {
     }
 
     function resetPromptPageToDefaults() {
-        $("#projectSelect").val("");
-        $("#promptModeSelect").val("BALANCED");
         $("#shouldSendAgentsFile").prop("checked", true);
+        $("#shouldSendDesignFile").prop("checked", true);
         $("#userRequest").val("");
         $("#aiModelPrompt").val("");
         $("#outputPrompt").val("");
@@ -249,7 +267,7 @@ $(function () {
             $modelSelect.val("");
         }
         applySkillMultiselectSelection(getDefaultSkillIds(loadedSkills));
-        updateAgentsCheckboxVisibility();
+        updateProjectFileCheckboxVisibility();
         updateTokenInfo();
     }
 
@@ -266,7 +284,7 @@ $(function () {
     function bindDraftAutoSave() {
         $("#userRequest, #aiModelPrompt, #outputPrompt").on("input", debouncedSaveDraft);
         $("#projectSelect, #promptModeSelect, #aiModelSelect").on("change", debouncedSaveDraft);
-        $("#shouldSendAgentsFile").on("change", debouncedSaveDraft);
+        $("#shouldSendAgentsFile, #shouldSendDesignFile").on("change", debouncedSaveDraft);
         $("#skillMultiselect").on("change", debouncedSaveDraft);
         $("#btn-clear-prompt").on("click", clearDraft);
     }
@@ -282,14 +300,20 @@ $(function () {
         }
     }
 
-    function updateAgentsCheckboxVisibility() {
+    function updateProjectFileCheckboxVisibility() {
         const project = selectedProject();
         if (project && !project.useAgentsFile) {
             $("#agentsCheckboxWrapper").addClass("d-none");
             $("#shouldSendAgentsFile").prop("checked", false);
-            return;
+        } else {
+            $("#agentsCheckboxWrapper").removeClass("d-none");
         }
-        $("#agentsCheckboxWrapper").removeClass("d-none");
+        if (project && !project.useDesignFile) {
+            $("#designCheckboxWrapper").addClass("d-none");
+            $("#shouldSendDesignFile").prop("checked", false);
+        } else {
+            $("#designCheckboxWrapper").removeClass("d-none");
+        }
     }
 
     function updateTokenInfo() {
@@ -308,7 +332,7 @@ $(function () {
         projects.forEach(project => {
             select.append($("<option>", {value: project.id, text: project.name}));
         });
-        updateAgentsCheckboxVisibility();
+        updateProjectFileCheckboxVisibility();
     }
 
     function populateModels() {
@@ -320,15 +344,56 @@ $(function () {
         updateTokenInfo();
     }
 
+    function getDefaultPromptModeId() {
+        const balanced = promptModes.find(function (mode) {
+            return mode.code === "BALANCED";
+        });
+        if (balanced) {
+            return String(balanced.id);
+        }
+        return promptModes.length > 0 ? String(promptModes[0].id) : "";
+    }
+
+    function populatePromptModes() {
+        const select = $("#promptModeSelect");
+        select.empty();
+        if (!promptModes.length) {
+            select.append($("<option>", {value: "", text: "No modes available"}));
+            return;
+        }
+        promptModes.forEach(function (mode) {
+            select.append($("<option>", {value: mode.id, text: mode.name}));
+        });
+        select.val(getDefaultPromptModeId());
+    }
+
     function loadMetadata() {
         CodeAtlas.apiGet("/api/prompts/metadata")
             .done(function (response) {
                 projects = response.data.projects || [];
                 enabledModels = response.data.enabledModels || [];
+                promptModes = response.data.promptModes || [];
                 populateProjects();
                 populateModels();
-                loadDraftFromLocalStorage();
-                loadSkills();
+                populatePromptModes();
+                const applyStoredPreferences = function () {
+                    if (!window.CodeAtlasUserPreferences) {
+                        loadDraftFromLocalStorage();
+                        loadSkills();
+                        return;
+                    }
+                    CodeAtlasUserPreferences.applyPreferenceFields([
+                        { field: "promptOptimizerDefaultPromptModeId", selectId: "promptModeSelect" },
+                        { field: "promptOptimizerDefaultAiModelId", selectId: "aiModelSelect" }
+                    ]);
+                    loadDraftFromLocalStorage();
+                    loadSkills();
+                };
+                if (window.CodeAtlasUserPreferences) {
+                    CodeAtlasUserPreferences.whenLoaded().always(applyStoredPreferences);
+                } else {
+                    applyStoredPreferences();
+                }
             })
             .fail(function (xhr) {
                 CodeAtlas.showToast(
@@ -339,7 +404,7 @@ $(function () {
     }
 
     $("#projectSelect").on("change", function () {
-        updateAgentsCheckboxVisibility();
+        updateProjectFileCheckboxVisibility();
     });
 
     $("#aiModelSelect, #aiModelPrompt").on("change keyup", function () {
@@ -353,11 +418,17 @@ $(function () {
             CodeAtlas.showToast("User request is required.", "danger");
             return;
         }
+        const promptModeId = $("#promptModeSelect").val();
+        if (!promptModeId) {
+            CodeAtlas.showToast("Select a prompt mode.", "danger");
+            return;
+        }
         const payload = {
             projectId: $("#projectSelect").val() || null,
             userRequest: userRequest,
             shouldSendAgentsFile: $("#shouldSendAgentsFile").is(":checked"),
-            promptMode: $("#promptModeSelect").val()
+            shouldSendDesignFile: $("#shouldSendDesignFile").is(":checked"),
+            promptModeId: Number(promptModeId)
         };
         CodeAtlas.setButtonLoading($buildBtn, true, "Building Preview...");
         $.ajax({
@@ -401,12 +472,14 @@ $(function () {
         if (!confirmed) {
             return;
         }
+        const promptModeId = $("#promptModeSelect").val();
         const payload = {
             projectId: $("#projectSelect").val() || null,
             aiModelId: model.id,
             aiModelPrompt: aiModelPrompt,
             shouldSendAgentsFile: $("#shouldSendAgentsFile").is(":checked"),
-            promptMode: $("#promptModeSelect").val()
+            shouldSendDesignFile: $("#shouldSendDesignFile").is(":checked"),
+            promptModeId: promptModeId ? Number(promptModeId) : null
         };
         setPromptPageLocked(true, $sendBtn, "Sending...");
         $.ajax({

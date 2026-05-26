@@ -4,6 +4,7 @@ import com.code.atlas.web.api.ApiResponse;
 import com.code.atlas.web.api.GlobalExceptionHandler;
 import com.code.atlas.web.service.PromptHistoryService;
 import com.code.atlas.web.service.dto.PromptHistoryResponseDto;
+
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/prompt-history")
-public class PromptHistoryController {
+public class PromptHistoryController extends BaseRestController {
 
     private final PromptHistoryService promptHistoryService;
 
@@ -27,10 +28,7 @@ public class PromptHistoryController {
             List<PromptHistoryResponseDto> history = promptHistoryService.getAllHistory();
             return ResponseEntity.ok(ApiResponse.success("Prompt history fetched.", history));
         } catch (Exception ex) {
-            GlobalExceptionHandler.logCaughtException("GET /api/prompt-history", ex);
-            return GlobalExceptionHandler.errorResponseEntity(
-                    GlobalExceptionHandler.resolveMessage(ex, "Request failed."),
-                    HttpStatus.BAD_REQUEST);
+            return handledException("GET /api/prompt-history", ex);
         }
     }
 }
