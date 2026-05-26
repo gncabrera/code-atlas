@@ -150,7 +150,7 @@ class CommitHelperServiceTest {
                         && "new-file.txt".equals(command.get(4)))
         )).thenReturn("untracked diff");
 
-        String diff = commitHelperService.collectWorkingTreeDiff(tempDir);
+        String diff = gitProcessRunner.collectWorkingTreeDiff(tempDir);
 
         assertEquals("tracked diff\nuntracked diff", diff);
     }

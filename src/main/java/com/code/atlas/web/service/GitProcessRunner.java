@@ -42,4 +42,47 @@ public class GitProcessRunner {
         String message = output.isBlank() ? "Git command failed." : output;
         return "Git command failed (" + String.join(" ", command) + ", exit " + exitCode + "): " + message;
     }
+
+    public String collectWorkingTreeDiff(Path projectRoot) {
+        StringBuilder diff = new StringBuilder();
+        appendDiffSection(diff, runAllowDiffExit(projectRoot, List.of("git", "diff", "HEAD")));
+
+        String untrackedFiles = run(
+                projectRoot,
+                List.of("git", "ls-files", "--others", "--exclude-standard")
+        );
+        if (!untrackedFiles.isBlank()) {
+            String nullDevice = nullDevicePath();
+            for (String file : untrackedFiles.split("\n")) {
+                String relativePath = file.trim();
+                if (relativePath.isEmpty()) {
+                    continue;
+                }
+                appendDiffSection(
+                        diff,
+                        runAllowDiffExit(
+                                projectRoot,
+                                List.of("git", "diff", "--no-index", nullDevice, relativePath)
+                        )
+                );
+            }
+        }
+
+        return diff.toString().trim();
+    }
+
+    private void appendDiffSection(StringBuilder diff, String section) {
+        if (section == null || section.isBlank()) {
+            return;
+        }
+        if (!diff.isEmpty()) {
+            diff.append("\n");
+        }
+        diff.append(section.trim());
+    }
+
+    private String nullDevicePath() {
+        String osName = System.getProperty("os.name", "").toLowerCase();
+        return osName.contains("win") ? "NUL" : "/dev/null";
+    }
 }

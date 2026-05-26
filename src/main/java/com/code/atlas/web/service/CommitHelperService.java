@@ -58,7 +58,7 @@ public class CommitHelperService {
         Path projectRoot = resolveProjectRoot(project);
 
         assertGitRepository(projectRoot);
-        String diff = collectWorkingTreeDiff(projectRoot);
+        String diff = gitProcessRunner.collectWorkingTreeDiff(projectRoot);
         if (diff.isBlank()) {
             throw new IllegalArgumentException("No uncommitted changes found for project.");
         }
@@ -108,48 +108,9 @@ public class CommitHelperService {
         return diff.substring(0, maxDiffChars - suffixLength) + TRUNCATION_SUFFIX;
     }
 
-    String collectWorkingTreeDiff(Path projectRoot) {
-        StringBuilder diff = new StringBuilder();
-        appendDiffSection(diff, gitProcessRunner.runAllowDiffExit(projectRoot, List.of("git", "diff", "HEAD")));
 
-        String untrackedFiles = gitProcessRunner.run(
-                projectRoot,
-                List.of("git", "ls-files", "--others", "--exclude-standard")
-        );
-        if (!untrackedFiles.isBlank()) {
-            String nullDevice = nullDevicePath();
-            for (String file : untrackedFiles.split("\n")) {
-                String relativePath = file.trim();
-                if (relativePath.isEmpty()) {
-                    continue;
-                }
-                appendDiffSection(
-                        diff,
-                        gitProcessRunner.runAllowDiffExit(
-                                projectRoot,
-                                List.of("git", "diff", "--no-index", nullDevice, relativePath)
-                        )
-                );
-            }
-        }
 
-        return diff.toString().trim();
-    }
 
-    private void appendDiffSection(StringBuilder diff, String section) {
-        if (section == null || section.isBlank()) {
-            return;
-        }
-        if (!diff.isEmpty()) {
-            diff.append("\n");
-        }
-        diff.append(section.trim());
-    }
-
-    private String nullDevicePath() {
-        String osName = System.getProperty("os.name", "").toLowerCase();
-        return osName.contains("win") ? "NUL" : "/dev/null";
-    }
 
     private Path resolveProjectRoot(Project project) {
         Path projectRoot = Paths.get(project.getPath()).normalize();

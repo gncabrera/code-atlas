@@ -5,6 +5,8 @@ import com.code.atlas.web.repository.ProjectRepository;
 import com.code.atlas.web.service.dto.ProjectRequestDto;
 import com.code.atlas.web.service.dto.ProjectResponseDto;
 import jakarta.transaction.Transactional;
+
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -81,5 +83,23 @@ public class ProjectService {
                 project.getDescription(),
                 project.isUseAgentsFile()
         );
+    }
+
+    public String resolveAgentsFileContent(Project project) {
+        if (project == null) {
+            return "";
+        }
+        if (!project.isUseAgentsFile()) {
+            return "";
+        }
+        Path agentsPath = Path.of(project.getPath(), "AGENTS.md").normalize();
+        if (!Files.exists(agentsPath)) {
+            return "No AGENTS.md found";
+        }
+        try {
+            return "AGENTS.md\n\n" + Files.readString(agentsPath);
+        } catch (IOException ex) {
+            return "No AGENTS.md found";
+        }
     }
 }

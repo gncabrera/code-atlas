@@ -45,7 +45,7 @@ public class PromptService {
         Project project = resolveProject(requestDto.projectId());
         String template = promptTemplateService.loadTemplate(mode);
         String context = promptContextService.buildContext(project, requestDto.userRequest());
-        String agentsFileContent = resolveAgentsFileContent(project, requestDto.shouldSendAgentsFile());
+        String agentsFileContent = requestDto.shouldSendAgentsFile() ? projectService.resolveAgentsFileContent(project) : "";
         String generatedPrompt = template
                 .replace("{{ USER_REQUEST }}", requestDto.userRequest().trim())
                 .replace("{{ CONTEXT }}", context)
@@ -70,26 +70,7 @@ public class PromptService {
         return projectService.getProjectEntity(projectId);
     }
 
-    private String resolveAgentsFileContent(Project project, boolean shouldSendAgentsFile) {
-        if (!shouldSendAgentsFile) {
-            return "";
-        }
-        if (project == null) {
-            return "";
-        }
-        if (!project.isUseAgentsFile()) {
-            return "";
-        }
-        Path agentsPath = Path.of(project.getPath(), "AGENTS.md").normalize();
-        if (!Files.exists(agentsPath)) {
-            return "No AGENTS.md found";
-        }
-        try {
-            return "AGENTS.md\n\n" + Files.readString(agentsPath);
-        } catch (IOException ex) {
-            return "No AGENTS.md found";
-        }
-    }
+
 
 
 }
