@@ -40,6 +40,28 @@ class MyClass {
 }
 ```
 
+Canonical services
+
+Centralize cross-cutting integrations in these classes. Do not duplicate their responsibilities elsewhere unless absolutely necessary (brief justification in code review).
+
+Git (`GitProcessRunner`)
+
+1. All git CLI execution (subprocess `git`, `ProcessBuilder`, `Runtime.exec`) must go only through `com.code.atlas.web.service.GitProcessRunner`.
+2. Do not run git commands from controllers, other services, or utilities — extend `GitProcessRunner` (new methods or helpers) when new git capabilities are needed.
+3. Feature services must not assemble or run raw `git` command lists — add named workflow methods on `GitProcessRunner` (commit, push, diff, etc.) and call those from feature code.
+
+AI model inference (`AIModelService.sendToModel`)
+
+1. All live calls to an AI provider (e.g. Gemini `Client.generateContent`) must go only through `AIModelService.sendToModel(Project, AIModel, String prompt, String notes)`.
+2. Do not import `com.google.genai` or construct API clients outside `AIModelService`.
+3. Other code prepares prompts and resolves `Project` / `AIModel`, then calls `sendToModel`. CRUD, metadata, and `AIModelService.estimateTokens` remain in `AIModelService` as today.
+
+Projects (`ProjectService`)
+
+1. Project CRUD, path validation, `getProjectEntity`, and `resolveAgentsFileContent` belong only in `com.code.atlas.web.service.ProjectService`.
+2. Other services load a project via `getProjectEntity` or list/detail DTOs from `ProjectService`.
+3. File indexing and context retrieval stay in `ProjectIndexService` and related context classes; they consume `Project` entities obtained through `ProjectService`.
+
 Entities
 
 1. Must annotate entity classes with @Entity.
