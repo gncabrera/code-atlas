@@ -11,12 +11,13 @@
 
 <main class="container py-4">
     <h1 class="mb-3">AI Models</h1>
-    <div class="alert alert-warning" role="alert">
+    <div class="alert alert-warning alert-dismissible fade show" role="alert" data-alert-id="ai-models.gemini-only">
         <i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>
         Only Gemini supported through
         <a href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer">
             Google AI Studio <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
         </a>.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
     </div>
     <div class="card mb-4">
         <div class="card-header">AI Model Form</div>

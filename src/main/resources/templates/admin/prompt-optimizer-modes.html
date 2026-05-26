@@ -17,8 +17,9 @@
         <div class="card-header">Mode Form</div>
         <div class="card-body">
             <input id="modeId" type="hidden">
-            <div id="readOnlyNotice" class="alert alert-info d-none" role="alert">
+            <div id="readOnlyNotice" class="alert alert-info alert-dismissible fade show d-none" role="alert" data-alert-persist="false">
                 System read-only mode: only the Hidden flag can be changed.
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
             <div class="row g-3">
                 <div class="col-md-3">

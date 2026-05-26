@@ -204,6 +204,24 @@ All interactive elements (buttons, inputs of type button/submit) that initiate a
 
 3. **CRUD save buttons**: Use `saveLoadingText` in `initCrudPage` config so each page can set its own loading label (e.g. `Saving Project...`).
 
+### Dismissible page alerts
+
+Static informational/warning banners in page templates (not transient toasts or dynamic result alerts) must be dismissible and follow this standard.
+
+1. **Markup** (Bootstrap 5 `alert-dismissible`):
+   ```html
+   <div class="alert alert-info alert-dismissible fade show" role="alert" data-alert-id="projects.git-repo-hint">
+       <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
+       Message text here.
+       <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+   </div>
+   ```
+2. **`data-alert-id`**: Required stable id (e.g. `page.slug`). Used as key in `localStorage` map `codeAtlas.dismissedAlerts`.
+3. **No flash on reload**: `fragments/head` loads `static/js/dismissible-alerts.js` synchronously before body; it injects a `<style>` rule hiding dismissed `[data-alert-id]` elements before first paint.
+4. **Persistence**: On close, `dismissible-alerts.js` saves the id; `CodeAtlas.initDismissibleAlerts()` (auto-run from `common.js`) removes dismissed nodes from the DOM and wires close handlers.
+5. **Non-persistent contextual alerts**: Use `data-alert-persist="false"` (no `data-alert-id` needed). Close hides until page reload only — e.g. admin `readOnlyNotice`.
+6. **Excluded**: Transient toasts (`CodeAtlas.showToast`), AJAX validation feedback, and dynamic result alerts (e.g. Code Review findings) do not use this pattern.
+
 AJAX and API consumption:
 
 1. All client calls target `@RestController` endpoints and must handle `ApiResponse` JSON (`result`, `message`, `data`).
