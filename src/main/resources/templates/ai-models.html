@@ -11,6 +11,13 @@
 
 <main class="container py-4">
     <h1 class="mb-3">AI Models</h1>
+    <div class="alert alert-warning" role="alert">
+        <i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>
+        Only Gemini supported through
+        <a href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer">
+            Google AI Studio <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
+        </a>.
+    </div>
     <div class="card mb-4">
         <div class="card-header">AI Model Form</div>
         <div class="card-body">
@@ -19,6 +26,7 @@
                 <div class="col-md-4">
                     <label for="modelName" class="form-label">Model Name</label>
                     <input id="modelName" class="form-control" type="text" placeholder="gemini-2.5-flash">
+                    <div class="form-text">Model Name must match exact Gemini API ID (e.g. <code>gemini-2.5-flash</code>).</div>
                 </div>
                 <div class="col-12">
                     <label for="modelDescription" class="form-label">Description</label>
@@ -28,10 +36,12 @@
                 <div class="col-md-4">
                     <label for="modelTokensPerMinute" class="form-label">Tokens Per Minute <small class="text-muted">(0 for unlimited)</small></label>
                     <input id="modelTokensPerMinute" class="form-control" type="number" min="0">
+                    <div class="form-text">Tokens/min <code>0</code> = unlimited diff in Code Review; <code>&gt;0</code> caps diff truncation.</div>
                 </div>
                 <div class="col-md-4">
                     <label for="modelRequestsPerMinute" class="form-label">Requests Per Minute (Info)</label>
                     <input id="modelRequestsPerMinute" class="form-control" type="number" min="0">
+                    <div class="form-text">Req/min and Req/day are reference only, not enforced.</div>
                 </div>
                 <div class="col-md-4">
                     <label for="modelRequestsPerDay" class="form-label">Requests Per Day (Info)</label>
@@ -42,6 +52,7 @@
                     <select id="modelApiKeyLink" class="form-select">
                         <option value="">— None —</option>
                     </select>
+                    <div class="form-text">Link an active API Key — model won't work without one.</div>
                 </div>
                 <div class="col-12">
                     <div class="form-check">

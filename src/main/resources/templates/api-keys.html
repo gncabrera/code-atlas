@@ -11,6 +11,17 @@
 
 <main class="container py-4">
     <h1 class="mb-3">API Keys</h1>
+    <div class="alert alert-info" role="alert">
+        <i class="bi bi-lightbulb me-1" aria-hidden="true"></i>
+        Create an API key from
+        <a href="https://aistudio.google.com/api-keys" target="_blank" rel="noopener noreferrer">
+            Google AI Studio <i class="bi bi-box-arrow-up-right" aria-hidden="true"></i>
+        </a>.
+    </div>
+    <div class="alert alert-warning" role="alert">
+        <i class="bi bi-exclamation-triangle me-1" aria-hidden="true"></i>
+        Keys stored locally in SQLite — protect <code>data/app.db</code>.
+    </div>
     <div class="card mb-4">
         <div class="card-header">API Key Form</div>
         <div class="card-body">
@@ -19,10 +30,12 @@
                 <div class="col-md-4">
                     <label for="apiKeyName" class="form-label">Name</label>
                     <input id="apiKeyName" class="form-control" type="text" maxlength="100">
+                    <div class="form-text">One key can link to multiple AI models.</div>
                 </div>
                 <div class="col-md-4">
                     <label for="apiKeyProvider" class="form-label">Provider</label>
                     <input id="apiKeyProvider" class="form-control" type="text" maxlength="50" placeholder="Gemini">
+                    <div class="form-text">Provider <code>Gemini</code> + Active required for linked models.</div>
                 </div>
                 <div class="col-md-4">
                     <label for="apiKeyValue" class="form-label">API Key</label>

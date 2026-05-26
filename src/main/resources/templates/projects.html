@@ -11,6 +11,10 @@
 
 <main class="container py-4">
     <h1 class="mb-3">Projects</h1>
+    <div class="alert alert-info" role="alert">
+        <i class="bi bi-info-circle me-1" aria-hidden="true"></i>
+        Git repo required for Code Review and Commit Helper.
+    </div>
     <div class="card mb-4">
         <div class="card-header">Project Form</div>
         <div class="card-body">
@@ -23,6 +27,7 @@
                 <div class="col-md-6">
                     <label for="projectPath" class="form-label">Path</label>
                     <input id="projectPath" class="form-control" type="text">
+                    <div class="form-text">Path must exist on the server filesystem (local to this app).</div>
                 </div>
                 <div class="col-12">
                     <label for="projectDescription" class="form-label">Description</label>
@@ -33,6 +38,7 @@
                         <input class="form-check-input" type="checkbox" id="projectUseAgentsFile" checked>
                         <label class="form-check-label" for="projectUseAgentsFile">Enable AGENTS.md support</label>
                     </div>
+                    <div class="form-text">Add <code>AGENTS.md</code> at project root for AI context when enabled.</div>
                 </div>
             </div>
             <div class="mt-3 d-flex gap-2">

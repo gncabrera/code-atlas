@@ -82,11 +82,7 @@ public class CodeReviewService {
         }
 
         String truncatedDiff = truncateDiffForModel(agentsFile, files, diff, model.getTokensPerMinute());
-        String prompt = promptFormatService.formatPrompt(codeReviewTemplate, Map.of(
-                AGENTS_FILE_KEY, agentsFile,
-                FILES_KEY, files,
-                DIFF_KEY, truncatedDiff
-        ));
+        String prompt = getFormatPrompt(agentsFile, files, truncatedDiff);
 
         ModelResponseDto response = aiModelService.sendToModel(project, model, prompt, CODE_REVIEW_NOTES);
         return parseReviewResponse(response.reponse());
@@ -98,11 +94,7 @@ public class CodeReviewService {
         }
 
         int wrapperTokens = AIModelService.estimateTokens(
-                promptFormatService.formatPrompt(codeReviewTemplate, Map.of(
-                        AGENTS_FILE_KEY, agentsFile != null ? agentsFile : "",
-                        FILES_KEY, files != null ? files : "",
-                        DIFF_KEY, ""
-                ))
+                getFormatPrompt(agentsFile, files, "")
         );
         int availableTokens = tokensPerMinute - wrapperTokens;
         if (availableTokens <= 0) {
@@ -120,6 +112,14 @@ public class CodeReviewService {
         }
 
         return diff.substring(0, maxDiffChars - suffixLength) + TRUNCATION_SUFFIX;
+    }
+
+    private String getFormatPrompt(String agentsFile, String files, String diff) {
+        return promptFormatService.formatPrompt(codeReviewTemplate, Map.of(
+                AGENTS_FILE_KEY, agentsFile,
+                FILES_KEY, files,
+                DIFF_KEY, diff
+        ));
     }
 
     CodeReviewResponseDto parseReviewResponse(String rawResponse) {
