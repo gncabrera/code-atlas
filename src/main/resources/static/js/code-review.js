@@ -50,6 +50,22 @@ $(function () {
         $btn.prop("disabled", !valid);
     }
 
+    function validateRunReview() {
+        if (!$project.val()) {
+            return "Select project.";
+        }
+        if (!$model.val()) {
+            return "Select AI model.";
+        }
+        if (!$branchA.val() || !$branchB.val()) {
+            return "Select both branches.";
+        }
+        if ($branchA.val() === $branchB.val()) {
+            return "Base branch and compare branch must be different.";
+        }
+        return "";
+    }
+
     function loadMetadata(projectId) {
         const url = projectId
             ? "/api/code-review/metadata?projectId=" + encodeURIComponent(projectId)
@@ -93,6 +109,12 @@ $(function () {
     $branchB.on("change", checkFormState);
 
     $btn.on("click", function () {
+        const validationError = validateRunReview();
+        if (validationError) {
+            CodeAtlas.showToast(validationError, "warning");
+            return;
+        }
+
         $result.addClass("d-none");
         $progress.removeClass("d-none");
         CodeAtlas.setButtonLoading($btn, true, "Reviewing...");
@@ -112,7 +134,8 @@ $(function () {
             data: JSON.stringify(payload)
         })
             .done(function (response) {
-                if (response.result === "success") {
+                const result = String(response.result || "").toUpperCase();
+                if (result === "SUCCESS") {
                     lastReviewData = response.data;
                     renderReviewResult(response.data);
                 } else {
@@ -149,7 +172,6 @@ $(function () {
             concerns.forEach(function (concern) {
                 $concerns.append(
                     '<li class="list-group-item bg-transparent px-0 py-1 border-0 text-muted">' +
-                    '<i class="bi bi-exclamation-triangle text-warning me-2"></i>' +
                     escapeHtml(concern) +
                     "</li>"
                 );
@@ -157,7 +179,7 @@ $(function () {
         } else {
             $concerns.append(
                 '<li class="list-group-item bg-transparent px-0 py-1 border-0 text-success">' +
-                '<i class="bi bi-check-circle me-2"></i>No major concerns identified.' +
+                "No major concerns identified." +
                 "</li>"
             );
         }
@@ -192,6 +214,10 @@ $(function () {
                 "</button>"
             );
         });
+        if (severities.indexOf(activeSeverityFilter) === -1) {
+            activeSeverityFilter = "ALL";
+            $severityFilters.find('.severity-filter[data-severity="ALL"]').addClass("active");
+        }
         $severityFilters.removeClass("d-none");
     }
 
@@ -200,7 +226,7 @@ $(function () {
         if (!findings.length) {
             $container.html(
                 '<div class="alert alert-success mb-0">' +
-                '<i class="bi bi-check-circle-fill me-2"></i>No findings reported.' +
+                "No findings reported." +
                 "</div>"
             );
             return;
@@ -212,13 +238,13 @@ $(function () {
             const patchHtml = finding.suggestedPatch
                 ? '<div class="mt-3 finding-details">' +
                 '<span class="small fw-bold text-secondary">Suggested patch</span>' +
-                '<pre class="bg-dark text-light p-3 rounded mt-1 small mb-0"><code>' +
+                '<pre class="bg-dark text-light p-3 rounded mt-1 small mb-0 suggested-patch"><code>' +
                 escapeHtml(finding.suggestedPatch) +
                 "</code></pre></div>"
                 : "";
 
             const $card = $(
-                '<div class="card shadow-sm border-start border-4 mb-3 finding-card" data-severity="' +
+                '<div class="card mb-3 finding-card" data-severity="' +
                 escapeHtml(severity) +
                 '">' +
                 '<div class="card-body">' +
@@ -227,8 +253,7 @@ $(function () {
                 '<span class="badge bg-secondary me-2">' + escapeHtml(finding.category || "") + "</span>" +
                 '<span class="badge bg-' + badgeColor + '">' + escapeHtml(severity) + "</span>" +
                 '<h5 class="mt-2 mb-1">' + escapeHtml(finding.title || "Finding") + "</h5>" +
-                '<p class="text-muted small mb-0">' +
-                '<i class="bi bi-file-earmark-code me-1"></i>' +
+                '<p class="text-muted small mb-0 finding-location">' +
                 escapeHtml(finding.file || "N/A") +
                 " : line " +
                 escapeHtml(finding.line != null ? String(finding.line) : "N/A") +
@@ -275,7 +300,8 @@ $(function () {
             .replace(/&/g, "&amp;")
             .replace(/</g, "&lt;")
             .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;");
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
     }
 
     loadMetadata(null);

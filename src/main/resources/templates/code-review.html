@@ -6,54 +6,51 @@
     <title>Code Atlas - Code Review</title>
     <th:block th:replace="~{fragments/head :: pageHead('code-review.css')}"></th:block>
 </head>
-<body class="bg-light">
+<body>
 <div th:replace="~{fragments/navbar :: navbar}"></div>
 
 <main class="container py-4">
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card shadow-sm border-0">
-                <div class="card-body p-4">
-                    <h4 class="card-title text-primary mb-1">
-                        <i class="bi bi-shield-check me-2"></i>Code Review
-                    </h4>
-                    <p class="text-muted small mb-0">Compare branches and run AI static analysis on code changes.</p>
+    <h1 class="mb-3">Code Review</h1>
+    <p class="text-muted mb-3">Compare two branches and review changes with selected AI model.</p>
 
-                    <div class="alert alert-info alert-dismissible fade show mt-3 mb-0" role="alert" data-alert-id="code-review.large-context-hint">
-                        <i class="bi bi-lightbulb me-1" aria-hidden="true"></i>
-                        Prefer using a model with a HUGE context, like Gemma 4 31B.
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                    <div class="row g-3 mt-3 align-items-end">
-                        <div class="col-md-3">
-                            <label for="projectSelect" class="form-label small fw-bold">Project</label>
-                            <select id="projectSelect" class="form-select">
-                                <option value="">Select project</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label for="modelSelect" class="form-label small fw-bold">AI Model</label>
-                            <select id="modelSelect" class="form-select">
-                                <option value="">Select AI model</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label for="branchA" class="form-label small fw-bold">Base Branch</label>
-                            <select id="branchA" class="form-select" disabled>
-                                <option value="">Select project first</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <label for="branchB" class="form-label small fw-bold">Compare Branch</label>
-                            <select id="branchB" class="form-select" disabled>
-                                <option value="">Select project first</option>
-                            </select>
-                        </div>
-                        <div class="col-12 text-end">
-                            <button type="button" id="btnRunReview" class="btn btn-primary px-4" disabled>
-                                <i class="bi bi-play-circle me-1"></i>Review Code
-                            </button>
-                        </div>
+    <div class="alert alert-info alert-dismissible fade show mb-4" role="alert" data-alert-id="code-review.large-context-hint">
+        Use model with large context window for better review quality.
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">Review Setup</div>
+        <div class="card-body">
+            <div class="row g-3 align-items-end">
+                <div class="col-md-6 col-lg-3">
+                    <label for="projectSelect" class="form-label">Project</label>
+                    <select id="projectSelect" class="form-select">
+                        <option value="">Select project</option>
+                    </select>
+                </div>
+                <div class="col-md-6 col-lg-3">
+                    <label for="modelSelect" class="form-label">AI Model</label>
+                    <select id="modelSelect" class="form-select">
+                        <option value="">Select AI model</option>
+                    </select>
+                </div>
+                <div class="col-md-6 col-lg-3">
+                    <label for="branchA" class="form-label">Base Branch</label>
+                    <select id="branchA" class="form-select" disabled>
+                        <option value="">Select project first</option>
+                    </select>
+                </div>
+                <div class="col-md-6 col-lg-3">
+                    <label for="branchB" class="form-label">Compare Branch</label>
+                    <select id="branchB" class="form-select" disabled>
+                        <option value="">Select project first</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <div class="d-flex justify-content-end">
+                        <button type="button" id="btnRunReview" class="btn btn-primary" disabled>
+                            Run Review
+                        </button>
                     </div>
                 </div>
             </div>
@@ -67,18 +64,16 @@
     </div>
 
     <div id="reviewResult" class="d-none">
-        <div class="card shadow-sm mb-4 border-0">
-            <div class="card-header bg-white border-0 py-3">
-                <h5 class="mb-0 text-secondary">Analysis Summary</h5>
-            </div>
+        <div class="card mb-4">
+            <div class="card-header">Analysis Summary</div>
             <div class="card-body">
                 <div class="row align-items-center">
-                    <div class="col-md-3 text-center border-end">
+                    <div class="col-md-3 text-center border-md-end">
                         <span class="text-muted d-block small mb-1">Quality Score</span>
                         <div id="summaryScore" class="display-3 fw-bold code-review-score">-</div>
                         <span class="text-muted">out of 10</span>
                     </div>
-                    <div class="col-md-3 text-center border-end">
+                    <div class="col-md-3 text-center border-md-end">
                         <span class="text-muted d-block small mb-1">Risk Profile</span>
                         <h3 id="summaryRisk" class="mt-2 mb-0">-</h3>
                     </div>
@@ -90,11 +85,15 @@
             </div>
         </div>
 
-        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-            <h5 class="mb-0 text-secondary">Findings</h5>
-            <div id="severityFilters" class="btn-group btn-group-sm d-none" role="group" aria-label="Severity filters"></div>
+        <div class="card">
+            <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <h5 class="mb-0">Findings</h5>
+                <div id="severityFilters" class="btn-group btn-group-sm d-none" role="group" aria-label="Severity filters"></div>
+            </div>
+            <div class="card-body">
+                <div id="findingsContainer"></div>
+            </div>
         </div>
-        <div id="findingsContainer"></div>
     </div>
 </main>
 
