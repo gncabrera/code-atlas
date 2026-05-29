@@ -94,10 +94,10 @@ class CodeReviewServiceTest {
     }
 
     @Test
-    void runCodeReview_rejectsSameBranch() {
+    void runBranchCodeReview_rejectsSameBranch() {
         IllegalArgumentException ex = assertThrows(
                 IllegalArgumentException.class,
-                () -> codeReviewService.runCodeReview(1L, 2L, "main", "main")
+                () -> codeReviewService.runBranchCodeReview(1L, 2L, "main", "main")
         );
 
         assertEquals("Base and compare branches must be different.", ex.getMessage());
@@ -147,7 +147,7 @@ class CodeReviewServiceTest {
     }
 
     @Test
-    void runCodeReview_callsGitDiffAndAiModel() {
+    void runBranchCodeReview_callsGitDiffAndAiModel() {
         when(projectService.getProjectEntity(1L)).thenReturn(project);
         when(aiModelService.getModelEntity(2L)).thenReturn(model);
         when(projectService.resolveAgentsFileContent(project)).thenReturn("agents");
@@ -161,7 +161,7 @@ class CodeReviewServiceTest {
                         {"summary":{"score":7,"risk":"MEDIUM","mainConcerns":[]},"findings":[]}
                         """, 10));
 
-        CodeReviewResponseDto result = codeReviewService.runCodeReview(1L, 2L, "main", "feature/x");
+        CodeReviewResponseDto result = codeReviewService.runBranchCodeReview(1L, 2L, "main", "feature/x");
 
         assertEquals(7, result.summary().score());
         assertEquals("MEDIUM", result.summary().risk());

@@ -36,7 +36,7 @@ public class CodeReviewRestController extends BaseRestController {
     @PostMapping
     public ResponseEntity<ApiResponse<?>> executeReview(@RequestBody CodeReviewRequestDto request) {
         try {
-            CodeReviewResponseDto result = codeReviewService.runCodeReview(
+            CodeReviewResponseDto result = codeReviewService.runBranchCodeReview(
                     request.projectId(),
                     request.modelId(),
                     request.branchA(),

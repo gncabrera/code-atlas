@@ -63,7 +63,7 @@ public class CodeReviewService {
         );
     }
 
-    public CodeReviewResponseDto runCodeReview(Long projectId, Long modelId, String branchA, String branchB) {
+    public CodeReviewResponseDto runBranchCodeReview(Long projectId, Long modelId, String branchA, String branchB) {
         String normalizedBranchA = branchA.trim();
         String normalizedBranchB = branchB.trim();
         if (normalizedBranchA.equals(normalizedBranchB)) {
@@ -71,14 +71,24 @@ public class CodeReviewService {
         }
 
         Project project = projectService.getProjectEntity(projectId);
-        AIModel model = aiModelService.getModelEntity(modelId);
         Path projectRoot = resolveProjectRoot(project);
         assertGitRepository(projectRoot);
+
+        String diff = gitProcessRunner.diffBetweenBranches(projectRoot, normalizedBranchA, normalizedBranchB);
+        if (diff.isBlank()) {
+            throw new IllegalArgumentException("No differences found between the selected branches.");
+        }
+
+        return runBranchCodeReview(projectId, modelId, diff);
+    }
+
+    public CodeReviewResponseDto runBranchCodeReview(Long projectId, Long modelId, String diff) {
+        Project project = projectService.getProjectEntity(projectId);
+        AIModel model = aiModelService.getModelEntity(modelId);
 
         String agentsFile = projectService.resolveAgentsFileContent(project);
         String designFile = projectService.resolveDesignFileContent(project);
         String files = String.join("\n", projectService.getProjectFiles(project));
-        String diff = gitProcessRunner.diffBetweenBranches(projectRoot, normalizedBranchA, normalizedBranchB);
         if (diff.isBlank()) {
             throw new IllegalArgumentException("No differences found between the selected branches.");
         }
