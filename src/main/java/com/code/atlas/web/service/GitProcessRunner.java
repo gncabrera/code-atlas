@@ -22,6 +22,7 @@ public class GitProcessRunner {
     private static final Logger log = LoggerFactory.getLogger(GitProcessRunner.class);
     private static final long GIT_COMMAND_TIMEOUT_SECONDS = 30;
     private static final Pattern BRANCH_NAME_PATTERN = Pattern.compile("^[a-zA-Z0-9_\\-.\\/]+$");
+    private static final String DEFAULT_REMOTE = "origin";
 
     public String run(Path workingDir, List<String> command) {
         return runInternal(workingDir, command, false);
@@ -70,6 +71,21 @@ public class GitProcessRunner {
         validateBranchName(branchA);
         validateBranchName(branchB);
         return runAllowDiffExit(projectRoot, List.of("git", "diff", branchA + ".." + branchB));
+    }
+
+    public void pushCurrentBranch(Path projectRoot) {
+        try {
+            run(projectRoot, List.of("git", "push"));
+        } catch (IllegalArgumentException ex) {
+            if (!isMissingUpstreamPushError(ex.getMessage())) {
+                throw ex;
+            }
+            run(projectRoot, List.of("git", "push", "-u", DEFAULT_REMOTE, "HEAD"));
+        }
+    }
+
+    private boolean isMissingUpstreamPushError(String message) {
+        return message != null && message.contains("no upstream branch");
     }
 
     private List<String> withNoPager(List<String> command) {
