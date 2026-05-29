@@ -3,6 +3,7 @@ package com.code.atlas.web.service;
 import com.code.atlas.web.domain.AIModel;
 import com.code.atlas.web.domain.Project;
 import com.code.atlas.web.service.dto.CodeReviewMetadataDto;
+import com.code.atlas.web.service.dto.CodeReviewRequestDto;
 import com.code.atlas.web.service.dto.CodeReviewResponseDto;
 import com.code.atlas.web.service.dto.ModelResponseDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -63,6 +64,31 @@ public class CodeReviewService {
         );
     }
 
+    public CodeReviewResponseDto runCodeReview(CodeReviewRequestDto request) {
+        if (request.currentChangesOnly()) {
+            return runCurrentChangesCodeReview(request.projectId(), request.modelId());
+        }
+        return runBranchCodeReview(
+                request.projectId(),
+                request.modelId(),
+                request.branchA(),
+                request.branchB()
+        );
+    }
+
+    public CodeReviewResponseDto runCurrentChangesCodeReview(Long projectId, Long modelId) {
+        Project project = projectService.getProjectEntity(projectId);
+        Path projectRoot = resolveProjectRoot(project);
+        assertGitRepository(projectRoot);
+
+        String diff = gitProcessRunner.collectWorkingTreeDiff(projectRoot);
+        if (diff.isBlank()) {
+            throw new IllegalArgumentException("No uncommitted changes detected to review.");
+        }
+
+        return runCodeReview(projectId, modelId, diff);
+    }
+
     public CodeReviewResponseDto runBranchCodeReview(Long projectId, Long modelId, String branchA, String branchB) {
         String normalizedBranchA = branchA.trim();
         String normalizedBranchB = branchB.trim();
@@ -90,7 +116,7 @@ public class CodeReviewService {
         String designFile = projectService.resolveDesignFileContent(project);
         String files = String.join("\n", projectService.getProjectFiles(project));
         if (diff.isBlank()) {
-            throw new IllegalArgumentException("No differences found between the selected branches.");
+            throw new IllegalArgumentException("No changes found to review.");
         }
 
         String truncatedDiff = truncateDiffForModel(agentsFile, designFile, files, diff, model.getTokensPerMinute());

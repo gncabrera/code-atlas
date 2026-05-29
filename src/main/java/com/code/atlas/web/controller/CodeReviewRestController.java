@@ -36,12 +36,7 @@ public class CodeReviewRestController extends BaseRestController {
     @PostMapping
     public ResponseEntity<ApiResponse<?>> executeReview(@RequestBody CodeReviewRequestDto request) {
         try {
-            CodeReviewResponseDto result = codeReviewService.runBranchCodeReview(
-                    request.projectId(),
-                    request.modelId(),
-                    request.branchA(),
-                    request.branchB()
-            );
+            CodeReviewResponseDto result = codeReviewService.runCodeReview(request);
             return ResponseEntity.ok(ApiResponse.success("Code review completed.", result));
         } catch (Exception ex) {
             return handledException("POST /api/code-review", ex);

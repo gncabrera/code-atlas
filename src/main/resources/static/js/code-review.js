@@ -9,6 +9,7 @@ $(function () {
     const $model = $("#modelSelect");
     const $branchA = $("#branchA");
     const $branchB = $("#branchB");
+    const $currentChangesCheckbox = $("#currentChangesOnly");
     const $btn = $("#btnRunReview");
     const $progress = $("#reviewProgress");
     const $result = $("#reviewResult");
@@ -45,8 +46,19 @@ $(function () {
         branches = [];
     }
 
+    function toggleBranchDropdowns(disabled) {
+        $branchA.prop("disabled", disabled);
+        $branchB.prop("disabled", disabled);
+    }
+
+    function isCurrentChangesOnly() {
+        return $currentChangesCheckbox.is(":checked");
+    }
+
     function checkFormState() {
-        const valid = $project.val() && $model.val() && $branchA.val() && $branchB.val();
+        const hasProjectAndModel = $project.val() && $model.val();
+        const hasBranches = $branchA.val() && $branchB.val();
+        const valid = hasProjectAndModel && (isCurrentChangesOnly() || hasBranches);
         $btn.prop("disabled", !valid);
     }
 
@@ -56,6 +68,9 @@ $(function () {
         }
         if (!$model.val()) {
             return "Select AI model.";
+        }
+        if (isCurrentChangesOnly()) {
+            return "";
         }
         if (!$branchA.val() || !$branchB.val()) {
             return "Select both branches.";
@@ -92,6 +107,9 @@ $(function () {
                     if (projectId) {
                         $project.val(String(projectId));
                     }
+                    if (isCurrentChangesOnly()) {
+                        toggleBranchDropdowns(true);
+                    }
                     checkFormState();
                 };
                 if (window.CodeAtlasUserPreferences) {
@@ -120,6 +138,11 @@ $(function () {
     $branchA.on("change", checkFormState);
     $branchB.on("change", checkFormState);
 
+    $currentChangesCheckbox.on("change", function () {
+        toggleBranchDropdowns($(this).is(":checked"));
+        checkFormState();
+    });
+
     $btn.on("click", function () {
         const validationError = validateRunReview();
         if (validationError) {
@@ -134,9 +157,13 @@ $(function () {
         const payload = {
             projectId: Number($project.val()),
             modelId: Number($model.val()),
-            branchA: $branchA.val(),
-            branchB: $branchB.val()
+            currentChangesOnly: isCurrentChangesOnly()
         };
+
+        if (!payload.currentChangesOnly) {
+            payload.branchA = $branchA.val();
+            payload.branchB = $branchB.val();
+        }
 
         $.ajax({
             url: "/api/code-review",
@@ -316,5 +343,12 @@ $(function () {
             .replace(/'/g, "&#39;");
     }
 
-    loadMetadata(null);
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialProjectId = urlParams.get("projectId");
+    if (urlParams.get("currentChangesOnly") === "true") {
+        $currentChangesCheckbox.prop("checked", true);
+        toggleBranchDropdowns(true);
+    }
+
+    loadMetadata(initialProjectId ? Number(initialProjectId) : null);
 });
