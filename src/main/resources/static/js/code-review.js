@@ -9,6 +9,8 @@ $(function () {
     const $model = $("#modelSelect");
     const $branchA = $("#branchA");
     const $branchB = $("#branchB");
+    const $branchAField = $branchA.closest(".col-md-6");
+    const $branchBField = $branchB.closest(".col-md-6");
     const $currentChangesCheckbox = $("#currentChangesOnly");
     const $btn = $("#btnRunReview");
     const $progress = $("#reviewProgress");
@@ -46,9 +48,10 @@ $(function () {
         branches = [];
     }
 
-    function toggleBranchDropdowns(disabled) {
-        $branchA.prop("disabled", disabled);
-        $branchB.prop("disabled", disabled);
+    function toggleBranchDropdowns(hidden) {
+        $branchAField.add($branchBField)
+            .toggleClass("invisible", hidden)
+            .attr("aria-hidden", hidden ? "true" : null);
     }
 
     function isCurrentChangesOnly() {

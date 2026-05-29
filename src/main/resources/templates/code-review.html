@@ -21,12 +21,16 @@
     <div class="card mb-4">
         <div class="card-header">Review Setup</div>
         <div class="card-body">
-            <div class="row g-3 align-items-end">
+            <div class="row g-3 align-items-start">
                 <div class="col-md-6 col-lg-3">
                     <label for="projectSelect" class="form-label">Project</label>
                     <select id="projectSelect" class="form-select">
                         <option value="">Select project</option>
                     </select>
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" id="currentChangesOnly">
+                        <label class="form-check-label" for="currentChangesOnly">Review current changes only</label>
+                    </div>
                 </div>
                 <div class="col-md-6 col-lg-3">
                     <label for="modelSelect" class="form-label">AI Model</label>
@@ -47,20 +51,14 @@
                         <option value="">Select project first</option>
                     </select>
                 </div>
-                <div class="col-3">
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="currentChangesOnly">
-                        <label class="form-check-label" for="currentChangesOnly">Review current changes only</label>
-                    </div>
-                </div>
-                <div class="col-9">
+                <div class="col-12">
                     <div class="d-flex justify-content-end">
                         <button type="button" id="btnRunReview" class="btn btn-primary" disabled>
                             Run Review
                         </button>
                     </div>
                 </div>
-                
+
             </div>
         </div>
     </div>
