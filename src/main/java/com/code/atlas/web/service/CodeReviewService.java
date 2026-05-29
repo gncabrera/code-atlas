@@ -79,10 +79,10 @@ public class CodeReviewService {
             throw new IllegalArgumentException("No differences found between the selected branches.");
         }
 
-        return runBranchCodeReview(projectId, modelId, diff);
+        return runCodeReview(projectId, modelId, diff);
     }
 
-    public CodeReviewResponseDto runBranchCodeReview(Long projectId, Long modelId, String diff) {
+    public CodeReviewResponseDto runCodeReview(Long projectId, Long modelId, String diff) {
         Project project = projectService.getProjectEntity(projectId);
         AIModel model = aiModelService.getModelEntity(modelId);
 
