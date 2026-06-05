@@ -2,8 +2,8 @@ package com.code.atlas.web.service.context.indexed;
 
 import com.code.atlas.web.domain.AIModel;
 import com.code.atlas.web.domain.Project;
-import com.code.atlas.web.service.ProjectIndexService;
 import com.code.atlas.web.repository.SymbolIndexRepository;
+import com.code.atlas.web.service.ProjectIndexService;
 import com.code.atlas.web.service.context.indexed.context.DeterministicRetriever;
 import com.code.atlas.web.service.context.indexed.context.GraphExpander;
 import com.code.atlas.web.service.context.indexed.context.SecondRetriever;
@@ -21,6 +21,9 @@ import org.springframework.stereotype.Service;
 @Service
 public class IndexedContextService {
 
+    private static final String PHASE = "build";
+    private static final int TOTAL_STEPS = 8;
+
     private final ProjectIndexService projectIndexService;
     private final IndexBuildService indexBuildService;
     private final SymbolIndexRepository symbolIndexRepository;
@@ -31,6 +34,7 @@ public class IndexedContextService {
     private final SecondRetriever secondRetriever;
     private final ArchitectureSummarizer architectureSummarizer;
     private final IndexedContextAssembler indexedContextAssembler;
+    private final ContextPipelineLogger pipelineLogger;
 
     public IndexedContextService(
             ProjectIndexService projectIndexService,
@@ -42,7 +46,8 @@ public class IndexedContextService {
             MissingContextDetector missingContextDetector,
             SecondRetriever secondRetriever,
             ArchitectureSummarizer architectureSummarizer,
-            IndexedContextAssembler indexedContextAssembler
+            IndexedContextAssembler indexedContextAssembler,
+            ContextPipelineLogger pipelineLogger
     ) {
         this.projectIndexService = projectIndexService;
         this.indexBuildService = indexBuildService;
@@ -54,30 +59,69 @@ public class IndexedContextService {
         this.secondRetriever = secondRetriever;
         this.architectureSummarizer = architectureSummarizer;
         this.indexedContextAssembler = indexedContextAssembler;
+        this.pipelineLogger = pipelineLogger;
     }
 
     public String build(Project project, String userRequest, AIModel aiModel) {
         if (project == null) {
             return "## Relevant Files\n\nNo project selected. Context generation skipped.";
         }
-        ensureIndicesFresh(project);
-        Intent intent = intentExtractionService.extract(project, userRequest, aiModel);
-        ContextResult initial = deterministicRetriever.retrieve(project, intent);
-        ContextResult expanded = graphExpander.expand(project, initial);
-        MissingContext missing = missingContextDetector.detect(project, userRequest, intent, expanded, aiModel);
-        List<RetrievedFile> mergedFiles = mergeFiles(expanded.files(), secondRetriever.retrieve(project, intent, missing));
-        String architectureFacts = architectureSummarizer.summarize(project, userRequest, intent, mergedFiles, aiModel);
-        KnowledgeResult knowledgeResult = new KnowledgeResult(architectureFacts, mergedFiles, expanded.graph());
-        return indexedContextAssembler.assemble(intent, knowledgeResult);
+        pipelineLogger.message(project, PHASE, "Starting indexed context build");
+        long buildStarted = System.nanoTime();
+        try {
+            runVoidStep(project, 1, "Ensure indices are fresh", () -> ensureIndicesFresh(project));
+            Intent intent = runStep(project, 2, "Extract intent", () -> intentExtractionService.extract(project, userRequest, aiModel));
+            ContextResult initial = runStep(project, 3, "Deterministic retrieval", () -> deterministicRetriever.retrieve(project, intent));
+            ContextResult expanded = runStep(project, 4, "Graph expansion", () -> graphExpander.expand(project, initial));
+            MissingContext missing = runStep(project, 5, "Detect missing context",
+                    () -> missingContextDetector.detect(project, userRequest, intent, expanded, aiModel));
+            List<RetrievedFile> mergedFiles = runStep(project, 6, "Second retrieval and merge",
+                    () -> mergeFiles(expanded.files(), secondRetriever.retrieve(project, intent, missing)));
+            String architectureFacts = runStep(project, 7, "Summarize architecture",
+                    () -> architectureSummarizer.summarize(project, userRequest, intent, mergedFiles, aiModel));
+            KnowledgeResult knowledgeResult = new KnowledgeResult(architectureFacts, mergedFiles, expanded.graph());
+            String assembled = runStep(project, 8, "Assemble context",
+                    () -> indexedContextAssembler.assemble(intent, knowledgeResult));
+            pipelineLogger.message(project, PHASE, "Indexed context build finished (" + elapsedMs(buildStarted) + " ms)");
+            return assembled;
+        } catch (RuntimeException ex) {
+            pipelineLogger.stepFailed(project, PHASE, 0, TOTAL_STEPS, "Indexed context build", elapsedMs(buildStarted), ex.getMessage());
+            throw ex;
+        }
     }
 
     private void ensureIndicesFresh(Project project) {
         if (projectIndexService.isStale(project)) {
-            projectIndexService.refreshIndex(project);
+            projectIndexService.refreshIndex(project, PHASE);
             return;
         }
         if (symbolIndexRepository.findByProjectId(project.getId()).isEmpty()) {
-            indexBuildService.rebuildProject(project);
+            indexBuildService.rebuildProject(project, PHASE);
+        }
+    }
+
+    private void runVoidStep(Project project, int step, String label, Runnable action) {
+        long started = System.nanoTime();
+        pipelineLogger.stepStart(project, PHASE, step, TOTAL_STEPS, label);
+        try {
+            action.run();
+            pipelineLogger.stepComplete(project, PHASE, step, TOTAL_STEPS, label, elapsedMs(started));
+        } catch (RuntimeException ex) {
+            pipelineLogger.stepFailed(project, PHASE, step, TOTAL_STEPS, label, elapsedMs(started), ex.getMessage());
+            throw ex;
+        }
+    }
+
+    private <T> T runStep(Project project, int step, String label, StepAction<T> action) {
+        long started = System.nanoTime();
+        pipelineLogger.stepStart(project, PHASE, step, TOTAL_STEPS, label);
+        try {
+            T result = action.run();
+            pipelineLogger.stepComplete(project, PHASE, step, TOTAL_STEPS, label, elapsedMs(started));
+            return result;
+        } catch (RuntimeException ex) {
+            pipelineLogger.stepFailed(project, PHASE, step, TOTAL_STEPS, label, elapsedMs(started), ex.getMessage());
+            throw ex;
         }
     }
 
@@ -90,5 +134,14 @@ public class IndexedContextService {
             merged.putIfAbsent(file.relativePath(), file);
         }
         return new ArrayList<>(merged.values());
+    }
+
+    private static long elapsedMs(long startedNanos) {
+        return (System.nanoTime() - startedNanos) / 1_000_000L;
+    }
+
+    @FunctionalInterface
+    private interface StepAction<T> {
+        T run();
     }
 }

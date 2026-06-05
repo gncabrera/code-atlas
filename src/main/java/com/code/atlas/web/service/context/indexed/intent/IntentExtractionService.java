@@ -36,7 +36,7 @@ public class IntentExtractionService {
 
     public Intent extract(Project project, String userRequest, AIModel aiModel) {
         String prompt = promptFormatService.formatPrompt(template, Map.of("USER_REQUEST", userRequest));
-        String raw = aiModelService.sendToModel(project, aiModel, prompt, NOTES).reponse();
+        String raw = aiModelService.sendToModel(project, aiModel, prompt, NOTES, "Indexed context: intent extraction").reponse();
         IntentExtractionResponse response = JsonResponseExtractor.parseResponse(
                 raw,
                 IntentExtractionResponse.class,

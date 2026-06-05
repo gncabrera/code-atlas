@@ -102,7 +102,7 @@ public class ProjectController extends BaseRestController {
         try {
             Project project = projectService.getProjectEntity(id);
             AIModel aiModel = aiModelService.getModelEntity(requestDto.aiModelId());
-            projectIndexService.refreshIndex(project);
+            projectIndexService.refreshIndex(project, "offline");
             offlineIndexService.regenerate(project, aiModel);
             return ResponseEntity.ok(ApiResponse.success("Offline indices regenerated.", null));
         } catch (Exception ex) {

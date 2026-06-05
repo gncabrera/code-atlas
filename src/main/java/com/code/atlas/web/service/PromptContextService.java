@@ -7,6 +7,7 @@ import com.code.atlas.web.service.context.deterministic.ContextFormatter;
 import com.code.atlas.web.service.context.deterministic.ContextQuery;
 import com.code.atlas.web.service.context.deterministic.ContextQueryParser;
 import com.code.atlas.web.service.context.deterministic.ContextRetriever;
+import com.code.atlas.web.service.context.indexed.ContextPipelineLogger;
 import com.code.atlas.web.service.context.indexed.IndexedContextService;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,6 +21,7 @@ public class PromptContextService {
     private final ContextRetriever contextRetriever;
     private final ContextFormatter contextFormatter;
     private final IndexedContextService indexedContextService;
+    private final ContextPipelineLogger pipelineLogger;
     private final int maxContextChars;
 
     public PromptContextService(
@@ -27,12 +29,14 @@ public class PromptContextService {
             ContextRetriever contextRetriever,
             ContextFormatter contextFormatter,
             IndexedContextService indexedContextService,
+            ContextPipelineLogger pipelineLogger,
             @Value("${codeatlas.context.max-total-chars:7000}") int maxContextChars
     ) {
         this.contextQueryParser = contextQueryParser;
         this.contextRetriever = contextRetriever;
         this.contextFormatter = contextFormatter;
         this.indexedContextService = indexedContextService;
+        this.pipelineLogger = pipelineLogger;
         this.maxContextChars = Math.max(1, maxContextChars);
     }
 
@@ -43,6 +47,8 @@ public class PromptContextService {
         try {
             return indexedContextService.build(project, userRequest, aiModel);
         } catch (Exception ex) {
+            pipelineLogger.stepFailed(project, "build", 0, 0, "Indexed context build",
+                    0L, "Falling back to deterministic context: " + ex.getMessage());
             return buildDeterministicContext(project, userRequest);
         }
     }

@@ -9,13 +9,11 @@ import com.google.genai.types.GenerateContentResponse;
 import com.google.genai.types.HttpOptions;
 import jakarta.transaction.Transactional;
 import java.util.List;
-import java.util.logging.Level;
-
-import lombok.extern.java.Log;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-@Log
+@Slf4j
 @Service
 public class AIModelService {
 
@@ -135,6 +133,11 @@ public class AIModelService {
 
     @Transactional
     public ModelResponseDto sendToModel(Project project, AIModel model, String prompt, String notes) {
+        return sendToModel(project, model, prompt, notes, null);
+    }
+
+    @Transactional
+    public ModelResponseDto sendToModel(Project project, AIModel model, String prompt, String notes, String logLabel) {
         if (!model.isEnabled()) {
             throw new IllegalArgumentException("Selected AI model is disabled.");
         }
@@ -145,7 +148,14 @@ public class AIModelService {
             );
         }
 
+        boolean logLlmCall = logLabel != null && !logLabel.isBlank();
+        if (logLlmCall) {
+            log.info("[Context][project={}] LLM — starting: {} (model={}, estTokens={})",
+                    project.getId(), logLabel, model.getName(), estimatedTokens);
+        }
+
         PromptHistory history = promptHistoryService.create(project, model, prompt, notes);
+        long startedNanos = System.nanoTime();
 
         try {
             String apiKeyValue = resolveApiKeyValue(model);
@@ -159,12 +169,29 @@ public class AIModelService {
             GenerateContentResponse response = client.models.generateContent(model.getName(), prompt, null);
             String outputText = response.text();
             promptHistoryService.success(history, outputText);
+            if (logLlmCall) {
+                log.info("[Context][project={}] LLM — completed: {} ({} ms, estTokens={})",
+                        project.getId(), logLabel, elapsedMs(startedNanos), estimatedTokens);
+            }
             return new ModelResponseDto(outputText, estimatedTokens);
         } catch (Exception ex) {
-            promptHistoryService.error(history, ex);
-            log.log(Level.SEVERE, "Failed calling AI model: " + history.toString());
-            throw new IllegalArgumentException("Failed calling AI model: " + ex.getMessage());
+            String errorDetail = ExceptionMessageFormatter.formatChain(ex);
+            promptHistoryService.error(history, errorDetail);
+            if (logLlmCall) {
+                log.error("[Context][project={}] LLM — failed: {} ({} ms, model={}): {}",
+                        project.getId(), logLabel, elapsedMs(startedNanos), model.getName(), errorDetail, ex);
+            } else {
+                log.error("Failed calling AI model (model={}, historyId={}): {}",
+                        model.getName(), history.getId(), errorDetail, ex);
+            }
+            throw new IllegalArgumentException(
+                    "Failed calling AI model '" + model.getName() + "': " + errorDetail
+            );
         }
+    }
+
+    private static long elapsedMs(long startedNanos) {
+        return (System.nanoTime() - startedNanos) / 1_000_000L;
     }
 
     public static int estimateTokens(String input) {

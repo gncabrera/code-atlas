@@ -57,7 +57,7 @@ public class MissingContextDetector {
                 "RETRIEVED_FILES", formatFiles(contextResult.files()),
                 "PATTERN_HINTS", formatPatternHints(project)
         ));
-        String raw = aiModelService.sendToModel(project, aiModel, prompt, NOTES).reponse();
+        String raw = aiModelService.sendToModel(project, aiModel, prompt, NOTES, "Indexed context: missing context detection").reponse();
         MissingContextResponse response = JsonResponseExtractor.parseResponse(
                 raw,
                 MissingContextResponse.class,

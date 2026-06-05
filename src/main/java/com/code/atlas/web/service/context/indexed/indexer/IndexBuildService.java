@@ -13,6 +13,7 @@ import com.code.atlas.web.repository.FrontendIndexRepository;
 import com.code.atlas.web.repository.GraphEdgeRepository;
 import com.code.atlas.web.repository.ProjectFileIndexRepository;
 import com.code.atlas.web.repository.SymbolIndexRepository;
+import com.code.atlas.web.service.context.indexed.ContextPipelineLogger;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import java.io.IOException;
@@ -34,6 +35,7 @@ public class IndexBuildService {
     private final FrontendIndexRepository frontendIndexRepository;
     private final List<LanguageIndexer> languageIndexers;
     private final EntityManager entityManager;
+    private final ContextPipelineLogger pipelineLogger;
 
     public IndexBuildService(
             ProjectFileIndexRepository projectFileIndexRepository,
@@ -43,7 +45,8 @@ public class IndexBuildService {
             DatabaseIndexRepository databaseIndexRepository,
             FrontendIndexRepository frontendIndexRepository,
             List<LanguageIndexer> languageIndexers,
-            EntityManager entityManager
+            EntityManager entityManager,
+            ContextPipelineLogger pipelineLogger
     ) {
         this.projectFileIndexRepository = projectFileIndexRepository;
         this.symbolIndexRepository = symbolIndexRepository;
@@ -53,38 +56,51 @@ public class IndexBuildService {
         this.frontendIndexRepository = frontendIndexRepository;
         this.languageIndexers = languageIndexers;
         this.entityManager = entityManager;
+        this.pipelineLogger = pipelineLogger;
     }
 
     @Transactional
     public void rebuildProject(Project project) {
+        rebuildProject(project, "index");
+    }
+
+    @Transactional
+    public void rebuildProject(Project project, String phase) {
         List<ProjectFileIndex> entries = projectFileIndexRepository.findByProjectId(project.getId());
         if (entries.isEmpty()) {
             purgeStructuralIndices(project.getId());
+            pipelineLogger.message(project, phase, "No indexed files — structural indices cleared");
             return;
         }
         purgeStructuralIndices(project.getId());
         flushStructuralDeletes();
         Path projectRoot = Path.of(project.getPath()).normalize();
+        int indexedFiles = 0;
         for (ProjectFileIndex entry : entries) {
-            indexFile(project, projectRoot, entry);
+            if (indexFile(project, projectRoot, entry)) {
+                indexedFiles++;
+            }
         }
+        pipelineLogger.message(project, phase, "Structural indices rebuilt for " + indexedFiles + " of " + entries.size() + " files");
     }
 
-    private void indexFile(Project project, Path projectRoot, ProjectFileIndex entry) {
+    private boolean indexFile(Project project, Path projectRoot, ProjectFileIndex entry) {
         Path filePath = projectRoot.resolve(entry.getFilePath()).normalize();
         if (!Files.isRegularFile(filePath)) {
-            return;
+            return false;
         }
         LanguageIndexer indexer = resolveIndexer(entry.getFileExtension());
         if (indexer == null) {
-            return;
+            return false;
         }
         try {
             String content = Files.readString(filePath);
             IndexerOutput output = indexer.index(new IndexFileInput(entry.getFilePath(), entry.getFileExtension(), content));
             persistOutput(project, entry.getFilePath(), output);
+            return true;
         } catch (IOException ex) {
             // Skip unreadable files.
+            return false;
         }
     }
 

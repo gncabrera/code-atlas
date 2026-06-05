@@ -43,7 +43,7 @@ public class ArchitectureSummarizer {
                 "FILE_SUMMARIES", formatSummaries(project, files),
                 "RETRIEVED_FILES", files.stream().map(RetrievedFile::relativePath).collect(Collectors.joining("\n"))
         ));
-        return aiModelService.sendToModel(project, aiModel, prompt, NOTES).reponse();
+        return aiModelService.sendToModel(project, aiModel, prompt, NOTES, "Indexed context: architecture summary").reponse();
     }
 
     private String formatIntent(Intent intent) {

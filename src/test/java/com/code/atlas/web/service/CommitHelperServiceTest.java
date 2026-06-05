@@ -170,6 +170,6 @@ class CommitHelperServiceTest {
         inOrder.verify(gitProcessRunner).run(any(Path.class), eq(List.of("git", "rev-parse", "--is-inside-work-tree")));
         inOrder.verify(gitProcessRunner).run(any(Path.class), eq(List.of("git", "add", "-A")));
         inOrder.verify(gitProcessRunner).run(any(Path.class), eq(List.of("git", "commit", "-m", "feat: test commit")));
-        inOrder.verify(gitProcessRunner).run(any(Path.class), eq(List.of("git", "push")));
+        inOrder.verify(gitProcessRunner).pushCurrentBranch(any(Path.class));
     }
 }

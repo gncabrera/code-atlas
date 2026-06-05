@@ -9,6 +9,7 @@ import java.util.List;
 
 import com.code.atlas.web.service.PromptContextService;
 import com.code.atlas.web.service.context.deterministic.*;
+import com.code.atlas.web.service.context.indexed.ContextPipelineLogger;
 import com.code.atlas.web.service.context.indexed.IndexedContextService;
 import org.junit.jupiter.api.Test;
 
@@ -20,7 +21,8 @@ class PromptContextServiceTest {
         ContextRetriever retriever = mock(ContextRetriever.class);
         ContextFormatter formatter = new ContextFormatter();
         IndexedContextService indexedContextService = mock(IndexedContextService.class);
-        PromptContextService service = new PromptContextService(parser, retriever, formatter, indexedContextService, 250);
+        ContextPipelineLogger pipelineLogger = mock(ContextPipelineLogger.class);
+        PromptContextService service = new PromptContextService(parser, retriever, formatter, indexedContextService, pipelineLogger, 250);
 
         Project project = new Project();
         project.setId(1L);
