@@ -32,4 +32,19 @@ class JavaIndexerTest {
         assertTrue(output.endpoints().stream().anyMatch(row -> "GET".equals(row.httpMethod())));
         assertTrue(output.graphEdges().stream().anyMatch(edge -> "UserService".equals(edge.target())));
     }
+
+    @Test
+    void deduplicatesRepeatedUsesEdgesWithinFile() {
+        String source = """
+                public class UserController {
+                    private final UserService userService;
+                    private final UserService backupUserService;
+                }
+                """;
+        IndexerOutput output = indexer.index(new IndexFileInput("UserController.java", "java", source));
+        long usesCount = output.graphEdges().stream()
+                .filter(edge -> "USES".equals(edge.relation()) && "UserService".equals(edge.target()))
+                .count();
+        assertTrue(usesCount <= 1);
+    }
 }

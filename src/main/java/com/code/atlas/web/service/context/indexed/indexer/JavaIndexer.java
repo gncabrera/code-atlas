@@ -2,8 +2,10 @@ package com.code.atlas.web.service.context.indexed.indexer;
 
 import com.code.atlas.web.service.context.deterministic.ContextSymbolExtractor;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.springframework.stereotype.Component;
@@ -69,21 +71,28 @@ public class JavaIndexer implements LanguageIndexer {
     }
 
     private List<SymbolRow> extractSymbols(String content) {
+        Set<String> seen = new LinkedHashSet<>();
         List<SymbolRow> symbols = new ArrayList<>();
         String[] lines = content.split("\n", -1);
         for (int i = 0; i < lines.length; i++) {
             Matcher matcher = CLASS_PATTERN.matcher(lines[i]);
             if (matcher.find()) {
-                symbols.add(new SymbolRow(matcher.group(2), matcher.group(1), i + 1));
+                addSymbol(symbols, seen, matcher.group(2), matcher.group(1), i + 1);
             }
         }
         List<String> extracted = contextSymbolExtractor.extractSymbols(content, "java", 30);
         for (String symbol : extracted) {
-            if (symbols.stream().noneMatch(row -> row.symbol().equals(symbol.replace("()", "")))) {
-                symbols.add(new SymbolRow(symbol.replace("()", ""), "method", 0));
-            }
+            String normalized = symbol.replace("()", "");
+            addSymbol(symbols, seen, normalized, "method", 0);
         }
         return symbols;
+    }
+
+    private void addSymbol(List<SymbolRow> symbols, Set<String> seen, String symbol, String kind, int line) {
+        String key = symbol + "|" + line;
+        if (seen.add(key)) {
+            symbols.add(new SymbolRow(symbol, kind, line));
+        }
     }
 
     private List<EndpointRow> extractEndpoints(String content, String controllerName) {
@@ -113,17 +122,18 @@ public class JavaIndexer implements LanguageIndexer {
         if (sourceType.isBlank()) {
             return List.of();
         }
+        Set<String> seen = new LinkedHashSet<>();
         List<GraphEdgeRow> edges = new ArrayList<>();
         Matcher extendsMatcher = EXTENDS_PATTERN.matcher(content);
         if (extendsMatcher.find()) {
-            edges.add(new GraphEdgeRow(sourceType, extendsMatcher.group(1).trim(), "EXTENDS"));
+            addGraphEdge(edges, seen, sourceType, extendsMatcher.group(1).trim(), "EXTENDS");
         }
         Matcher implementsMatcher = IMPLEMENTS_PATTERN.matcher(content);
         if (implementsMatcher.find()) {
             for (String iface : implementsMatcher.group(1).split(",")) {
                 String target = iface.trim();
                 if (!target.isBlank()) {
-                    edges.add(new GraphEdgeRow(sourceType, target, "IMPLEMENTS"));
+                    addGraphEdge(edges, seen, sourceType, target, "IMPLEMENTS");
                 }
             }
         }
@@ -131,10 +141,17 @@ public class JavaIndexer implements LanguageIndexer {
         while (fieldMatcher.find()) {
             String target = fieldMatcher.group(1);
             if (!target.equals(sourceType) && Character.isUpperCase(target.charAt(0))) {
-                edges.add(new GraphEdgeRow(sourceType, target, "USES"));
+                addGraphEdge(edges, seen, sourceType, target, "USES");
             }
         }
         return edges;
+    }
+
+    private void addGraphEdge(List<GraphEdgeRow> edges, Set<String> seen, String source, String target, String relation) {
+        String key = source + "|" + target + "|" + relation;
+        if (seen.add(key)) {
+            edges.add(new GraphEdgeRow(source, target, relation));
+        }
     }
 
     private List<DatabaseRow> extractDatabaseRows(String content, String relativePath, String primaryType) {

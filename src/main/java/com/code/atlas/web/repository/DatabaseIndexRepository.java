@@ -2,6 +2,7 @@ package com.code.atlas.web.repository;
 
 import com.code.atlas.web.domain.DatabaseIndexEntry;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -11,6 +12,8 @@ public interface DatabaseIndexRepository extends JpaRepository<DatabaseIndexEntr
     List<DatabaseIndexEntry> findByProjectId(Long projectId);
 
     List<DatabaseIndexEntry> findByProjectIdAndTableNameContainingIgnoreCase(Long projectId, String tableFragment);
+
+    Optional<DatabaseIndexEntry> findByProjectIdAndTableName(Long projectId, String tableName);
 
     void deleteByProjectIdAndFilePath(Long projectId, String filePath);
 

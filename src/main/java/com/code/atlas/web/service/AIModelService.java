@@ -9,10 +9,13 @@ import com.google.genai.types.GenerateContentResponse;
 import com.google.genai.types.HttpOptions;
 import jakarta.transaction.Transactional;
 import java.util.List;
+import java.util.logging.Level;
 
+import lombok.extern.java.Log;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+@Log
 @Service
 public class AIModelService {
 
@@ -159,6 +162,7 @@ public class AIModelService {
             return new ModelResponseDto(outputText, estimatedTokens);
         } catch (Exception ex) {
             promptHistoryService.error(history, ex);
+            log.log(Level.SEVERE, "Failed calling AI model: " + history.toString());
             throw new IllegalArgumentException("Failed calling AI model: " + ex.getMessage());
         }
     }

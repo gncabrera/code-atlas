@@ -2,6 +2,7 @@ package com.code.atlas.web.repository;
 
 import com.code.atlas.web.domain.GraphEdgeEntry;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -13,6 +14,13 @@ public interface GraphEdgeRepository extends JpaRepository<GraphEdgeEntry, Long>
     List<GraphEdgeEntry> findByProjectIdAndSource(Long projectId, String source);
 
     List<GraphEdgeEntry> findByProjectIdAndTarget(Long projectId, String target);
+
+    Optional<GraphEdgeEntry> findByProjectIdAndSourceAndTargetAndRelation(
+            Long projectId,
+            String source,
+            String target,
+            String relation
+    );
 
     void deleteByProjectIdAndSourceFilePath(Long projectId, String sourceFilePath);
 

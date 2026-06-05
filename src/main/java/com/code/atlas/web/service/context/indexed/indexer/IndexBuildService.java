@@ -13,12 +13,14 @@ import com.code.atlas.web.repository.FrontendIndexRepository;
 import com.code.atlas.web.repository.GraphEdgeRepository;
 import com.code.atlas.web.repository.ProjectFileIndexRepository;
 import com.code.atlas.web.repository.SymbolIndexRepository;
+import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -31,6 +33,7 @@ public class IndexBuildService {
     private final DatabaseIndexRepository databaseIndexRepository;
     private final FrontendIndexRepository frontendIndexRepository;
     private final List<LanguageIndexer> languageIndexers;
+    private final EntityManager entityManager;
 
     public IndexBuildService(
             ProjectFileIndexRepository projectFileIndexRepository,
@@ -39,7 +42,8 @@ public class IndexBuildService {
             GraphEdgeRepository graphEdgeRepository,
             DatabaseIndexRepository databaseIndexRepository,
             FrontendIndexRepository frontendIndexRepository,
-            List<LanguageIndexer> languageIndexers
+            List<LanguageIndexer> languageIndexers,
+            EntityManager entityManager
     ) {
         this.projectFileIndexRepository = projectFileIndexRepository;
         this.symbolIndexRepository = symbolIndexRepository;
@@ -48,6 +52,7 @@ public class IndexBuildService {
         this.databaseIndexRepository = databaseIndexRepository;
         this.frontendIndexRepository = frontendIndexRepository;
         this.languageIndexers = languageIndexers;
+        this.entityManager = entityManager;
     }
 
     @Transactional
@@ -57,33 +62,29 @@ public class IndexBuildService {
             purgeStructuralIndices(project.getId());
             return;
         }
+        purgeStructuralIndices(project.getId());
+        flushStructuralDeletes();
         Path projectRoot = Path.of(project.getPath()).normalize();
-        List<String> activePaths = new ArrayList<>();
         for (ProjectFileIndex entry : entries) {
-            activePaths.add(entry.getFilePath());
             indexFile(project, projectRoot, entry);
         }
-        purgeOrphanPaths(project.getId(), activePaths);
     }
 
     private void indexFile(Project project, Path projectRoot, ProjectFileIndex entry) {
         Path filePath = projectRoot.resolve(entry.getFilePath()).normalize();
         if (!Files.isRegularFile(filePath)) {
-            deleteIndicesForFile(project.getId(), entry.getFilePath());
             return;
         }
         LanguageIndexer indexer = resolveIndexer(entry.getFileExtension());
         if (indexer == null) {
-            deleteIndicesForFile(project.getId(), entry.getFilePath());
             return;
         }
         try {
             String content = Files.readString(filePath);
             IndexerOutput output = indexer.index(new IndexFileInput(entry.getFilePath(), entry.getFileExtension(), content));
-            deleteIndicesForFile(project.getId(), entry.getFilePath());
             persistOutput(project, entry.getFilePath(), output);
         } catch (IOException ex) {
-            deleteIndicesForFile(project.getId(), entry.getFilePath());
+            // Skip unreadable files.
         }
     }
 
@@ -97,7 +98,12 @@ public class IndexBuildService {
     }
 
     private void persistOutput(Project project, String filePath, IndexerOutput output) {
+        Set<String> seenSymbols = new HashSet<>();
         for (SymbolRow row : output.symbols()) {
+            String symbolKey = row.symbol() + "|" + row.line();
+            if (!seenSymbols.add(symbolKey)) {
+                continue;
+            }
             SymbolIndexEntry entity = new SymbolIndexEntry();
             entity.setProject(project);
             entity.setSymbol(row.symbol());
@@ -107,6 +113,13 @@ public class IndexBuildService {
             symbolIndexRepository.save(entity);
         }
         for (EndpointRow row : output.endpoints()) {
+            if (endpointIndexRepository.findByProjectIdAndHttpMethodAndPath(
+                    project.getId(),
+                    row.httpMethod(),
+                    row.path()
+            ).isPresent()) {
+                continue;
+            }
             EndpointIndexEntry entity = new EndpointIndexEntry();
             entity.setProject(project);
             entity.setHttpMethod(row.httpMethod());
@@ -117,6 +130,14 @@ public class IndexBuildService {
             endpointIndexRepository.save(entity);
         }
         for (GraphEdgeRow row : output.graphEdges()) {
+            if (graphEdgeRepository.findByProjectIdAndSourceAndTargetAndRelation(
+                    project.getId(),
+                    row.source(),
+                    row.target(),
+                    row.relation()
+            ).isPresent()) {
+                continue;
+            }
             GraphEdgeEntry entity = new GraphEdgeEntry();
             entity.setProject(project);
             entity.setSource(row.source());
@@ -126,9 +147,13 @@ public class IndexBuildService {
             graphEdgeRepository.save(entity);
         }
         for (DatabaseRow row : output.databaseRows()) {
+            String tableName = row.tableName().isBlank() ? filePath : row.tableName();
+            if (databaseIndexRepository.findByProjectIdAndTableName(project.getId(), tableName).isPresent()) {
+                continue;
+            }
             DatabaseIndexEntry entity = new DatabaseIndexEntry();
             entity.setProject(project);
-            entity.setTableName(row.tableName().isBlank() ? filePath : row.tableName());
+            entity.setTableName(tableName);
             entity.setEntity(row.entity());
             entity.setRepository(row.repository());
             entity.setMigration(row.migration());
@@ -146,24 +171,8 @@ public class IndexBuildService {
         }
     }
 
-    private void deleteIndicesForFile(Long projectId, String filePath) {
-        symbolIndexRepository.deleteByProjectIdAndFilePath(projectId, filePath);
-        endpointIndexRepository.deleteByProjectIdAndFilePath(projectId, filePath);
-        graphEdgeRepository.deleteByProjectIdAndSourceFilePath(projectId, filePath);
-        databaseIndexRepository.deleteByProjectIdAndFilePath(projectId, filePath);
-        frontendIndexRepository.deleteByProjectIdAndFilePath(projectId, filePath);
-    }
-
-    private void purgeOrphanPaths(Long projectId, List<String> activePaths) {
-        if (activePaths.isEmpty()) {
-            purgeStructuralIndices(projectId);
-            return;
-        }
-        symbolIndexRepository.deleteByProjectIdAndFilePathNotIn(projectId, activePaths);
-        endpointIndexRepository.deleteByProjectIdAndFilePathNotIn(projectId, activePaths);
-        graphEdgeRepository.deleteByProjectIdAndSourceFilePathNotIn(projectId, activePaths);
-        databaseIndexRepository.deleteByProjectIdAndFilePathNotIn(projectId, activePaths);
-        frontendIndexRepository.deleteByProjectIdAndFilePathNotIn(projectId, activePaths);
+    private void flushStructuralDeletes() {
+        entityManager.flush();
     }
 
     private void purgeStructuralIndices(Long projectId) {
