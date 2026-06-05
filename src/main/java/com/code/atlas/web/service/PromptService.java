@@ -38,7 +38,7 @@ public class PromptService {
         }
         Project project = resolveProject(requestDto.projectId());
         String template = mode.getPrompt();
-        String context = promptContextService.buildContext(project, requestDto.userRequest());
+        String context = promptContextService.buildDeterministicContext(project, requestDto.userRequest());
         String agentsFileContent = requestDto.shouldSendAgentsFile() ? projectService.resolveAgentsFileContent(project) : "";
         String designFileContent = requestDto.shouldSendDesignFile() ? projectService.resolveDesignFileContent(project) : "";
         Map<String, String> parameters = Map.of(

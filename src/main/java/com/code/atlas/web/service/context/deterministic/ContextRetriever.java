@@ -1,4 +1,4 @@
-package com.code.atlas.web.service.context;
+package com.code.atlas.web.service.context.deterministic;
 
 import com.code.atlas.web.domain.ProjectFileIndex;
 import com.code.atlas.web.domain.Project;

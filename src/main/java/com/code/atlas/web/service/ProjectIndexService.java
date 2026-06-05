@@ -2,9 +2,9 @@ package com.code.atlas.web.service;
 
 import com.code.atlas.web.domain.ProjectFileIndex;
 import com.code.atlas.web.domain.Project;
-import com.code.atlas.web.service.context.ContextFileSupport;
-import com.code.atlas.web.service.context.ContextQuery;
-import com.code.atlas.web.service.context.ContextSymbolExtractor;
+import com.code.atlas.web.service.context.deterministic.ContextFileSupport;
+import com.code.atlas.web.service.context.deterministic.ContextQuery;
+import com.code.atlas.web.service.context.deterministic.ContextSymbolExtractor;
 import com.code.atlas.web.repository.ProjectFileIndexRepository;
 import jakarta.transaction.Transactional;
 import java.io.IOException;

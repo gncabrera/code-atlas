@@ -58,7 +58,7 @@ class PromptServiceTest {
     void buildPreview_injectsDesignFileWhenRequested() {
         when(promptOptimizerModeService.getModeEntity(10L)).thenReturn(mode);
         when(projectService.getProjectEntity(1L)).thenReturn(project);
-        when(promptContextService.buildContext(eq(project), any())).thenReturn("ctx");
+        when(promptContextService.buildDeterministicContext(eq(project), any())).thenReturn("ctx");
         when(projectService.resolveDesignFileContent(project)).thenReturn("DESIGN.md\n\nui rules");
         when(promptFormatService.formatPrompt(any(), any())).thenAnswer(invocation -> {
             @SuppressWarnings("unchecked")
@@ -77,7 +77,7 @@ class PromptServiceTest {
     void buildPreview_omitsDesignFileWhenNotRequested() {
         when(promptOptimizerModeService.getModeEntity(10L)).thenReturn(mode);
         when(projectService.getProjectEntity(1L)).thenReturn(project);
-        when(promptContextService.buildContext(eq(project), any())).thenReturn("ctx");
+        when(promptContextService.buildDeterministicContext(eq(project), any())).thenReturn("ctx");
         when(promptFormatService.formatPrompt(any(), any())).thenAnswer(invocation -> {
             @SuppressWarnings("unchecked")
             var parameters = (java.util.Map<String, String>) invocation.getArgument(1);

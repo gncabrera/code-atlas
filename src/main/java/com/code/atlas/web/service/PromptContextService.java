@@ -4,7 +4,7 @@ import com.code.atlas.web.domain.Project;
 import java.util.ArrayList;
 import java.util.List;
 
-import com.code.atlas.web.service.context.*;
+import com.code.atlas.web.service.context.deterministic.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -28,7 +28,11 @@ public class PromptContextService {
         this.maxContextChars = Math.max(1, maxContextChars);
     }
 
-    public String buildContext(Project project, String userRequest) {
+    public String buildIndexedContext(Project project, String userRequest) {
+        throw new RuntimeException("Not implemented");
+    }
+
+    public String buildDeterministicContext(Project project, String userRequest) {
         if (project == null) {
             return "## Relevant Files\n\nNo project selected. Context generation skipped.";
         }

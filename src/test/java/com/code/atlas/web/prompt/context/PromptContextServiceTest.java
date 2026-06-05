@@ -8,13 +8,13 @@ import com.code.atlas.web.domain.Project;
 import java.util.List;
 
 import com.code.atlas.web.service.PromptContextService;
-import com.code.atlas.web.service.context.*;
+import com.code.atlas.web.service.context.deterministic.*;
 import org.junit.jupiter.api.Test;
 
 class PromptContextServiceTest {
 
     @Test
-    void buildContextLimitsCandidatesByCharacterBudget() {
+    void buildDeterministicContextLimitsCandidatesByCharacterBudget() {
         ContextQueryParser parser = mock(ContextQueryParser.class);
         ContextRetriever retriever = mock(ContextRetriever.class);
         ContextFormatter formatter = new ContextFormatter();
@@ -51,7 +51,7 @@ class PromptContextServiceTest {
                 )
         ));
 
-        String output = service.buildContext(project, "Feature: soft delete users");
+        String output = service.buildDeterministicContext(project, "Feature: soft delete users");
 
         assertTrue(output.contains("### 1. src/main/java/A.java"));
         assertTrue(!output.contains("### 2. src/main/java/B.java"));
