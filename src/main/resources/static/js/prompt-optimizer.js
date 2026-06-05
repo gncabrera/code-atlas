@@ -430,6 +430,10 @@ $(function () {
             shouldSendDesignFile: $("#shouldSendDesignFile").is(":checked"),
             promptModeId: Number(promptModeId)
         };
+        const modelId = $("#aiModelSelect").val();
+        if (modelId) {
+            payload.aiModelId = Number(modelId);
+        }
         CodeAtlas.setButtonLoading($buildBtn, true, "Building Preview...");
         $.ajax({
             url: "/api/prompts/build-preview",

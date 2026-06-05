@@ -5,6 +5,7 @@ import com.code.atlas.web.domain.Project;
 import com.code.atlas.web.service.context.deterministic.ContextFileSupport;
 import com.code.atlas.web.service.context.deterministic.ContextQuery;
 import com.code.atlas.web.service.context.deterministic.ContextSymbolExtractor;
+import com.code.atlas.web.service.context.indexed.indexer.IndexBuildService;
 import com.code.atlas.web.repository.ProjectFileIndexRepository;
 import jakarta.transaction.Transactional;
 import java.io.IOException;
@@ -34,15 +35,18 @@ public class ProjectIndexService {
 
     private final ProjectFileIndexRepository projectFileIndexRepository;
     private final ContextSymbolExtractor contextSymbolExtractor;
+    private final IndexBuildService indexBuildService;
     private final Duration maxAge;
 
     public ProjectIndexService(
             ProjectFileIndexRepository projectFileIndexRepository,
             ContextSymbolExtractor contextSymbolExtractor,
+            IndexBuildService indexBuildService,
             @Value("${codeatlas.context.index-max-age-minutes:30}") long maxAgeMinutes
     ) {
         this.projectFileIndexRepository = projectFileIndexRepository;
         this.contextSymbolExtractor = contextSymbolExtractor;
+        this.indexBuildService = indexBuildService;
         this.maxAge = Duration.ofMinutes(Math.max(1, maxAgeMinutes));
     }
 
@@ -69,6 +73,7 @@ public class ProjectIndexService {
         } else {
             projectFileIndexRepository.deleteByProjectId(project.getId());
         }
+        indexBuildService.rebuildProject(project);
     }
 
     public List<ProjectFileIndex> search(Project project, ContextQuery query, int limit) {

@@ -3,11 +3,15 @@ package com.code.atlas.web.service;
 import com.code.atlas.web.domain.AIModel;
 import com.code.atlas.web.domain.PromptOptimizerMode;
 import com.code.atlas.web.domain.Project;
-import com.code.atlas.web.service.dto.*;
+import com.code.atlas.web.service.dto.BuildPreviewRequestDto;
+import com.code.atlas.web.service.dto.BuildPreviewResponseDto;
+import com.code.atlas.web.service.dto.ModelResponseDto;
+import com.code.atlas.web.service.dto.SendPromptRequestDto;
+import com.code.atlas.web.service.dto.SendPromptResponseDto;
 import jakarta.transaction.Transactional;
-import org.springframework.stereotype.Service;
-
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
 @Service
 public class PromptService {
@@ -17,18 +21,22 @@ public class PromptService {
     private final PromptContextService promptContextService;
     private final AIModelService aiModelService;
     private final PromptFormatService promptFormatService;
+    private final String contextStrategy;
 
     public PromptService(
             PromptOptimizerModeService promptOptimizerModeService,
             ProjectService projectService,
             PromptContextService promptContextService,
-            AIModelService aiModelService, PromptFormatService promptFormatService
+            AIModelService aiModelService,
+            PromptFormatService promptFormatService,
+            @Value("${codeatlas.context.strategy:deterministic}") String contextStrategy
     ) {
         this.promptOptimizerModeService = promptOptimizerModeService;
         this.projectService = projectService;
         this.promptContextService = promptContextService;
         this.aiModelService = aiModelService;
         this.promptFormatService = promptFormatService;
+        this.contextStrategy = contextStrategy == null ? "deterministic" : contextStrategy.trim().toLowerCase();
     }
 
     public BuildPreviewResponseDto buildPreview(BuildPreviewRequestDto requestDto) {
@@ -38,7 +46,7 @@ public class PromptService {
         }
         Project project = resolveProject(requestDto.projectId());
         String template = mode.getPrompt();
-        String context = promptContextService.buildDeterministicContext(project, requestDto.userRequest());
+        String context = resolveContext(project, requestDto);
         String agentsFileContent = requestDto.shouldSendAgentsFile() ? projectService.resolveAgentsFileContent(project) : "";
         String designFileContent = requestDto.shouldSendDesignFile() ? projectService.resolveDesignFileContent(project) : "";
         Map<String, String> parameters = Map.of(
@@ -62,6 +70,17 @@ public class PromptService {
                 + ". PromptMode: " + modeLabel;
         ModelResponseDto modelResponseDto = aiModelService.sendToModel(project, model, exactPrompt, notes);
         return new SendPromptResponseDto(modelResponseDto.reponse(), modelResponseDto.estimatedTokens());
+    }
+
+    private String resolveContext(Project project, BuildPreviewRequestDto requestDto) {
+        if ("indexed".equals(contextStrategy)) {
+            if (requestDto.aiModelId() == null) {
+                throw new IllegalArgumentException("AI model id is required when indexed context strategy is enabled.");
+            }
+            AIModel aiModel = aiModelService.getModelEntity(requestDto.aiModelId());
+            return promptContextService.buildIndexedContext(project, requestDto.userRequest(), aiModel);
+        }
+        return promptContextService.buildDeterministicContext(project, requestDto.userRequest());
     }
 
     private String resolveModeLabel(Long promptModeId) {

@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
+import com.code.atlas.web.domain.AIModel;
 import com.code.atlas.web.domain.PromptOptimizerMode;
 import com.code.atlas.web.domain.Project;
 import com.code.atlas.web.service.dto.BuildPreviewRequestDto;
@@ -15,9 +16,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
-class PromptServiceTest {
+class PromptServiceIndexedContextTest {
 
     @Mock
     private PromptOptimizerModeService promptOptimizerModeService;
@@ -39,55 +41,38 @@ class PromptServiceTest {
 
     private Project project;
     private PromptOptimizerMode mode;
+    private AIModel aiModel;
 
     @BeforeEach
     void setUp() {
+        ReflectionTestUtils.setField(promptService, "contextStrategy", "indexed");
         project = new Project();
         project.setId(1L);
-        project.setPath("/tmp/project");
-        project.setUseDesignFile(true);
-
         mode = new PromptOptimizerMode();
         mode.setId(10L);
-        mode.setCode("BALANCED");
         mode.setHidden(false);
-        mode.setPrompt("Request: {{ USER_REQUEST }}\nDesign: {{ DESIGN_FILE }}");
+        mode.setPrompt("Context:\n{{CONTEXT}}");
+        aiModel = new AIModel();
+        aiModel.setId(5L);
+        aiModel.setEnabled(true);
     }
 
     @Test
-    void buildPreview_injectsDesignFileWhenRequested() {
+    void buildPreviewUsesIndexedContextWhenStrategyIndexed() {
         when(promptOptimizerModeService.getModeEntity(10L)).thenReturn(mode);
         when(projectService.getProjectEntity(1L)).thenReturn(project);
-        when(promptContextService.buildDeterministicContext(eq(project), any())).thenReturn("ctx");
-        when(projectService.resolveDesignFileContent(project)).thenReturn("DESIGN.md\n\nui rules");
+        when(aiModelService.getModelEntity(5L)).thenReturn(aiModel);
+        when(promptContextService.buildIndexedContext(eq(project), any(), eq(aiModel))).thenReturn("indexed-context");
         when(promptFormatService.formatPrompt(any(), any())).thenAnswer(invocation -> {
             @SuppressWarnings("unchecked")
             var parameters = (java.util.Map<String, String>) invocation.getArgument(1);
-            return parameters.get("DESIGN_FILE");
+            return parameters.get("CONTEXT");
         });
 
         BuildPreviewResponseDto response = promptService.buildPreview(
-                new BuildPreviewRequestDto(1L, "add button", false, true, 10L, null)
+                new BuildPreviewRequestDto(1L, "add soft delete", false, false, 10L, 5L)
         );
 
-        assertTrue(response.aiModelPrompt().contains("ui rules"));
-    }
-
-    @Test
-    void buildPreview_omitsDesignFileWhenNotRequested() {
-        when(promptOptimizerModeService.getModeEntity(10L)).thenReturn(mode);
-        when(projectService.getProjectEntity(1L)).thenReturn(project);
-        when(promptContextService.buildDeterministicContext(eq(project), any())).thenReturn("ctx");
-        when(promptFormatService.formatPrompt(any(), any())).thenAnswer(invocation -> {
-            @SuppressWarnings("unchecked")
-            var parameters = (java.util.Map<String, String>) invocation.getArgument(1);
-            return parameters.getOrDefault("DESIGN_FILE", "missing");
-        });
-
-        BuildPreviewResponseDto response = promptService.buildPreview(
-                new BuildPreviewRequestDto(1L, "add button", false, false, 10L, null)
-        );
-
-        assertTrue(response.aiModelPrompt().isEmpty());
+        assertTrue(response.aiModelPrompt().contains("indexed-context"));
     }
 }

@@ -1,10 +1,15 @@
 package com.code.atlas.web.service;
 
+import com.code.atlas.web.domain.AIModel;
 import com.code.atlas.web.domain.Project;
+import com.code.atlas.web.service.context.deterministic.ContextCandidate;
+import com.code.atlas.web.service.context.deterministic.ContextFormatter;
+import com.code.atlas.web.service.context.deterministic.ContextQuery;
+import com.code.atlas.web.service.context.deterministic.ContextQueryParser;
+import com.code.atlas.web.service.context.deterministic.ContextRetriever;
+import com.code.atlas.web.service.context.indexed.IndexedContextService;
 import java.util.ArrayList;
 import java.util.List;
-
-import com.code.atlas.web.service.context.deterministic.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -14,22 +19,32 @@ public class PromptContextService {
     private final ContextQueryParser contextQueryParser;
     private final ContextRetriever contextRetriever;
     private final ContextFormatter contextFormatter;
+    private final IndexedContextService indexedContextService;
     private final int maxContextChars;
 
     public PromptContextService(
             ContextQueryParser contextQueryParser,
             ContextRetriever contextRetriever,
             ContextFormatter contextFormatter,
+            IndexedContextService indexedContextService,
             @Value("${codeatlas.context.max-total-chars:7000}") int maxContextChars
     ) {
         this.contextQueryParser = contextQueryParser;
         this.contextRetriever = contextRetriever;
         this.contextFormatter = contextFormatter;
+        this.indexedContextService = indexedContextService;
         this.maxContextChars = Math.max(1, maxContextChars);
     }
 
-    public String buildIndexedContext(Project project, String userRequest) {
-        throw new RuntimeException("Not implemented");
+    public String buildIndexedContext(Project project, String userRequest, AIModel aiModel) {
+        if (aiModel == null) {
+            throw new IllegalArgumentException("AI model is required for indexed context generation.");
+        }
+        try {
+            return indexedContextService.build(project, userRequest, aiModel);
+        } catch (Exception ex) {
+            return buildDeterministicContext(project, userRequest);
+        }
     }
 
     public String buildDeterministicContext(Project project, String userRequest) {

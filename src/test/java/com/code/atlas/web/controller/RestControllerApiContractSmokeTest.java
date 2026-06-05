@@ -7,6 +7,8 @@ import com.code.atlas.web.service.AIModelService;
 import com.code.atlas.web.service.CodeReviewService;
 import com.code.atlas.web.service.CommitHelperService;
 import com.code.atlas.web.service.ProjectService;
+import com.code.atlas.web.service.ProjectIndexService;
+import com.code.atlas.web.service.context.indexed.offline.OfflineIndexService;
 import com.code.atlas.web.service.PromptHistoryService;
 import com.code.atlas.web.service.PromptOptimizerModeService;
 import com.code.atlas.web.service.PromptService;
@@ -46,6 +48,15 @@ class RestControllerApiContractSmokeTest {
 
         @MockBean
         private ProjectService projectService;
+
+        @MockBean
+        private ProjectIndexService projectIndexService;
+
+        @MockBean
+        private OfflineIndexService offlineIndexService;
+
+        @MockBean
+        private AIModelService aiModelService;
 
         @Test
         void listEndpointReturnsApiResponseContract() throws Exception {
