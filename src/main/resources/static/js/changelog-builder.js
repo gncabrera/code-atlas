@@ -34,6 +34,18 @@ $(function () {
                         $aiModelSelect.append(new Option(m.name, m.id));
                     }
                 });
+                const applyStoredPreferences = function () {
+                    if (window.CodeAtlasUserPreferences) {
+                        CodeAtlasUserPreferences.applyPreferenceFields([
+                            { field: "changelogBuilderDefaultAiModelId", selectId: "aiModelSelect" }
+                        ]);
+                    }
+                };
+                if (window.CodeAtlasUserPreferences) {
+                    CodeAtlasUserPreferences.whenLoaded().always(applyStoredPreferences);
+                } else {
+                    applyStoredPreferences();
+                }
             })
             .fail(function (xhr) {
                 CodeAtlas.showToast(CodeAtlas.apiMessage(xhr, "Failed to load AI models."), "danger");

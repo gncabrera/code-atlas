@@ -35,4 +35,7 @@ public class UserPreferences {
 
     @Column(name = "code_review_default_ai_model_id", nullable = false)
     private int codeReviewDefaultAiModelId = 0;
+
+    @Column(name = "changelog_builder_default_ai_model_id", nullable = false)
+    private int changelogBuilderDefaultAiModelId = 0;
 }

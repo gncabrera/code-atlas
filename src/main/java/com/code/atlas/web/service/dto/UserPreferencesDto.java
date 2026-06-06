@@ -8,7 +8,8 @@ public record UserPreferencesDto(
         ContextStrategy promptOptimizerDefaultContextStrategy,
         int promptOptimizerDefaultContextAiModelId,
         int commitHelperDefaultAiModelId,
-        int codeReviewDefaultAiModelId
+        int codeReviewDefaultAiModelId,
+        int changelogBuilderDefaultAiModelId
 ) {
     public UserPreferencesDto {
         if (promptOptimizerDefaultContextStrategy == null) {

@@ -8,7 +8,8 @@
         promptOptimizerDefaultContextStrategy: "DETERMINISTIC",
         promptOptimizerDefaultContextAiModelId: 0,
         commitHelperDefaultAiModelId: 0,
-        codeReviewDefaultAiModelId: 0
+        codeReviewDefaultAiModelId: 0,
+        changelogBuilderDefaultAiModelId: 0
     };
 
     let preferencesLoaded = false;
@@ -32,6 +33,9 @@
         ],
         "code-review": [
             { field: "codeReviewDefaultAiModelId", selectId: "modelSelect" }
+        ],
+        "changelog-builder": [
+            { field: "changelogBuilderDefaultAiModelId", selectId: "aiModelSelect" }
         ]
     };
 
@@ -45,6 +49,9 @@
         }
         if (path.includes("code-review")) {
             return "code-review";
+        }
+        if (path.includes("changelog-builder")) {
+            return "changelog-builder";
         }
         return "";
     }

@@ -31,6 +31,7 @@ public class UserPreferencesService {
         entity.setPromptOptimizerDefaultContextAiModelId(dto.promptOptimizerDefaultContextAiModelId());
         entity.setCommitHelperDefaultAiModelId(dto.commitHelperDefaultAiModelId());
         entity.setCodeReviewDefaultAiModelId(dto.codeReviewDefaultAiModelId());
+        entity.setChangelogBuilderDefaultAiModelId(dto.changelogBuilderDefaultAiModelId());
         return toDto(repository.save(entity));
     }
 
@@ -46,7 +47,8 @@ public class UserPreferencesService {
                 entity.getPromptOptimizerDefaultContextStrategy(),
                 entity.getPromptOptimizerDefaultContextAiModelId(),
                 entity.getCommitHelperDefaultAiModelId(),
-                entity.getCodeReviewDefaultAiModelId()
+                entity.getCodeReviewDefaultAiModelId(),
+                entity.getChangelogBuilderDefaultAiModelId()
         );
     }
 }
