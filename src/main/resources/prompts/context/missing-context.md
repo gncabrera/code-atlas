@@ -20,9 +20,9 @@ Schema:
 }
 
 Rules:
+- use short canonical category labels only: migration, frontend, repository, entity, dto, test, config
 - missing is empty when retrieved files appear sufficient
-- use short category labels, not file paths
-- common categories: migration, frontend caller, repository, entity, dto, test, config
+- common categories: migration, frontend, repository, entity, dto, test, config
 
 # General context from project:
 

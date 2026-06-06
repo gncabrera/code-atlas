@@ -3,6 +3,7 @@ package com.code.atlas.web.service.context.indexed.context;
 import com.code.atlas.web.domain.DatabaseIndexEntry;
 import com.code.atlas.web.domain.FrontendIndexEntry;
 import com.code.atlas.web.domain.Project;
+import com.code.atlas.web.domain.ProjectFileIndex;
 import com.code.atlas.web.repository.DatabaseIndexRepository;
 import com.code.atlas.web.repository.FrontendIndexRepository;
 import com.code.atlas.web.repository.SymbolIndexRepository;
@@ -10,6 +11,7 @@ import com.code.atlas.web.service.context.indexed.IndexedFileLoader;
 import com.code.atlas.web.service.context.indexed.Intent;
 import com.code.atlas.web.service.context.indexed.MissingContext;
 import com.code.atlas.web.service.context.indexed.RetrievedFile;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -24,6 +26,7 @@ public class SecondRetriever {
     private final FrontendIndexRepository frontendIndexRepository;
     private final SymbolIndexRepository symbolIndexRepository;
     private final IndexedFileLoader indexedFileLoader;
+    private final IndexedPathFileRetriever indexedPathFileRetriever;
     private final int maxFiles;
 
     public SecondRetriever(
@@ -31,12 +34,14 @@ public class SecondRetriever {
             FrontendIndexRepository frontendIndexRepository,
             SymbolIndexRepository symbolIndexRepository,
             IndexedFileLoader indexedFileLoader,
-            @Value("${codeatlas.context.indexed.max-files:12}") int maxFiles
+            IndexedPathFileRetriever indexedPathFileRetriever,
+            @Value("${codeatlas.context.indexed.max-files:16}") int maxFiles
     ) {
         this.databaseIndexRepository = databaseIndexRepository;
         this.frontendIndexRepository = frontendIndexRepository;
         this.symbolIndexRepository = symbolIndexRepository;
         this.indexedFileLoader = indexedFileLoader;
+        this.indexedPathFileRetriever = indexedPathFileRetriever;
         this.maxFiles = Math.max(1, maxFiles);
     }
 
@@ -57,12 +62,20 @@ public class SecondRetriever {
                 addEntitySymbolMatches(project, intent, filesByPath);
             }
         }
-        return filesByPath.values().stream().limit(maxFiles).toList();
+        return filesByPath.values().stream()
+                .sorted(Comparator.comparingInt(RetrievedFile::score).reversed())
+                .limit(maxFiles)
+                .toList();
     }
 
     private void addDatabaseMatches(Project project, Intent intent, Map<String, RetrievedFile> filesByPath) {
-        for (DatabaseIndexEntry entry : databaseIndexRepository.findByProjectId(project.getId())) {
+        int sizeBefore = filesByPath.size();
+        List<DatabaseIndexEntry> databaseEntries = databaseIndexRepository.findByProjectId(project.getId());
+        for (DatabaseIndexEntry entry : databaseEntries) {
             addFile(project, entry.getFilePath(), 80, "Database index match", filesByPath);
+            if (!entry.getMigration().isBlank() && !entry.getMigration().equals(entry.getFilePath())) {
+                addFile(project, entry.getMigration(), 82, "Linked migration from database index", filesByPath);
+            }
         }
         for (String entity : intent.entities()) {
             for (DatabaseIndexEntry entry : databaseIndexRepository.findByProjectIdAndTableNameContainingIgnoreCase(
@@ -72,11 +85,34 @@ public class SecondRetriever {
                 addFile(project, entry.getFilePath(), 85, "Database index for " + entity, filesByPath);
             }
         }
+        if (databaseEntries.isEmpty() || filesByPath.size() == sizeBefore) {
+            addMigrationPathFallback(project, filesByPath);
+        }
+    }
+
+    private void addMigrationPathFallback(Project project, Map<String, RetrievedFile> filesByPath) {
+        for (ProjectFileIndex entry : indexedPathFileRetriever.findMigrationFiles(project)) {
+            addFile(project, entry.getFilePath(), 78, "Migration path fallback", filesByPath);
+        }
     }
 
     private void addFrontendMatches(Project project, Map<String, RetrievedFile> filesByPath) {
-        for (FrontendIndexEntry entry : frontendIndexRepository.findByProjectId(project.getId())) {
+        int sizeBefore = filesByPath.size();
+        List<FrontendIndexEntry> frontendEntries = frontendIndexRepository.findByProjectId(project.getId());
+        for (FrontendIndexEntry entry : frontendEntries) {
             addFile(project, entry.getFilePath(), 75, "Frontend index: " + entry.getComponent(), filesByPath);
+            if (!entry.getService().isBlank() && !entry.getService().equals(entry.getFilePath())) {
+                addFile(project, entry.getService(), 74, "Linked frontend script", filesByPath);
+            }
+        }
+        if (frontendEntries.isEmpty() || filesByPath.size() == sizeBefore) {
+            addFrontendPathFallback(project, filesByPath);
+        }
+    }
+
+    private void addFrontendPathFallback(Project project, Map<String, RetrievedFile> filesByPath) {
+        for (ProjectFileIndex entry : indexedPathFileRetriever.findFrontendFiles(project)) {
+            addFile(project, entry.getFilePath(), 72, "Frontend path fallback", filesByPath);
         }
     }
 

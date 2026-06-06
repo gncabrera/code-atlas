@@ -36,6 +36,7 @@ public class IndexBuildService {
     private final List<LanguageIndexer> languageIndexers;
     private final EntityManager entityManager;
     private final ContextPipelineLogger pipelineLogger;
+    private final MigrationEntityLinker migrationEntityLinker;
 
     public IndexBuildService(
             ProjectFileIndexRepository projectFileIndexRepository,
@@ -46,7 +47,8 @@ public class IndexBuildService {
             FrontendIndexRepository frontendIndexRepository,
             List<LanguageIndexer> languageIndexers,
             EntityManager entityManager,
-            ContextPipelineLogger pipelineLogger
+            ContextPipelineLogger pipelineLogger,
+            MigrationEntityLinker migrationEntityLinker
     ) {
         this.projectFileIndexRepository = projectFileIndexRepository;
         this.symbolIndexRepository = symbolIndexRepository;
@@ -57,6 +59,7 @@ public class IndexBuildService {
         this.languageIndexers = languageIndexers;
         this.entityManager = entityManager;
         this.pipelineLogger = pipelineLogger;
+        this.migrationEntityLinker = migrationEntityLinker;
     }
 
     @Transactional
@@ -82,6 +85,7 @@ public class IndexBuildService {
             }
         }
         pipelineLogger.message(project, phase, "Structural indices rebuilt for " + indexedFiles + " of " + entries.size() + " files");
+        migrationEntityLinker.linkLatestMigrations(project);
     }
 
     private boolean indexFile(Project project, Path projectRoot, ProjectFileIndex entry) {
@@ -177,11 +181,19 @@ public class IndexBuildService {
             databaseIndexRepository.save(entity);
         }
         for (FrontendRow row : output.frontendRows()) {
+            String endpoint = row.endpoint() == null ? "" : row.endpoint();
+            if (frontendIndexRepository.findByProjectIdAndComponentAndEndpoint(
+                    project.getId(),
+                    row.component(),
+                    endpoint
+            ).isPresent()) {
+                continue;
+            }
             FrontendIndexEntry entity = new FrontendIndexEntry();
             entity.setProject(project);
             entity.setComponent(row.component());
             entity.setService(row.service());
-            entity.setEndpoint(row.endpoint());
+            entity.setEndpoint(endpoint);
             entity.setFilePath(filePath);
             frontendIndexRepository.save(entity);
         }

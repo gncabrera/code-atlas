@@ -63,7 +63,7 @@ public class MissingContextDetector {
                 MissingContextResponse.class,
                 objectMapper
         );
-        return new MissingContext(response.missing());
+        return new MissingContext(MissingContextCategoryNormalizer.normalize(response.missing()));
     }
 
     private String formatIntent(Intent intent) {

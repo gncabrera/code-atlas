@@ -10,6 +10,12 @@ public interface FrontendIndexRepository extends JpaRepository<FrontendIndexEntr
 
     List<FrontendIndexEntry> findByProjectId(Long projectId);
 
+    java.util.Optional<FrontendIndexEntry> findByProjectIdAndComponentAndEndpoint(
+            Long projectId,
+            String component,
+            String endpoint
+    );
+
     List<FrontendIndexEntry> findByProjectIdAndEndpointContainingIgnoreCase(Long projectId, String endpointFragment);
 
     void deleteByProjectIdAndFilePath(Long projectId, String filePath);

@@ -17,6 +17,8 @@ Schema:
 Rules:
 - entities are PascalCase class or domain names when identifiable
 - layers reflect likely touch points for the change
+- include migration in layers when schema, database, columns, tables, flyway, liquibase, sql, or persistence changes are implied
+- include frontend in layers when UI, templates, html, js, css, pages, or client behavior may change
 - frontendImpact true when UI or API consumers may change
 
 # General context from project:

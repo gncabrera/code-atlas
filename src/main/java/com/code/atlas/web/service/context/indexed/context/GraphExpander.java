@@ -34,7 +34,7 @@ public class GraphExpander {
             SymbolIndexRepository symbolIndexRepository,
             IndexedFileLoader indexedFileLoader,
             @Value("${codeatlas.context.indexed.max-graph-depth:3}") int maxGraphDepth,
-            @Value("${codeatlas.context.indexed.max-files:12}") int maxFiles
+            @Value("${codeatlas.context.indexed.max-files:16}") int maxFiles
     ) {
         this.graphEdgeRepository = graphEdgeRepository;
         this.symbolIndexRepository = symbolIndexRepository;
