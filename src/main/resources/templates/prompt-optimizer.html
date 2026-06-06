@@ -74,10 +74,25 @@
                         </a>
                     </div>
                 </div>
-                <div class="col-md-4" id="indexedModelContainer">
+                <div class="col-md-4 d-none" id="indexedModelContainer">
                     <label for="contextAiModelSelect" class="form-label">Context AI Model</label>
                     <select id="contextAiModelSelect" class="form-select"></select>
-                    <div class="form-text">Model used to resolve indexed context during preview build.</div>
+                    <div class="form-text">Model used to resolve indexed context and offline index generation.</div>
+                </div>
+                <div class="col-md-4 d-none" id="offlineIndexContainer">
+                    <label class="form-label d-block">Offline Index</label>
+                    <div class="d-flex flex-wrap gap-2 mt-2">
+                        <button type="button" id="incrementalOfflineIndexBtn" class="btn btn-sm btn-outline-secondary"
+                                data-bs-toggle="tooltip" data-bs-placement="top"
+                                title="Update business concepts, patterns, and summaries for new or changed files only.">
+                            Incremental Update
+                        </button>
+                        <button type="button" id="rebuildOfflineIndexBtn" class="btn btn-sm btn-outline-warning"
+                                data-bs-toggle="tooltip" data-bs-placement="top"
+                                title="Purge all offline indices and regenerate from scratch. Long-running operation.">
+                            Rebuild Offline Index
+                        </button>
+                    </div>
                 </div>
             </div>
             <textarea id="userRequest" class="form-control mb-3" rows="7"

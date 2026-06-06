@@ -28,7 +28,9 @@ $(function () {
         "#sendToModelBtn",
         "#outputPrompt",
         "#copyOutputBtn",
-        "#skillMultiselect"
+        "#skillMultiselect",
+        "#incrementalOfflineIndexBtn",
+        "#rebuildOfflineIndexBtn"
     ];
 
     const draftFieldSelectors = [
@@ -89,11 +91,41 @@ $(function () {
     }
 
     function updateIndexedModelVisibility() {
-        if (isIndexedContextStrategySelected()) {
-            $("#indexedModelContainer").removeClass("d-none");
+        const showIndexed = isIndexedContextStrategySelected();
+        $("#indexedModelContainer, #offlineIndexContainer").toggleClass("d-none", !showIndexed);
+    }
+
+    function runOfflineIndexAction($btn, endpointSuffix, loadingText, confirmMessage, failMessage) {
+        const projectId = $("#projectSelect").val();
+        if (!projectId) {
+            CodeAtlas.showToast("Select a project for offline index generation.", "danger");
             return;
         }
-        $("#indexedModelContainer").addClass("d-none");
+        const contextModelId = $("#contextAiModelSelect").val();
+        if (!contextModelId) {
+            CodeAtlas.showToast("Select a context AI model for indexed strategy.", "danger");
+            return;
+        }
+        if (confirmMessage && !window.confirm(confirmMessage)) {
+            return;
+        }
+        const payload = { aiModelId: Number(contextModelId) };
+        setPromptPageLocked(true, $btn, loadingText);
+        $.ajax({
+            url: `/api/projects/${projectId}/index/offline${endpointSuffix}`,
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify(payload)
+        })
+            .done(function (response) {
+                CodeAtlas.showToast(response.message || "Offline index updated.", "success");
+            })
+            .fail(function (xhr) {
+                CodeAtlas.showToast(CodeAtlas.apiMessage(xhr, failMessage), "danger");
+            })
+            .always(function () {
+                setPromptPageLocked(false, $btn);
+            });
     }
 
     function collectDraftData() {
@@ -560,6 +592,26 @@ $(function () {
             .always(function () {
                 CodeAtlas.setButtonLoading($buildBtn, false);
             });
+    });
+
+    $("#incrementalOfflineIndexBtn").on("click", function () {
+        runOfflineIndexAction(
+            $(this),
+            "/incremental",
+            "Updating Index...",
+            null,
+            "Failed incremental offline index update."
+        );
+    });
+
+    $("#rebuildOfflineIndexBtn").on("click", function () {
+        runOfflineIndexAction(
+            $(this),
+            "",
+            "Rebuilding Index...",
+            "Full offline index rebuild purges all offline indices and may take a long time. Continue?",
+            "Failed offline index rebuild."
+        );
     });
 
     $("#sendToModelBtn").on("click", function () {
