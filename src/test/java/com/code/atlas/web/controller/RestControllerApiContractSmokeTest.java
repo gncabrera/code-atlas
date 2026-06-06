@@ -4,6 +4,7 @@ import com.code.atlas.web.config.DevAssetModelAdvice;
 import com.code.atlas.web.controller.support.ApiResponseContractSupport;
 import com.code.atlas.web.service.AIModelApiKeyService;
 import com.code.atlas.web.service.AIModelService;
+import com.code.atlas.web.service.ApplicationLogService;
 import com.code.atlas.web.service.CodeReviewService;
 import com.code.atlas.web.service.CommitHelperService;
 import com.code.atlas.web.service.ProjectService;
@@ -15,6 +16,7 @@ import com.code.atlas.web.service.PromptService;
 import com.code.atlas.web.service.SkillService;
 import com.code.atlas.web.service.dto.CodeReviewMetadataDto;
 import com.code.atlas.web.service.dto.CommitHelperMetadataDto;
+import com.code.atlas.web.service.dto.LogTailResponse;
 import com.code.atlas.web.service.dto.PromptPageMetadataDto;
 import java.util.List;
 import org.junit.jupiter.api.Nested;
@@ -314,6 +316,39 @@ class RestControllerApiContractSmokeTest {
                     .andExpect(jsonPath("$.result").value("success"))
                     .andExpect(jsonPath("$.message").value("Commit helper metadata fetched."))
                     .andExpect(jsonPath("$.data.currentBranch").value("main"))
+                    .andExpect(ApiResponseContractSupport.strictSuccessContract());
+        }
+    }
+
+    @Nested
+    @WebMvcTest(
+            controllers = ApplicationLogController.class,
+            excludeFilters = @ComponentScan.Filter(
+                    type = FilterType.ASSIGNABLE_TYPE,
+                    classes = DevAssetModelAdvice.class
+            )
+    )
+    class ApplicationLogControllerSmoke {
+
+        @Autowired
+        private MockMvc mockMvc;
+
+        @MockBean
+        private ApplicationLogService applicationLogService;
+
+        @Test
+        void tailEndpointReturnsApiResponseContract() throws Exception {
+            when(applicationLogService.tailLog(500))
+                    .thenReturn(new LogTailResponse(List.of("line-1"), true, 50.0));
+
+            mockMvc.perform(get("/api/logs/tail").param("lines", "500"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.result").value("success"))
+                    .andExpect(jsonPath("$.message").value("Log tail fetched."))
+                    .andExpect(jsonPath("$.data.lines").isArray())
+                    .andExpect(jsonPath("$.data.lines[0]").value("line-1"))
+                    .andExpect(jsonPath("$.data.running").value(true))
+                    .andExpect(jsonPath("$.data.progressPercent").value(50.0))
                     .andExpect(ApiResponseContractSupport.strictSuccessContract());
         }
     }
