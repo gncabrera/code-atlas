@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
@@ -81,22 +82,44 @@ public class OfflineIndexService {
 
     @Transactional
     public void regenerate(Project project, AIModel aiModel) {
-        pipelineLogger.message(project, PHASE, "Starting offline index regeneration");
+        pipelineLogger.message(project, PHASE, "Starting offline index regeneration (full)");
         long started = System.nanoTime();
         try {
             runStep(project, 1, "Purge offline indices", () -> {
                 purgeOfflineIndices(project.getId());
                 entityManager.flush();
             });
-            String inventory = buildInventory(project);
-            runStep(project, 2, "Generate business concepts", () -> regenerateBusinessConcepts(project, aiModel, inventory));
-            runStep(project, 3, "Generate patterns", () -> regeneratePatterns(project, aiModel, inventory));
-            runStep(project, 4, "Generate file summaries", () -> regenerateSummaries(project, aiModel));
+            regenerateBusinessAndPatternSteps(project, aiModel);
+            runStep(project, 4, "Generate file summaries", () -> regenerateSummaries(project, aiModel, false));
             pipelineLogger.message(project, PHASE, "Offline index regeneration finished (" + elapsedMs(started) + " ms)");
         } catch (RuntimeException ex) {
             pipelineLogger.stepFailed(project, PHASE, 0, TOTAL_STEPS, "Offline index regeneration", elapsedMs(started), ex.getMessage());
             throw ex;
         }
+    }
+
+    @Transactional
+    public void regenerateIncremental(Project project, AIModel aiModel) {
+        pipelineLogger.message(project, PHASE, "Starting offline incremental index regeneration");
+        long started = System.nanoTime();
+        try {
+            runStep(project, 1, "Purge business and pattern indices", () -> {
+                purgeBusinessAndPatternIndices(project.getId());
+                entityManager.flush();
+            });
+            regenerateBusinessAndPatternSteps(project, aiModel);
+            runStep(project, 4, "Generate file summaries (incremental)", () -> regenerateSummaries(project, aiModel, true));
+            pipelineLogger.message(project, PHASE, "Offline incremental index regeneration finished (" + elapsedMs(started) + " ms)");
+        } catch (RuntimeException ex) {
+            pipelineLogger.stepFailed(project, PHASE, 0, TOTAL_STEPS, "Offline incremental index regeneration", elapsedMs(started), ex.getMessage());
+            throw ex;
+        }
+    }
+
+    private void regenerateBusinessAndPatternSteps(Project project, AIModel aiModel) {
+        String inventory = buildInventory(project);
+        runStep(project, 2, "Generate business concepts", () -> regenerateBusinessConcepts(project, aiModel, inventory));
+        runStep(project, 3, "Generate patterns", () -> regeneratePatterns(project, aiModel, inventory));
     }
 
     private void runStep(Project project, int step, String label, Runnable action) {
@@ -115,6 +138,11 @@ public class OfflineIndexService {
         businessConceptIndexRepository.deleteByProjectId(projectId);
         patternIndexRepository.deleteByProjectId(projectId);
         fileSummaryIndexRepository.deleteByProjectId(projectId);
+    }
+
+    private void purgeBusinessAndPatternIndices(Long projectId) {
+        businessConceptIndexRepository.deleteByProjectId(projectId);
+        patternIndexRepository.deleteByProjectId(projectId);
     }
 
     private void regenerateBusinessConcepts(Project project, AIModel aiModel, String inventory) {
@@ -183,14 +211,60 @@ public class OfflineIndexService {
         pipelineLogger.message(project, PHASE, "Persisted " + saved + " patterns");
     }
 
-    private void regenerateSummaries(Project project, AIModel aiModel) {
-        List<ProjectFileIndex> files = projectFileIndexRepository.findByProjectId(project.getId());
-        if (files.isEmpty()) {
+    private void regenerateSummaries(Project project, AIModel aiModel, boolean incremental) {
+        List<ProjectFileIndex> allFiles = projectFileIndexRepository.findByProjectId(project.getId());
+        if (allFiles.isEmpty()) {
             pipelineLogger.message(project, PHASE, "No indexed files — skipped file summaries");
             return;
         }
-        List<String> chunks = fileSummaryChunkBuilder.buildChunks(project, files, aiModel, summaryTemplate);
-        pipelineLogger.message(project, PHASE, "Summarizing " + files.size() + " files in " + chunks.size() + " chunk(s)");
+        List<ProjectFileIndex> filesToSummarize;
+        if (incremental) {
+            List<String> activePaths = allFiles.stream().map(ProjectFileIndex::getFilePath).toList();
+            purgeStaleFileSummaries(project.getId(), activePaths);
+            entityManager.flush();
+            Map<String, FileSummaryIndexEntry> existingSummaries = fileSummaryIndexRepository.findByProjectId(project.getId()).stream()
+                    .collect(Collectors.toMap(FileSummaryIndexEntry::getFilePath, Function.identity(), (left, right) -> left));
+            filesToSummarize = selectFilesNeedingSummary(allFiles, existingSummaries);
+            int unchanged = allFiles.size() - filesToSummarize.size();
+            pipelineLogger.message(project, PHASE, "Incremental file summaries: " + filesToSummarize.size()
+                    + " to process, " + unchanged + " unchanged");
+        } else {
+            filesToSummarize = allFiles;
+        }
+        summarizeAndPersistFiles(project, aiModel, filesToSummarize);
+    }
+
+    static List<ProjectFileIndex> selectFilesNeedingSummary(
+            List<ProjectFileIndex> allFiles,
+            Map<String, FileSummaryIndexEntry> existingSummariesByPath
+    ) {
+        List<ProjectFileIndex> selected = new ArrayList<>();
+        for (ProjectFileIndex file : allFiles) {
+            FileSummaryIndexEntry existing = existingSummariesByPath.get(file.getFilePath());
+            if (existing == null || !file.getContentHash().equals(existing.getContentHash())) {
+                selected.add(file);
+            }
+        }
+        return selected;
+    }
+
+    private void purgeStaleFileSummaries(Long projectId, List<String> activePaths) {
+        if (activePaths.isEmpty()) {
+            fileSummaryIndexRepository.deleteByProjectId(projectId);
+            return;
+        }
+        fileSummaryIndexRepository.deleteByProjectIdAndFilePathNotIn(projectId, activePaths);
+    }
+
+    private void summarizeAndPersistFiles(Project project, AIModel aiModel, List<ProjectFileIndex> filesToSummarize) {
+        if (filesToSummarize.isEmpty()) {
+            pipelineLogger.message(project, PHASE, "No file summaries needed");
+            return;
+        }
+        Map<String, String> contentHashByPath = filesToSummarize.stream()
+                .collect(Collectors.toMap(ProjectFileIndex::getFilePath, ProjectFileIndex::getContentHash, (left, right) -> left));
+        List<String> chunks = fileSummaryChunkBuilder.buildChunks(project, filesToSummarize, aiModel, summaryTemplate);
+        pipelineLogger.message(project, PHASE, "Summarizing " + filesToSummarize.size() + " files in " + chunks.size() + " chunk(s)");
         List<FileSummaryOfflineResponse.SummaryItem> summaries = new ArrayList<>();
         for (int chunkIndex = 0; chunkIndex < chunks.size(); chunkIndex++) {
             summaries.addAll(getFileSummaryOffline(
@@ -201,7 +275,14 @@ public class OfflineIndexService {
                     chunks.size()
             ));
         }
+        persistSummaryItems(project, summaries, contentHashByPath);
+    }
 
+    private void persistSummaryItems(
+            Project project,
+            List<FileSummaryOfflineResponse.SummaryItem> summaries,
+            Map<String, String> contentHashByPath
+    ) {
         if (summaries.isEmpty()) {
             pipelineLogger.message(project, PHASE, "File summaries response empty — skipped persistence");
             return;
@@ -216,15 +297,25 @@ public class OfflineIndexService {
             if (!seenFiles.add(fileKey)) {
                 continue;
             }
-            FileSummaryIndexEntry entry = new FileSummaryIndexEntry();
-            entry.setProject(project);
-            entry.setFilePath(fileKey);
-            entry.setSummary(item.summary());
-            entry.setUpdatedAt(LocalDateTime.now());
-            fileSummaryIndexRepository.save(entry);
+            String contentHash = contentHashByPath.getOrDefault(fileKey, "");
+            saveSummary(project, fileKey, item.summary(), contentHash);
             saved++;
         }
         pipelineLogger.message(project, PHASE, "Persisted " + saved + " file summaries");
+    }
+
+    private void saveSummary(Project project, String filePath, String summary, String contentHash) {
+        FileSummaryIndexEntry entry = fileSummaryIndexRepository.findByProjectIdAndFilePath(project.getId(), filePath)
+                .orElseGet(() -> {
+                    FileSummaryIndexEntry newEntry = new FileSummaryIndexEntry();
+                    newEntry.setProject(project);
+                    newEntry.setFilePath(filePath);
+                    return newEntry;
+                });
+        entry.setSummary(summary == null ? "" : summary);
+        entry.setContentHash(contentHash == null ? "" : contentHash);
+        entry.setUpdatedAt(LocalDateTime.now());
+        fileSummaryIndexRepository.save(entry);
     }
 
     private List<FileSummaryOfflineResponse.SummaryItem> getFileSummaryOffline(

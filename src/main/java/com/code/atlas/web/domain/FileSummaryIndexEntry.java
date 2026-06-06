@@ -33,6 +33,9 @@ public class FileSummaryIndexEntry {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String summary = "";
 
+    @Column(name = "content_hash", nullable = false, length = 64)
+    private String contentHash = "";
+
     @Convert(converter = SqliteLocalDateTimeConverter.class)
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;

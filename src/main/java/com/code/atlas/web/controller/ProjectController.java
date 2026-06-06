@@ -109,4 +109,20 @@ public class ProjectController extends BaseRestController {
             return handledException("POST /api/projects/{id}/index/offline", ex);
         }
     }
+
+    @PostMapping("/{id}/index/offline/incremental")
+    public ResponseEntity<ApiResponse<?>> regenerateOfflineIndexIncremental(
+            @PathVariable Long id,
+            @RequestBody OfflineIndexRequestDto requestDto
+    ) {
+        try {
+            Project project = projectService.getProjectEntity(id);
+            AIModel aiModel = aiModelService.getModelEntity(requestDto.aiModelId());
+            projectIndexService.refreshIndex(project, "offline");
+            offlineIndexService.regenerateIncremental(project, aiModel);
+            return ResponseEntity.ok(ApiResponse.success("Offline indices regenerated incrementally.", null));
+        } catch (Exception ex) {
+            return handledException("POST /api/projects/{id}/index/offline/incremental", ex);
+        }
+    }
 }

@@ -13,5 +13,7 @@ public interface FileSummaryIndexRepository extends JpaRepository<FileSummaryInd
 
     Optional<FileSummaryIndexEntry> findByProjectIdAndFilePath(Long projectId, String filePath);
 
+    void deleteByProjectIdAndFilePathNotIn(Long projectId, List<String> filePaths);
+
     void deleteByProjectId(Long projectId);
 }
