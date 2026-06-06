@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 
 import com.code.atlas.web.domain.PromptOptimizerMode;
 import com.code.atlas.web.domain.Project;
+import com.code.atlas.web.service.context.indexed.ContextStrategy;
 import com.code.atlas.web.service.dto.BuildPreviewRequestDto;
 import com.code.atlas.web.service.dto.BuildPreviewResponseDto;
 import org.junit.jupiter.api.BeforeEach;
@@ -67,7 +68,7 @@ class PromptServiceTest {
         });
 
         BuildPreviewResponseDto response = promptService.buildPreview(
-                new BuildPreviewRequestDto(1L, "add button", false, true, 10L, null, null, null)
+                new BuildPreviewRequestDto(1L, "add button", false, true, 10L, null, ContextStrategy.DETERMINISTIC, null)
         );
 
         assertTrue(response.aiModelPrompt().contains("ui rules"));
@@ -85,7 +86,7 @@ class PromptServiceTest {
         });
 
         BuildPreviewResponseDto response = promptService.buildPreview(
-                new BuildPreviewRequestDto(1L, "add button", false, false, 10L, null, null, null)
+                new BuildPreviewRequestDto(1L, "add button", false, false, 10L, null, ContextStrategy.DETERMINISTIC, null)
         );
 
         assertTrue(response.aiModelPrompt().isEmpty());
