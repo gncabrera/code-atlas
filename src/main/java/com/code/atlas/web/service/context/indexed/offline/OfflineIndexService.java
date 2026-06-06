@@ -37,7 +37,6 @@ public class OfflineIndexService {
     private static final String PATTERN_TEMPLATE = "prompts/context/offline/pattern.md";
     private static final String SUMMARY_TEMPLATE = "prompts/context/offline/file-summary.md";
     private static final String NOTES = "Indexed context: offline index generation";
-    private static final int SUMMARY_CHUNK_SIZE = 50;
 
     private final ProjectFileIndexRepository projectFileIndexRepository;
     private final BusinessConceptIndexRepository businessConceptIndexRepository;
@@ -48,6 +47,7 @@ public class OfflineIndexService {
     private final ObjectMapper objectMapper;
     private final EntityManager entityManager;
     private final ContextPipelineLogger pipelineLogger;
+    private final OfflineFileSummaryChunkBuilder fileSummaryChunkBuilder;
     private final String businessTemplate;
     private final String patternTemplate;
     private final String summaryTemplate;
@@ -61,7 +61,8 @@ public class OfflineIndexService {
             PromptFormatService promptFormatService,
             ObjectMapper objectMapper,
             EntityManager entityManager,
-            ContextPipelineLogger pipelineLogger
+            ContextPipelineLogger pipelineLogger,
+            OfflineFileSummaryChunkBuilder fileSummaryChunkBuilder
     ) {
         this.projectFileIndexRepository = projectFileIndexRepository;
         this.businessConceptIndexRepository = businessConceptIndexRepository;
@@ -72,6 +73,7 @@ public class OfflineIndexService {
         this.objectMapper = objectMapper;
         this.entityManager = entityManager;
         this.pipelineLogger = pipelineLogger;
+        this.fileSummaryChunkBuilder = fileSummaryChunkBuilder;
         this.businessTemplate = IndexedPromptLoader.load(BUSINESS_TEMPLATE);
         this.patternTemplate = IndexedPromptLoader.load(PATTERN_TEMPLATE);
         this.summaryTemplate = IndexedPromptLoader.load(SUMMARY_TEMPLATE);
@@ -187,16 +189,17 @@ public class OfflineIndexService {
             pipelineLogger.message(project, PHASE, "No indexed files — skipped file summaries");
             return;
         }
-        int chunkCount = (files.size() + SUMMARY_CHUNK_SIZE - 1) / SUMMARY_CHUNK_SIZE;
-        pipelineLogger.message(project, PHASE, "Summarizing " + files.size() + " files in " + chunkCount + " chunk(s)");
+        List<String> chunks = fileSummaryChunkBuilder.buildChunks(project, files, aiModel, summaryTemplate);
+        pipelineLogger.message(project, PHASE, "Summarizing " + files.size() + " files in " + chunks.size() + " chunk(s)");
         List<FileSummaryOfflineResponse.SummaryItem> summaries = new ArrayList<>();
-        for (int start = 0; start < files.size(); start += SUMMARY_CHUNK_SIZE) {
-            int chunkIndex = (start / SUMMARY_CHUNK_SIZE) + 1;
-            int end = Math.min(start + SUMMARY_CHUNK_SIZE, files.size());
-            String filesBlock = files.subList(start, end).stream()
-                    .map(ProjectFileIndex::getFilePath)
-                    .collect(Collectors.joining("\n"));
-            summaries.addAll(getFileSummaryOffline(project, aiModel, filesBlock, chunkIndex, chunkCount));
+        for (int chunkIndex = 0; chunkIndex < chunks.size(); chunkIndex++) {
+            summaries.addAll(getFileSummaryOffline(
+                    project,
+                    aiModel,
+                    chunks.get(chunkIndex),
+                    chunkIndex + 1,
+                    chunks.size()
+            ));
         }
 
         if (summaries.isEmpty()) {
