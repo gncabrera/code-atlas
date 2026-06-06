@@ -28,7 +28,8 @@ public class IndexedContextAssembler {
         appendSection(builder, "# Dependency Graph", formatGraph(knowledgeResult.graph()));
         appendSection(builder, "# Relevant Files", formatFileList(knowledgeResult.files()));
         appendSection(builder, "# Code Snippets", formatSnippets(knowledgeResult.files()));
-        return limitSize(builder.toString().trim());
+        //return limitSize(builder.toString().trim());
+        return builder.toString().trim();
     }
 
     private void appendSection(StringBuilder builder, String title, String body) {

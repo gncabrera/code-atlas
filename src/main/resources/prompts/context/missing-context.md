@@ -23,3 +23,9 @@ Rules:
 - missing is empty when retrieved files appear sufficient
 - use short category labels, not file paths
 - common categories: migration, frontend caller, repository, entity, dto, test, config
+
+# General context from project:
+
+{{AGENTS_FILE}}
+
+{{DESIGN_FILE}}

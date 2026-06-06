@@ -17,3 +17,9 @@ Rules:
 - State explicit facts only; do not invent files
 - Mention layering, persistence, and gaps relevant to the request
 - Keep under 20 bullet lines
+
+# General context from project:
+
+{{AGENTS_FILE}}
+
+{{DESIGN_FILE}}

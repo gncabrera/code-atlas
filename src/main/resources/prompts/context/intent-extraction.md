@@ -18,3 +18,9 @@ Rules:
 - entities are PascalCase class or domain names when identifiable
 - layers reflect likely touch points for the change
 - frontendImpact true when UI or API consumers may change
+
+# General context from project:
+
+{{AGENTS_FILE}}
+
+{{DESIGN_FILE}}
