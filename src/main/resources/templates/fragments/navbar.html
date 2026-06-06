@@ -20,6 +20,11 @@
                     <a class="nav-link" href="/code-review"><i class="bi bi-shield-check me-1"></i>Code Review</a>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link" th:classappend="${activePage == 'changelog-builder' ? 'active' : ''}" th:href="@{/changelog-builder}">
+                        <i class="bi bi-journal-text me-1"></i> Changelog Builder
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link" href="/skills"><i class="bi bi-stars me-1"></i>Skills</a>
                 </li>
                 <li class="nav-item dropdown">
