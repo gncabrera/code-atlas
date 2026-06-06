@@ -1,5 +1,6 @@
 package com.code.atlas.web.domain;
 
+import com.code.atlas.web.service.context.indexed.ContextStrategy;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -24,7 +25,7 @@ public class UserPreferences {
     private int promptOptimizerDefaultPromptModeId = 0;
 
     @Column(name = "prompt_optimizer_default_context_strategy", nullable = false)
-    private String promptOptimizerDefaultContextStrategy = "deterministic";
+    private ContextStrategy promptOptimizerDefaultContextStrategy = ContextStrategy.DETERMINISTIC;
 
     @Column(name = "prompt_optimizer_default_context_ai_model_id", nullable = false)
     private int promptOptimizerDefaultContextAiModelId = 0;

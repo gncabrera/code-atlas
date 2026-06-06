@@ -66,27 +66,21 @@ public class PromptService {
     }
 
     private String resolveContext(Project project, BuildPreviewRequestDto requestDto) {
-        String strategy = resolveContextStrategy(requestDto.contextStrategy());
-        if ("indexed".equals(strategy)) {
-            if (requestDto.contextAiModelId() == null) {
-                throw new IllegalArgumentException(
-                        "Context AI model id is required when indexed context strategy is selected.");
+        switch (requestDto.contextStrategy()) {
+            case DETERMINISTIC -> {
+                return promptContextService.buildDeterministicContext(project, requestDto.userRequest());
             }
-            AIModel aiModel = aiModelService.getModelEntity(requestDto.contextAiModelId());
-            return promptContextService.buildIndexedContext(project, requestDto.userRequest(), aiModel);
+            case INDEXED -> {
+                if (requestDto.contextAiModelId() == null) {
+                    throw new IllegalArgumentException(
+                            "Context AI model id is required when indexed context strategy is selected.");
+                }
+                AIModel aiModel = aiModelService.getModelEntity(requestDto.contextAiModelId());
+                return promptContextService.buildIndexedContext(project, requestDto.userRequest(), aiModel);
+            }
+            default -> { return ""; }
         }
-        return promptContextService.buildDeterministicContext(project, requestDto.userRequest());
-    }
 
-    private String resolveContextStrategy(String contextStrategy) {
-        if (contextStrategy == null || contextStrategy.isBlank()) {
-            return "deterministic";
-        }
-        String normalized = contextStrategy.trim().toLowerCase();
-        if ("indexed".equals(normalized) || "deterministic".equals(normalized)) {
-            return normalized;
-        }
-        throw new IllegalArgumentException("Context strategy must be 'deterministic' or 'indexed'.");
     }
 
     private String resolveModeLabel(Long promptModeId) {

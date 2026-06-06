@@ -55,21 +55,21 @@
                     <div class="d-flex flex-wrap align-items-center gap-2">
                         <div class="btn-group" role="group" aria-label="Context strategy">
                             <input type="radio" class="btn-check" name="contextStrategy" id="contextStrategyDeterministic"
-                                   value="deterministic" autocomplete="off" checked>
+                                   value="DETERMINISTIC" autocomplete="off" checked>
                             <label class="btn btn-outline-primary" for="contextStrategyDeterministic"
                                    data-bs-toggle="tooltip" data-bs-placement="top"
                                    title="Static project analysis: file paths, symbols, and snippets matched by rules.">
                                 Deterministic
                             </label>
                             <input type="radio" class="btn-check" name="contextStrategy" id="contextStrategyIndexed"
-                                   value="indexed" autocomplete="off">
+                                   value="INDEXED" autocomplete="off">
                             <label class="btn btn-outline-primary" for="contextStrategyIndexed"
                                    data-bs-toggle="tooltip" data-bs-placement="top"
                                    title="Indexed context: AI-driven intent extraction, graph expansion, and file retrieval from project indices.">
                                 Indexed
                             </label>
                         </div>
-                        <a href="#" id="setDefaultStrategyBtn" class="text-muted small text-decoration-none">
+                        <a href="#" id="setDefaultStrategyBtn" class="set-default-btn text-muted small text-decoration-none">
                             <i class="bi bi-pin-angle"></i> Set as default
                         </a>
                     </div>

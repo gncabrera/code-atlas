@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 import com.code.atlas.web.domain.AIModel;
 import com.code.atlas.web.domain.PromptOptimizerMode;
 import com.code.atlas.web.domain.Project;
+import com.code.atlas.web.service.context.indexed.ContextStrategy;
 import com.code.atlas.web.service.dto.BuildPreviewRequestDto;
 import com.code.atlas.web.service.dto.BuildPreviewResponseDto;
 import org.junit.jupiter.api.BeforeEach;
@@ -68,7 +69,7 @@ class PromptServiceIndexedContextTest {
         });
 
         BuildPreviewResponseDto response = promptService.buildPreview(
-                new BuildPreviewRequestDto(1L, "add soft delete", false, false, 10L, 7L, "indexed", 5L)
+                new BuildPreviewRequestDto(1L, "add soft delete", false, false, 10L, 7L, ContextStrategy.INDEXED, 5L)
         );
 
         assertTrue(response.aiModelPrompt().contains("indexed-context"));

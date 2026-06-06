@@ -81,11 +81,11 @@ $(function () {
 
     function selectedContextStrategy() {
         const value = $('input[name="contextStrategy"]:checked').val();
-        return value === "indexed" ? "indexed" : "deterministic";
+        return value === "INDEXED" ? "INDEXED" : "DETERMINISTIC";
     }
 
     function isIndexedContextStrategySelected() {
-        return selectedContextStrategy() === "indexed";
+        return selectedContextStrategy() === "INDEXED";
     }
 
     function updateIndexedModelVisibility() {
@@ -161,7 +161,7 @@ $(function () {
             && String(data.promptModeSelect || "") === getDefaultPromptModeId()
             && data.shouldSendAgentsFile === true
             && data.shouldSendDesignFile === true
-            && String(data.contextStrategy || "deterministic") === "deterministic"
+            && String(data.contextStrategy || "DETERMINISTIC") === "DETERMINISTIC"
             && String(data.contextAiModelSelect || "") === getDefaultContextAiModelSelectValue()
             && String(data.aiModelSelect || "") === getDefaultAiModelSelectValue()
             && skillIdsEqual(data.skillMultiselect, getDefaultSkillIds(loadedSkills));
@@ -221,7 +221,7 @@ $(function () {
             return true;
         }
         if (fieldKey === "contextStrategy") {
-            const strategy = value === "indexed" ? "indexed" : "deterministic";
+            const strategy = value === "INDEXED" ? "INDEXED" : "DETERMINISTIC";
             $('input[name="contextStrategy"][value="' + strategy + '"]').prop("checked", true).trigger("change");
             return true;
         }
@@ -307,7 +307,7 @@ $(function () {
             $modelSelect.val("");
         }
         applySkillMultiselectSelection(getDefaultSkillIds(loadedSkills));
-        $('input[name="contextStrategy"][value="deterministic"]').prop("checked", true).trigger("change");
+        $('input[name="contextStrategy"][value="DETERMINISTIC"]').prop("checked", true).trigger("change");
         const $contextModelSelect = $("#contextAiModelSelect");
         if ($contextModelSelect.find("option").length > 0) {
             $contextModelSelect.prop("selectedIndex", 0);
@@ -407,7 +407,7 @@ $(function () {
             return;
         }
         const prefs = CodeAtlasUserPreferences.getPreferences();
-        const strategy = prefs.promptOptimizerDefaultContextStrategy === "indexed" ? "indexed" : "deterministic";
+        const strategy = prefs.promptOptimizerDefaultContextStrategy === "INDEXED" ? "INDEXED" : "DETERMINISTIC";
         $('input[name="contextStrategy"][value="' + strategy + '"]').prop("checked", true);
         updateIndexedModelVisibility();
         const contextModelId = parseInt(String(prefs.promptOptimizerDefaultContextAiModelId || 0), 10) || 0;
@@ -432,29 +432,6 @@ $(function () {
     function bindContextStrategyControls() {
         $('input[name="contextStrategy"]').on("change", function () {
             updateIndexedModelVisibility();
-        });
-
-        $("#setDefaultStrategyBtn").on("click", function (event) {
-            event.preventDefault();
-            if (!window.CodeAtlasUserPreferences) {
-                CodeAtlas.showToast("User preferences are not available.", "danger");
-                return;
-            }
-            const contextModelId = parseInt(String($("#contextAiModelSelect").val() || 0), 10) || 0;
-            CodeAtlasUserPreferences.updatePreferences({
-                promptOptimizerDefaultContextStrategy: selectedContextStrategy(),
-                promptOptimizerDefaultContextAiModelId: contextModelId
-            })
-                .done(function (response) {
-                    if (String(response.result || "").toLowerCase() === "success") {
-                        CodeAtlas.showToast("Context strategy preference updated.", "success");
-                        return;
-                    }
-                    CodeAtlas.showToast(response.message || "Failed to update preference.", "danger");
-                })
-                .fail(function (xhr) {
-                    CodeAtlas.showToast(CodeAtlas.apiMessage(xhr, "Failed to save context strategy default."), "danger");
-                });
         });
     }
 
@@ -504,6 +481,7 @@ $(function () {
                     ]);
                     applyContextStrategyPreferences();
                     loadDraftFromLocalStorage();
+                    CodeAtlasUserPreferences.refreshDefaultIndicators();
                     loadSkills();
                 };
                 if (window.CodeAtlasUserPreferences) {
@@ -541,7 +519,7 @@ $(function () {
             return;
         }
         const contextStrategy = selectedContextStrategy();
-        if (contextStrategy === "indexed") {
+        if (contextStrategy === "INDEXED") {
             const contextModelId = $("#contextAiModelSelect").val();
             if (!contextModelId) {
                 CodeAtlas.showToast("Select a context AI model for indexed strategy.", "danger");
@@ -560,7 +538,7 @@ $(function () {
         if (modelId) {
             payload.aiModelId = Number(modelId);
         }
-        if (contextStrategy === "indexed") {
+        if (contextStrategy === "INDEXED") {
             payload.contextAiModelId = Number($("#contextAiModelSelect").val());
         }
         CodeAtlas.setButtonLoading($buildBtn, true, "Building Preview...");

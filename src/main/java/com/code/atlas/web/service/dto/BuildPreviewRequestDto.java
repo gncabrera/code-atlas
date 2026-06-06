@@ -1,5 +1,7 @@
 package com.code.atlas.web.service.dto;
 
+import com.code.atlas.web.service.context.indexed.ContextStrategy;
+
 public record BuildPreviewRequestDto(
         Long projectId,
         String userRequest,
@@ -7,7 +9,7 @@ public record BuildPreviewRequestDto(
         boolean shouldSendDesignFile,
         Long promptModeId,
         Long aiModelId,
-        String contextStrategy,
+        ContextStrategy contextStrategy,
         Long contextAiModelId
 ) {
     public BuildPreviewRequestDto {

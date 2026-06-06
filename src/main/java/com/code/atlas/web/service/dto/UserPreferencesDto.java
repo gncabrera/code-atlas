@@ -1,18 +1,18 @@
 package com.code.atlas.web.service.dto;
 
+import com.code.atlas.web.service.context.indexed.ContextStrategy;
+
 public record UserPreferencesDto(
         int promptOptimizerDefaultAiModelId,
         int promptOptimizerDefaultPromptModeId,
-        String promptOptimizerDefaultContextStrategy,
+        ContextStrategy promptOptimizerDefaultContextStrategy,
         int promptOptimizerDefaultContextAiModelId,
         int commitHelperDefaultAiModelId,
         int codeReviewDefaultAiModelId
 ) {
     public UserPreferencesDto {
-        if (promptOptimizerDefaultContextStrategy == null || promptOptimizerDefaultContextStrategy.isBlank()) {
-            promptOptimizerDefaultContextStrategy = "deterministic";
-        } else {
-            promptOptimizerDefaultContextStrategy = promptOptimizerDefaultContextStrategy.trim().toLowerCase();
+        if (promptOptimizerDefaultContextStrategy == null) {
+            promptOptimizerDefaultContextStrategy = ContextStrategy.DETERMINISTIC;
         }
     }
 }

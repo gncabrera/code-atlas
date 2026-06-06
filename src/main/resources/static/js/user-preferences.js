@@ -5,7 +5,7 @@
     const preferences = {
         promptOptimizerDefaultAiModelId: 0,
         promptOptimizerDefaultPromptModeId: 0,
-        promptOptimizerDefaultContextStrategy: "deterministic",
+        promptOptimizerDefaultContextStrategy: "DETERMINISTIC",
         promptOptimizerDefaultContextAiModelId: 0,
         commitHelperDefaultAiModelId: 0,
         codeReviewDefaultAiModelId: 0
@@ -17,7 +17,15 @@
     const pageBindings = {
         "prompt-optimizer": [
             { field: "promptOptimizerDefaultPromptModeId", selectId: "promptModeSelect" },
-            { field: "promptOptimizerDefaultAiModelId", selectId: "aiModelSelect" }
+            { field: "promptOptimizerDefaultAiModelId", selectId: "aiModelSelect" },
+            {
+                type: "radio",
+                field: "promptOptimizerDefaultContextStrategy",
+                radioName: "contextStrategy",
+                linkId: "setDefaultStrategyBtn",
+                companionField: "promptOptimizerDefaultContextAiModelId",
+                companionSelectId: "contextAiModelSelect"
+            }
         ],
         "commit-helper": [
             { field: "commitHelperDefaultAiModelId", selectId: "aiModelSelect" }
@@ -43,6 +51,18 @@
 
     function bindingsForCurrentPage() {
         return pageBindings[currentPageKey()] || [];
+    }
+
+    function isRadioBinding(binding) {
+        return binding && binding.type === "radio";
+    }
+
+    function isSelectBinding(binding) {
+        return binding && binding.selectId && !isRadioBinding(binding);
+    }
+
+    function normalizeContextStrategy(value) {
+        return value === "INDEXED" ? "INDEXED" : "DETERMINISTIC";
     }
 
     function fetchPreferences() {
@@ -122,6 +142,9 @@
 
     function applyPreferenceFields(fieldBindings) {
         (fieldBindings || []).forEach(function (binding) {
+            if (!isSelectBinding(binding)) {
+                return;
+            }
             const targetValue = preferences[binding.field];
             if (targetValue === undefined) {
                 return;
@@ -142,6 +165,13 @@
 
     function refreshDefaultIndicators() {
         bindingsForCurrentPage().forEach(function (binding) {
+            if (isRadioBinding(binding)) {
+                refreshRadioDefaultIndicator(binding);
+                return;
+            }
+            if (!isSelectBinding(binding)) {
+                return;
+            }
             const $select = $("#" + binding.selectId);
             if ($select.length === 0) {
                 return;
@@ -158,8 +188,7 @@
         });
     }
 
-    function updateLinkVisualState($link, $select, fieldName) {
-        const isDefault = isCurrentSelectionDefault($select, fieldName);
+    function setLinkDefaultAppearance($link, isDefault) {
         const $icon = $link.find("i");
         if (isDefault) {
             $link.addClass("text-primary").removeClass("text-muted");
@@ -170,6 +199,38 @@
             $icon.removeClass("bi-pin-angle-fill").addClass("bi-pin-angle");
             $link.attr("title", "Set as default");
         }
+    }
+
+    function updateLinkVisualState($link, $select, fieldName) {
+        setLinkDefaultAppearance($link, isCurrentSelectionDefault($select, fieldName));
+    }
+
+    function isCurrentContextStrategyDefault(binding) {
+        const savedStrategy = normalizeContextStrategy(preferences[binding.field]);
+        const currentStrategy = normalizeContextStrategy(
+            $('input[name="' + binding.radioName + '"]:checked').val()
+        );
+        if (savedStrategy !== currentStrategy) {
+            return false;
+        }
+        if (currentStrategy === "DETERMINISTIC") {
+            return true;
+        }
+        const savedModelId = parseInt(String(preferences[binding.companionField] || 0), 10) || 0;
+        const currentModelId = parseInt(String($("#" + binding.companionSelectId).val() || 0), 10) || 0;
+        return savedModelId > 0 && savedModelId === currentModelId;
+    }
+
+    function updateRadioLinkVisualState($link, binding) {
+        setLinkDefaultAppearance($link, isCurrentContextStrategyDefault(binding));
+    }
+
+    function refreshRadioDefaultIndicator(binding) {
+        const $link = $("#" + binding.linkId);
+        if ($link.length === 0) {
+            return;
+        }
+        updateRadioLinkVisualState($link, binding);
     }
 
     function findLabelForSelect(selectId, $select) {
@@ -231,14 +292,71 @@
         updateLinkVisualState($link, $select, binding.field);
     }
 
+    function setupRadioDefaultLink(binding) {
+        const $link = $("#" + binding.linkId);
+        if ($link.length === 0) {
+            return;
+        }
+
+        $link.off("click.userPreferences").on("click.userPreferences", function (event) {
+            event.preventDefault();
+            preferences[binding.field] = normalizeContextStrategy(
+                $('input[name="' + binding.radioName + '"]:checked').val()
+            );
+            preferences[binding.companionField] = parseInt(
+                String($("#" + binding.companionSelectId).val() || 0),
+                10
+            ) || 0;
+
+            savePreferences()
+                .done(function (response) {
+                    if (String(response.result || "").toLowerCase() === "success") {
+                        if (response.data) {
+                            Object.assign(preferences, response.data);
+                        }
+                        CodeAtlas.showToast("Preference updated successfully!", "success");
+                        refreshDefaultIndicators();
+                        return;
+                    }
+                    CodeAtlas.showToast(response.message || "Failed to update preference.", "danger");
+                })
+                .fail(function (xhr) {
+                    CodeAtlas.showToast(CodeAtlas.apiMessage(xhr, "Failed to save default choice."), "danger");
+                });
+        });
+
+        $('input[name="' + binding.radioName + '"]').off("change.userPreferences").on("change.userPreferences", function () {
+            updateRadioLinkVisualState($link, binding);
+        });
+
+        $("#" + binding.companionSelectId).off("change.userPreferencesStrategy").on("change.userPreferencesStrategy", function () {
+            updateRadioLinkVisualState($link, binding);
+        });
+
+        updateRadioLinkVisualState($link, binding);
+    }
+
     function setupSetAsDefaultLinks() {
         bindingsForCurrentPage().forEach(function (binding) {
-            injectSetDefaultLink(binding);
+            if (isRadioBinding(binding)) {
+                setupRadioDefaultLink(binding);
+                return;
+            }
+            if (isSelectBinding(binding)) {
+                injectSetDefaultLink(binding);
+            }
         });
     }
 
     function setupSetAsDefaultLinksWhenReady() {
         bindingsForCurrentPage().forEach(function (binding) {
+            if (isRadioBinding(binding)) {
+                setupRadioDefaultLink(binding);
+                return;
+            }
+            if (!isSelectBinding(binding)) {
+                return;
+            }
             const $select = $("#" + binding.selectId);
             if ($select.length === 0) {
                 return;
