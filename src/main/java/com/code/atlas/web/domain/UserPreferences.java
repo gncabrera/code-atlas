@@ -23,6 +23,12 @@ public class UserPreferences {
     @Column(name = "prompt_optimizer_default_prompt_mode_id", nullable = false)
     private int promptOptimizerDefaultPromptModeId = 0;
 
+    @Column(name = "prompt_optimizer_default_context_strategy", nullable = false)
+    private String promptOptimizerDefaultContextStrategy = "deterministic";
+
+    @Column(name = "prompt_optimizer_default_context_ai_model_id", nullable = false)
+    private int promptOptimizerDefaultContextAiModelId = 0;
+
     @Column(name = "commit_helper_default_ai_model_id", nullable = false)
     private int commitHelperDefaultAiModelId = 0;
 

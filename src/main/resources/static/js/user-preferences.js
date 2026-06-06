@@ -5,6 +5,8 @@
     const preferences = {
         promptOptimizerDefaultAiModelId: 0,
         promptOptimizerDefaultPromptModeId: 0,
+        promptOptimizerDefaultContextStrategy: "deterministic",
+        promptOptimizerDefaultContextAiModelId: 0,
         commitHelperDefaultAiModelId: 0,
         codeReviewDefaultAiModelId: 0
     };
@@ -259,6 +261,11 @@
         });
     }
 
+    function updatePreferences(updates) {
+        Object.assign(preferences, updates || {});
+        return savePreferences();
+    }
+
     global.CodeAtlasUserPreferences = {
         getPreferences: function () {
             return Object.assign({}, preferences);
@@ -271,7 +278,8 @@
         },
         applyPreferenceFields: applyPreferenceFields,
         applyForCurrentPage: applyForCurrentPage,
-        refreshDefaultIndicators: refreshDefaultIndicators
+        refreshDefaultIndicators: refreshDefaultIndicators,
+        updatePreferences: updatePreferences
     };
 
     global.userPreferences = preferences;

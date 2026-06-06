@@ -16,7 +16,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class PromptServiceIndexedContextTest {
@@ -45,7 +44,6 @@ class PromptServiceIndexedContextTest {
 
     @BeforeEach
     void setUp() {
-        ReflectionTestUtils.setField(promptService, "contextStrategy", "indexed");
         project = new Project();
         project.setId(1L);
         mode = new PromptOptimizerMode();
@@ -70,7 +68,7 @@ class PromptServiceIndexedContextTest {
         });
 
         BuildPreviewResponseDto response = promptService.buildPreview(
-                new BuildPreviewRequestDto(1L, "add soft delete", false, false, 10L, 5L)
+                new BuildPreviewRequestDto(1L, "add soft delete", false, false, 10L, 7L, "indexed", 5L)
         );
 
         assertTrue(response.aiModelPrompt().contains("indexed-context"));

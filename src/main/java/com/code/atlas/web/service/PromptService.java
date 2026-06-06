@@ -6,9 +6,7 @@ import com.code.atlas.web.domain.Project;
 import com.code.atlas.web.service.dto.*;
 import jakarta.transaction.Transactional;
 import java.util.Map;
-import java.util.Objects;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -19,22 +17,19 @@ public class PromptService {
     private final PromptContextService promptContextService;
     private final AIModelService aiModelService;
     private final PromptFormatService promptFormatService;
-    private final String contextStrategy;
 
     public PromptService(
             PromptOptimizerModeService promptOptimizerModeService,
             ProjectService projectService,
             PromptContextService promptContextService,
             AIModelService aiModelService,
-            PromptFormatService promptFormatService,
-            @Value("${codeatlas.context.strategy:deterministic}") String contextStrategy
+            PromptFormatService promptFormatService
     ) {
         this.promptOptimizerModeService = promptOptimizerModeService;
         this.projectService = projectService;
         this.promptContextService = promptContextService;
         this.aiModelService = aiModelService;
         this.promptFormatService = promptFormatService;
-        this.contextStrategy = contextStrategy == null ? "deterministic" : contextStrategy.trim().toLowerCase();
     }
 
     public BuildPreviewResponseDto buildPreview(BuildPreviewRequestDto requestDto) {
@@ -71,20 +66,27 @@ public class PromptService {
     }
 
     private String resolveContext(Project project, BuildPreviewRequestDto requestDto) {
-        if ("indexed".equals(contextStrategy)) {
-            if (requestDto.aiModelId() == null) {
-                throw new IllegalArgumentException("AI model id is required when indexed context strategy is enabled.");
+        String strategy = resolveContextStrategy(requestDto.contextStrategy());
+        if ("indexed".equals(strategy)) {
+            if (requestDto.contextAiModelId() == null) {
+                throw new IllegalArgumentException(
+                        "Context AI model id is required when indexed context strategy is selected.");
             }
-            // TODO: select AIModel from frontend
-            AIModel aiModel = aiModelService.getEnabledModels()
-                    .stream()
-                    .filter(a -> Objects.equals(a.name(), "gemma-4-31b-it"))
-                    .map(AIModelResponseDto::id)
-                    .map(aiModelService::getModelEntity)
-                    .findFirst().orElseThrow();
+            AIModel aiModel = aiModelService.getModelEntity(requestDto.contextAiModelId());
             return promptContextService.buildIndexedContext(project, requestDto.userRequest(), aiModel);
         }
         return promptContextService.buildDeterministicContext(project, requestDto.userRequest());
+    }
+
+    private String resolveContextStrategy(String contextStrategy) {
+        if (contextStrategy == null || contextStrategy.isBlank()) {
+            return "deterministic";
+        }
+        String normalized = contextStrategy.trim().toLowerCase();
+        if ("indexed".equals(normalized) || "deterministic".equals(normalized)) {
+            return normalized;
+        }
+        throw new IllegalArgumentException("Context strategy must be 'deterministic' or 'indexed'.");
     }
 
     private String resolveModeLabel(Long promptModeId) {

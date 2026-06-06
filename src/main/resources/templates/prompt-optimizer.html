@@ -49,6 +49,37 @@
     <div class="card mb-4">
         <div class="card-header">1. Your Prompt (UserRequest)</div>
         <div class="card-body">
+            <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                    <label class="form-label d-block">Context Strategy</label>
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <div class="btn-group" role="group" aria-label="Context strategy">
+                            <input type="radio" class="btn-check" name="contextStrategy" id="contextStrategyDeterministic"
+                                   value="deterministic" autocomplete="off" checked>
+                            <label class="btn btn-outline-primary" for="contextStrategyDeterministic"
+                                   data-bs-toggle="tooltip" data-bs-placement="top"
+                                   title="Static project analysis: file paths, symbols, and snippets matched by rules.">
+                                Deterministic
+                            </label>
+                            <input type="radio" class="btn-check" name="contextStrategy" id="contextStrategyIndexed"
+                                   value="indexed" autocomplete="off">
+                            <label class="btn btn-outline-primary" for="contextStrategyIndexed"
+                                   data-bs-toggle="tooltip" data-bs-placement="top"
+                                   title="Indexed context: AI-driven intent extraction, graph expansion, and file retrieval from project indices.">
+                                Indexed
+                            </label>
+                        </div>
+                        <a href="#" id="setDefaultStrategyBtn" class="text-muted small text-decoration-none">
+                            <i class="bi bi-pin-angle"></i> Set as default
+                        </a>
+                    </div>
+                </div>
+                <div class="col-md-4" id="indexedModelContainer">
+                    <label for="contextAiModelSelect" class="form-label">Context AI Model</label>
+                    <select id="contextAiModelSelect" class="form-select"></select>
+                    <div class="form-text">Model used to resolve indexed context during preview build.</div>
+                </div>
+            </div>
             <textarea id="userRequest" class="form-control mb-3" rows="7"
                       placeholder="Enter raw implementation request..."></textarea>
             <div class="d-flex flex-wrap align-items-center">

@@ -6,7 +6,9 @@ public record BuildPreviewRequestDto(
         boolean shouldSendAgentsFile,
         boolean shouldSendDesignFile,
         Long promptModeId,
-        Long aiModelId
+        Long aiModelId,
+        String contextStrategy,
+        Long contextAiModelId
 ) {
     public BuildPreviewRequestDto {
         if (userRequest == null || userRequest.isBlank()) {

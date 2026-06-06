@@ -67,7 +67,7 @@ class PromptServiceTest {
         });
 
         BuildPreviewResponseDto response = promptService.buildPreview(
-                new BuildPreviewRequestDto(1L, "add button", false, true, 10L, null)
+                new BuildPreviewRequestDto(1L, "add button", false, true, 10L, null, null, null)
         );
 
         assertTrue(response.aiModelPrompt().contains("ui rules"));
@@ -85,7 +85,7 @@ class PromptServiceTest {
         });
 
         BuildPreviewResponseDto response = promptService.buildPreview(
-                new BuildPreviewRequestDto(1L, "add button", false, false, 10L, null)
+                new BuildPreviewRequestDto(1L, "add button", false, false, 10L, null, null, null)
         );
 
         assertTrue(response.aiModelPrompt().isEmpty());
