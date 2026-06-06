@@ -49,6 +49,52 @@
     <div class="card mb-4">
         <div class="card-header">1. Your Prompt (UserRequest)</div>
         <div class="card-body">
+            <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                    <label class="form-label d-block">Context Strategy</label>
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <div class="btn-group" role="group" aria-label="Context strategy">
+                            <input type="radio" class="btn-check" name="contextStrategy" id="contextStrategyDeterministic"
+                                   value="DETERMINISTIC" autocomplete="off" checked>
+                            <label class="btn btn-outline-primary" for="contextStrategyDeterministic"
+                                   data-bs-toggle="tooltip" data-bs-placement="top"
+                                   title="Static project analysis: file paths, symbols, and snippets matched by rules.">
+                                Deterministic
+                            </label>
+                            <input type="radio" class="btn-check" name="contextStrategy" id="contextStrategyIndexed"
+                                   value="INDEXED" autocomplete="off">
+                            <label class="btn btn-outline-primary" for="contextStrategyIndexed"
+                                   data-bs-toggle="tooltip" data-bs-placement="top"
+                                   title="Indexed context: AI-driven intent extraction, graph expansion, and file retrieval from project indices.">
+                                Indexed
+                            </label>
+                        </div>
+                        <a href="#" id="setDefaultStrategyBtn" class="set-default-btn text-muted small text-decoration-none">
+                            <i class="bi bi-pin-angle"></i> Set as default
+                        </a>
+                    </div>
+                </div>
+                <div class="col-md-4 d-none" id="indexedModelContainer">
+                    <label for="contextAiModelSelect" class="form-label">Context AI Model</label>
+                    <select id="contextAiModelSelect" class="form-select"></select>
+                    <div class="form-text">Model used to resolve indexed context and offline index generation.</div>
+                </div>
+                <div class="col-md-4 d-none" id="offlineIndexContainer">
+                    <label class="form-label d-block">Offline Index</label>
+                    <div class="d-flex flex-wrap gap-2 mt-2">
+                        <button type="button" id="incrementalOfflineIndexBtn" class="btn btn-sm btn-outline-secondary"
+                                data-bs-toggle="tooltip" data-bs-placement="top"
+                                title="Update business concepts, patterns, and summaries for new or changed files only.">
+                            Incremental Update
+                        </button>
+                        <button type="button" id="rebuildOfflineIndexBtn" class="btn btn-sm btn-outline-warning"
+                                data-bs-toggle="tooltip" data-bs-placement="top"
+                                title="Purge all offline indices and regenerate from scratch. Long-running operation.">
+                            Rebuild Offline Index
+                        </button>
+                    </div>
+                </div>
+            </div>
             <textarea id="userRequest" class="form-control mb-3" rows="7"
                       placeholder="Enter raw implementation request..."></textarea>
             <div class="d-flex flex-wrap align-items-center">
@@ -92,7 +138,7 @@
                     </div>
                 </div>
             </div>
-            <textarea id="aiModelPrompt" class="form-control mb-3" rows="9"
+            <textarea id="aiModelPrompt" class="form-control mb-3 md-preview" rows="9"
                       placeholder="Preview prompt or edit before send..."></textarea>
             <button id="sendToModelBtn" class="btn btn-success">Send To AIModel</button>
         </div>
@@ -101,7 +147,7 @@
     <div class="card mb-4">
         <div class="card-header">3. Optimized Prompt (OutputPrompt)</div>
         <div class="card-body">
-            <textarea id="outputPrompt" class="form-control mb-3" rows="30"
+            <textarea id="outputPrompt" class="form-control mb-3 md-preview" rows="30"
                       placeholder="Model response..." ></textarea>
             <div id="outputPromptActions" class="d-flex flex-wrap align-items-center mb-3">
                 <button type="button" id="copyOutputBtn" class="btn btn-outline-secondary">Copy</button>

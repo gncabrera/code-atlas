@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 import com.code.atlas.web.domain.AIModel;
 import com.code.atlas.web.domain.Project;
 import com.code.atlas.web.service.dto.CodeReviewMetadataDto;
+import com.code.atlas.web.service.dto.CodeReviewRequestDto;
 import com.code.atlas.web.service.dto.CodeReviewResponseDto;
 import com.code.atlas.web.service.dto.ModelResponseDto;
 import com.code.atlas.web.service.dto.ProjectResponseDto;
@@ -94,10 +95,10 @@ class CodeReviewServiceTest {
     }
 
     @Test
-    void runCodeReview_rejectsSameBranch() {
+    void runBranchCodeReview_rejectsSameBranch() {
         IllegalArgumentException ex = assertThrows(
                 IllegalArgumentException.class,
-                () -> codeReviewService.runCodeReview(1L, 2L, "main", "main")
+                () -> codeReviewService.runBranchCodeReview(1L, 2L, "main", "main")
         );
 
         assertEquals("Base and compare branches must be different.", ex.getMessage());
@@ -147,7 +148,7 @@ class CodeReviewServiceTest {
     }
 
     @Test
-    void runCodeReview_callsGitDiffAndAiModel() {
+    void runBranchCodeReview_callsGitDiffAndAiModel() {
         when(projectService.getProjectEntity(1L)).thenReturn(project);
         when(aiModelService.getModelEntity(2L)).thenReturn(model);
         when(projectService.resolveAgentsFileContent(project)).thenReturn("agents");
@@ -161,11 +162,49 @@ class CodeReviewServiceTest {
                         {"summary":{"score":7,"risk":"MEDIUM","mainConcerns":[]},"findings":[]}
                         """, 10));
 
-        CodeReviewResponseDto result = codeReviewService.runCodeReview(1L, 2L, "main", "feature/x");
+        CodeReviewResponseDto result = codeReviewService.runBranchCodeReview(1L, 2L, "main", "feature/x");
 
         assertEquals(7, result.summary().score());
         assertEquals("MEDIUM", result.summary().risk());
         verify(gitProcessRunner).diffBetweenBranches(any(Path.class), eq("main"), eq("feature/x"));
         verify(aiModelService).sendToModel(eq(project), eq(model), any(), eq("Code Review"));
+    }
+
+    @Test
+    void runCodeReview_currentChangesOnly_usesWorkingTreeDiff() {
+        when(projectService.getProjectEntity(1L)).thenReturn(project);
+        when(aiModelService.getModelEntity(2L)).thenReturn(model);
+        when(projectService.resolveAgentsFileContent(project)).thenReturn("agents");
+        when(projectService.resolveDesignFileContent(project)).thenReturn("");
+        when(projectService.getProjectFiles(project)).thenReturn(List.of("src/Main.java"));
+        when(gitProcessRunner.run(any(Path.class), any())).thenReturn("true");
+        when(gitProcessRunner.collectWorkingTreeDiff(any(Path.class))).thenReturn("uncommitted diff");
+        when(aiModelService.sendToModel(eq(project), eq(model), any(), eq("Code Review")))
+                .thenReturn(new ModelResponseDto("""
+                        {"summary":{"score":9,"risk":"LOW","mainConcerns":[]},"findings":[]}
+                        """, 10));
+
+        CodeReviewRequestDto request = new CodeReviewRequestDto(1L, 2L, null, null, true);
+        CodeReviewResponseDto result = codeReviewService.runCodeReview(request);
+
+        assertEquals(9, result.summary().score());
+        assertEquals("LOW", result.summary().risk());
+        verify(gitProcessRunner).collectWorkingTreeDiff(any(Path.class));
+        verify(aiModelService).sendToModel(eq(project), eq(model), any(), eq("Code Review"));
+    }
+
+    @Test
+    void runCodeReview_currentChangesOnly_rejectsEmptyWorkingTreeDiff() {
+        when(projectService.getProjectEntity(1L)).thenReturn(project);
+        when(gitProcessRunner.run(any(Path.class), any())).thenReturn("true");
+        when(gitProcessRunner.collectWorkingTreeDiff(any(Path.class))).thenReturn("");
+
+        CodeReviewRequestDto request = new CodeReviewRequestDto(1L, 2L, null, null, true);
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> codeReviewService.runCodeReview(request)
+        );
+
+        assertEquals("No uncommitted changes detected to review.", ex.getMessage());
     }
 }

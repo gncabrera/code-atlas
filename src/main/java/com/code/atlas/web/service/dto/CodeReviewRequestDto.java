@@ -4,7 +4,8 @@ public record CodeReviewRequestDto(
         Long projectId,
         Long modelId,
         String branchA,
-        String branchB
+        String branchB,
+        boolean currentChangesOnly
 ) {
     public CodeReviewRequestDto {
         if (projectId == null) {
@@ -13,11 +14,13 @@ public record CodeReviewRequestDto(
         if (modelId == null) {
             throw new IllegalArgumentException("AI Model ID is mandatory");
         }
-        if (branchA == null || branchA.isBlank()) {
-            throw new IllegalArgumentException("Base branch is mandatory");
-        }
-        if (branchB == null || branchB.isBlank()) {
-            throw new IllegalArgumentException("Target branch is mandatory");
+        if (!currentChangesOnly) {
+            if (branchA == null || branchA.isBlank()) {
+                throw new IllegalArgumentException("Base branch is mandatory");
+            }
+            if (branchB == null || branchB.isBlank()) {
+                throw new IllegalArgumentException("Target branch is mandatory");
+            }
         }
     }
 }

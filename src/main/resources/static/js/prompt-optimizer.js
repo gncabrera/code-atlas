@@ -17,6 +17,9 @@ $(function () {
         "#promptModeSelect",
         "#shouldSendAgentsFile",
         "#shouldSendDesignFile",
+        'input[name="contextStrategy"]',
+        "#contextAiModelSelect",
+        "#setDefaultStrategyBtn",
         "#userRequest",
         "#buildPreviewBtn",
         "#btn-clear-prompt",
@@ -25,7 +28,9 @@ $(function () {
         "#sendToModelBtn",
         "#outputPrompt",
         "#copyOutputBtn",
-        "#skillMultiselect"
+        "#skillMultiselect",
+        "#incrementalOfflineIndexBtn",
+        "#rebuildOfflineIndexBtn"
     ];
 
     const draftFieldSelectors = [
@@ -33,6 +38,8 @@ $(function () {
         "#promptModeSelect",
         "#shouldSendAgentsFile",
         "#shouldSendDesignFile",
+        "contextStrategy",
+        "contextAiModelSelect",
         "#userRequest",
         "#aiModelSelect",
         "#aiModelPrompt",
@@ -74,12 +81,61 @@ $(function () {
         return enabledModels.find(model => String(model.id) === String(id)) || null;
     }
 
+    function selectedContextStrategy() {
+        const value = $('input[name="contextStrategy"]:checked').val();
+        return value === "INDEXED" ? "INDEXED" : "DETERMINISTIC";
+    }
+
+    function isIndexedContextStrategySelected() {
+        return selectedContextStrategy() === "INDEXED";
+    }
+
+    function updateIndexedModelVisibility() {
+        const showIndexed = isIndexedContextStrategySelected();
+        $("#indexedModelContainer, #offlineIndexContainer").toggleClass("d-none", !showIndexed);
+    }
+
+    function runOfflineIndexAction($btn, endpointSuffix, loadingText, confirmMessage, failMessage) {
+        const projectId = $("#projectSelect").val();
+        if (!projectId) {
+            CodeAtlas.showToast("Select a project for offline index generation.", "danger");
+            return;
+        }
+        const contextModelId = $("#contextAiModelSelect").val();
+        if (!contextModelId) {
+            CodeAtlas.showToast("Select a context AI model for indexed strategy.", "danger");
+            return;
+        }
+        if (confirmMessage && !window.confirm(confirmMessage)) {
+            return;
+        }
+        const payload = { aiModelId: Number(contextModelId) };
+        setPromptPageLocked(true, $btn, loadingText);
+        $.ajax({
+            url: `/api/projects/${projectId}/index/offline${endpointSuffix}`,
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify(payload)
+        })
+            .done(function (response) {
+                CodeAtlas.showToast(response.message || "Offline index updated.", "success");
+            })
+            .fail(function (xhr) {
+                CodeAtlas.showToast(CodeAtlas.apiMessage(xhr, failMessage), "danger");
+            })
+            .always(function () {
+                setPromptPageLocked(false, $btn);
+            });
+    }
+
     function collectDraftData() {
         return {
             projectSelect: $("#projectSelect").val() || "",
             promptModeSelect: $("#promptModeSelect").val() || getDefaultPromptModeId(),
             shouldSendAgentsFile: $("#shouldSendAgentsFile").is(":checked"),
             shouldSendDesignFile: $("#shouldSendDesignFile").is(":checked"),
+            contextStrategy: selectedContextStrategy(),
+            contextAiModelSelect: $("#contextAiModelSelect").val() || "",
             userRequest: ($("#userRequest").val() || "").trim(),
             aiModelSelect: $("#aiModelSelect").val() || "",
             aiModelPrompt: ($("#aiModelPrompt").val() || "").trim(),
@@ -121,6 +177,14 @@ $(function () {
         return String($modelSelect.find("option").first().val() || "");
     }
 
+    function getDefaultContextAiModelSelectValue() {
+        const $select = $("#contextAiModelSelect");
+        if ($select.find("option").length === 0) {
+            return "";
+        }
+        return String($select.find("option").first().val() || "");
+    }
+
     function isDraftAtDefaults(data) {
         return !data.userRequest
             && !data.aiModelPrompt
@@ -129,6 +193,8 @@ $(function () {
             && String(data.promptModeSelect || "") === getDefaultPromptModeId()
             && data.shouldSendAgentsFile === true
             && data.shouldSendDesignFile === true
+            && String(data.contextStrategy || "DETERMINISTIC") === "DETERMINISTIC"
+            && String(data.contextAiModelSelect || "") === getDefaultContextAiModelSelectValue()
             && String(data.aiModelSelect || "") === getDefaultAiModelSelectValue()
             && skillIdsEqual(data.skillMultiselect, getDefaultSkillIds(loadedSkills));
     }
@@ -186,11 +252,16 @@ $(function () {
             applySkillMultiselectSelection(Array.isArray(value) ? value.map(String) : []);
             return true;
         }
+        if (fieldKey === "contextStrategy") {
+            const strategy = value === "INDEXED" ? "INDEXED" : "DETERMINISTIC";
+            $('input[name="contextStrategy"][value="' + strategy + '"]').prop("checked", true).trigger("change");
+            return true;
+        }
         const $field = $("#" + fieldKey);
         if (!$field.length) {
             return false;
         }
-        if (fieldKey === "aiModelSelect") {
+        if (fieldKey === "aiModelSelect" || fieldKey === "contextAiModelSelect") {
             if (value && $field.find('option[value="' + value + '"]').length === 0) {
                 return false;
             }
@@ -246,6 +317,7 @@ $(function () {
         });
         restored = hadContent;
         isRestoringDraft = false;
+        updateIndexedModelVisibility();
         updateProjectFileCheckboxVisibility();
         updateTokenInfo();
         if (restored) {
@@ -267,6 +339,14 @@ $(function () {
             $modelSelect.val("");
         }
         applySkillMultiselectSelection(getDefaultSkillIds(loadedSkills));
+        $('input[name="contextStrategy"][value="DETERMINISTIC"]').prop("checked", true).trigger("change");
+        const $contextModelSelect = $("#contextAiModelSelect");
+        if ($contextModelSelect.find("option").length > 0) {
+            $contextModelSelect.prop("selectedIndex", 0);
+        } else {
+            $contextModelSelect.val("");
+        }
+        updateIndexedModelVisibility();
         updateProjectFileCheckboxVisibility();
         updateTokenInfo();
     }
@@ -283,7 +363,8 @@ $(function () {
 
     function bindDraftAutoSave() {
         $("#userRequest, #aiModelPrompt, #outputPrompt").on("input", debouncedSaveDraft);
-        $("#projectSelect, #promptModeSelect, #aiModelSelect").on("change", debouncedSaveDraft);
+        $("#projectSelect, #promptModeSelect, #aiModelSelect, #contextAiModelSelect").on("change", debouncedSaveDraft);
+        $('input[name="contextStrategy"]').on("change", debouncedSaveDraft);
         $("#shouldSendAgentsFile, #shouldSendDesignFile").on("change", debouncedSaveDraft);
         $("#skillMultiselect").on("change", debouncedSaveDraft);
         $("#btn-clear-prompt").on("click", clearDraft);
@@ -344,6 +425,48 @@ $(function () {
         updateTokenInfo();
     }
 
+    function populateContextModels() {
+        const select = $("#contextAiModelSelect");
+        select.empty();
+        enabledModels.forEach(model => {
+            select.append($("<option>", {value: model.id, text: model.name}));
+        });
+    }
+
+    function applyContextStrategyPreferences() {
+        if (!window.CodeAtlasUserPreferences) {
+            updateIndexedModelVisibility();
+            return;
+        }
+        const prefs = CodeAtlasUserPreferences.getPreferences();
+        const strategy = prefs.promptOptimizerDefaultContextStrategy === "INDEXED" ? "INDEXED" : "DETERMINISTIC";
+        $('input[name="contextStrategy"][value="' + strategy + '"]').prop("checked", true);
+        updateIndexedModelVisibility();
+        const contextModelId = parseInt(String(prefs.promptOptimizerDefaultContextAiModelId || 0), 10) || 0;
+        if (contextModelId > 0) {
+            const value = String(contextModelId);
+            const $select = $("#contextAiModelSelect");
+            if ($select.find('option[value="' + value + '"]').length > 0) {
+                $select.val(value);
+            }
+        }
+    }
+
+    function initContextStrategyTooltips() {
+        if (!globalThis.bootstrap || !globalThis.bootstrap.Tooltip) {
+            return;
+        }
+        document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function (element) {
+            bootstrap.Tooltip.getOrCreateInstance(element);
+        });
+    }
+
+    function bindContextStrategyControls() {
+        $('input[name="contextStrategy"]').on("change", function () {
+            updateIndexedModelVisibility();
+        });
+    }
+
     function getDefaultPromptModeId() {
         const balanced = promptModes.find(function (mode) {
             return mode.code === "BALANCED";
@@ -375,9 +498,11 @@ $(function () {
                 promptModes = response.data.promptModes || [];
                 populateProjects();
                 populateModels();
+                populateContextModels();
                 populatePromptModes();
                 const applyStoredPreferences = function () {
                     if (!window.CodeAtlasUserPreferences) {
+                        updateIndexedModelVisibility();
                         loadDraftFromLocalStorage();
                         loadSkills();
                         return;
@@ -386,7 +511,9 @@ $(function () {
                         { field: "promptOptimizerDefaultPromptModeId", selectId: "promptModeSelect" },
                         { field: "promptOptimizerDefaultAiModelId", selectId: "aiModelSelect" }
                     ]);
+                    applyContextStrategyPreferences();
                     loadDraftFromLocalStorage();
+                    CodeAtlasUserPreferences.refreshDefaultIndicators();
                     loadSkills();
                 };
                 if (window.CodeAtlasUserPreferences) {
@@ -423,13 +550,29 @@ $(function () {
             CodeAtlas.showToast("Select a prompt mode.", "danger");
             return;
         }
+        const contextStrategy = selectedContextStrategy();
+        if (contextStrategy === "INDEXED") {
+            const contextModelId = $("#contextAiModelSelect").val();
+            if (!contextModelId) {
+                CodeAtlas.showToast("Select a context AI model for indexed strategy.", "danger");
+                return;
+            }
+        }
         const payload = {
             projectId: $("#projectSelect").val() || null,
             userRequest: userRequest,
             shouldSendAgentsFile: $("#shouldSendAgentsFile").is(":checked"),
             shouldSendDesignFile: $("#shouldSendDesignFile").is(":checked"),
-            promptModeId: Number(promptModeId)
+            promptModeId: Number(promptModeId),
+            contextStrategy: contextStrategy
         };
+        const modelId = $("#aiModelSelect").val();
+        if (modelId) {
+            payload.aiModelId = Number(modelId);
+        }
+        if (contextStrategy === "INDEXED") {
+            payload.contextAiModelId = Number($("#contextAiModelSelect").val());
+        }
         CodeAtlas.setButtonLoading($buildBtn, true, "Building Preview...");
         $.ajax({
             url: "/api/prompts/build-preview",
@@ -449,6 +592,26 @@ $(function () {
             .always(function () {
                 CodeAtlas.setButtonLoading($buildBtn, false);
             });
+    });
+
+    $("#incrementalOfflineIndexBtn").on("click", function () {
+        runOfflineIndexAction(
+            $(this),
+            "/incremental",
+            "Updating Index...",
+            null,
+            "Failed incremental offline index update."
+        );
+    });
+
+    $("#rebuildOfflineIndexBtn").on("click", function () {
+        runOfflineIndexAction(
+            $(this),
+            "",
+            "Rebuilding Index...",
+            "Full offline index rebuild purges all offline indices and may take a long time. Continue?",
+            "Failed offline index rebuild."
+        );
     });
 
     $("#sendToModelBtn").on("click", function () {
@@ -629,5 +792,7 @@ $(function () {
     });
 
     bindDraftAutoSave();
+    bindContextStrategyControls();
+    initContextStrategyTooltips();
     loadMetadata();
 });

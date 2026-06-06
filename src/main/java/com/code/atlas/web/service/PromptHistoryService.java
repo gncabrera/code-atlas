@@ -59,7 +59,7 @@ public class PromptHistoryService {
     }
 
     public void error(PromptHistory history, Exception ex) {
-        error(history, ex.getMessage());
+        error(history, ExceptionMessageFormatter.formatChain(ex));
     }
 
     public void error(PromptHistory history, String message) {

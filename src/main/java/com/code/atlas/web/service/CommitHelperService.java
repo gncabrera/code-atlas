@@ -87,7 +87,7 @@ public class CommitHelperService {
         assertGitRepository(projectRoot);
         gitProcessRunner.run(projectRoot, List.of("git", "add", "-A"));
         gitProcessRunner.run(projectRoot, List.of("git", "commit", "-m", message.trim()));
-        gitProcessRunner.run(projectRoot, List.of("git", "push"));
+        gitProcessRunner.pushCurrentBranch(projectRoot);
     }
 
     private String cleanMessage(String message) {

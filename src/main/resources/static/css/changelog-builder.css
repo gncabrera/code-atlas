@@ -1,0 +1,17 @@
+@import url("markdown-preview.css");
+
+.table-responsive {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+#commitTable th {
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 10;
+}
+
+#semverBadge {
+    font-size: 0.95rem;
+}

@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <body>
-<nav th:fragment="navbar" class="navbar navbar-expand-lg bg-primary" data-bs-theme="dark">
+<th:block th:fragment="navbar">
+<nav class="navbar navbar-expand-lg bg-primary" data-bs-theme="dark">
     <div class="container-fluid">
         <a class="navbar-brand" href="/prompt-optimizer">Code Atlas</a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#codeAtlasNavbar"
@@ -18,6 +19,11 @@
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="/code-review"><i class="bi bi-shield-check me-1"></i>Code Review</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:classappend="${activePage == 'changelog-builder' ? 'active' : ''}" th:href="@{/changelog-builder}">
+                        <i class="bi bi-journal-text me-1"></i> Changelog Builder
+                    </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link" href="/skills"><i class="bi bi-stars me-1"></i>Skills</a>
@@ -44,8 +50,46 @@
                     </ul>
                 </li>
             </ul>
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <button type="button" class="btn btn-link nav-link position-relative px-2" id="btnLogActivity"
+                            data-bs-toggle="modal" data-bs-target="#logViewerModal" aria-label="Application logs">
+                        <span id="logActivitySpinner" class="spinner-border spinner-border-sm text-warning d-none me-1" role="status" aria-hidden="true"></span>
+                        <i id="logActivityIcon" class="bi bi-terminal me-1" aria-hidden="true"></i>
+                        <span id="logActivityText">Activity</span>
+                    </button>
+                </li>
+            </ul>
         </div>
     </div>
 </nav>
+
+<div class="modal fade" id="logViewerModal" tabindex="-1" aria-labelledby="logViewerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="w-100">
+                    <h5 class="modal-title" id="logViewerModalLabel">Application Logs</h5>
+                    <div id="logViewerProgressWrap" class="progress mt-2 d-none" style="height: 0.5rem;" role="progressbar" aria-label="Log progress">
+                        <div id="logViewerProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" style="width: 0%;">0%</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+                    <input type="search" class="form-control form-control-sm flex-grow-1" id="logViewerFilter"
+                           placeholder="Search console output..." autocomplete="off">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="logViewerPauseBtn">Pause Stream</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="logViewerClearBtn">Clear View</button>
+                    <small class="text-muted ms-auto" id="logViewerPollStatus">Refreshing every 15s</small>
+                </div>
+                <div id="logViewerOutput" class="bg-dark text-light p-3 rounded small"
+                     style="max-height: 500px; overflow-y: auto; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; white-space: pre-wrap; word-break: break-word;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+</th:block>
 </body>
 </html>

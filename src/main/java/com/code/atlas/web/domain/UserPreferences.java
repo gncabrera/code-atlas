@@ -1,5 +1,6 @@
 package com.code.atlas.web.domain;
 
+import com.code.atlas.web.service.context.indexed.ContextStrategy;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -23,9 +24,18 @@ public class UserPreferences {
     @Column(name = "prompt_optimizer_default_prompt_mode_id", nullable = false)
     private int promptOptimizerDefaultPromptModeId = 0;
 
+    @Column(name = "prompt_optimizer_default_context_strategy", nullable = false)
+    private ContextStrategy promptOptimizerDefaultContextStrategy = ContextStrategy.DETERMINISTIC;
+
+    @Column(name = "prompt_optimizer_default_context_ai_model_id", nullable = false)
+    private int promptOptimizerDefaultContextAiModelId = 0;
+
     @Column(name = "commit_helper_default_ai_model_id", nullable = false)
     private int commitHelperDefaultAiModelId = 0;
 
     @Column(name = "code_review_default_ai_model_id", nullable = false)
     private int codeReviewDefaultAiModelId = 0;
+
+    @Column(name = "changelog_builder_default_ai_model_id", nullable = false)
+    private int changelogBuilderDefaultAiModelId = 0;
 }

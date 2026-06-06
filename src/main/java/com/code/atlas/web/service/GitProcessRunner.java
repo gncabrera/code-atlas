@@ -22,6 +22,9 @@ public class GitProcessRunner {
     private static final Logger log = LoggerFactory.getLogger(GitProcessRunner.class);
     private static final long GIT_COMMAND_TIMEOUT_SECONDS = 30;
     private static final Pattern BRANCH_NAME_PATTERN = Pattern.compile("^[a-zA-Z0-9_\\-.\\/]+$");
+    private static final Pattern COMMIT_HASH_PATTERN = Pattern.compile("^[0-9a-fA-F]{7,40}$");
+    private static final String COMMIT_LOG_DELIMITER = "~#~";
+    private static final String DEFAULT_REMOTE = "origin";
 
     public String run(Path workingDir, List<String> command) {
         return runInternal(workingDir, command, false);
@@ -66,10 +69,59 @@ public class GitProcessRunner {
                 .toList();
     }
 
+    public List<String[]> listCommits(Path projectRoot, String branch, int limit) {
+        validateBranchName(branch);
+        if (limit <= 0) {
+            throw new IllegalArgumentException("Commit limit must be positive.");
+        }
+        String format = "%H" + COMMIT_LOG_DELIMITER + "%an" + COMMIT_LOG_DELIMITER + "%cI"
+                + COMMIT_LOG_DELIMITER + "%s";
+        String output = run(
+                projectRoot,
+                List.of("git", "log", branch.trim(), "-n", String.valueOf(limit), "--format=" + format)
+        );
+        if (output.isBlank()) {
+            return List.of();
+        }
+        List<String[]> commits = new ArrayList<>();
+        for (String line : output.split("\n")) {
+            String trimmed = line.trim();
+            if (trimmed.isEmpty()) {
+                continue;
+            }
+            String[] parts = trimmed.split(Pattern.quote(COMMIT_LOG_DELIMITER), 4);
+            if (parts.length < 4) {
+                continue;
+            }
+            commits.add(parts);
+        }
+        return commits;
+    }
+
+    public String showCommit(Path projectRoot, String commitHash) {
+        validateCommitHash(commitHash);
+        return run(projectRoot, List.of("git", "show", "--no-color", commitHash.trim()));
+    }
+
     public String diffBetweenBranches(Path projectRoot, String branchA, String branchB) {
         validateBranchName(branchA);
         validateBranchName(branchB);
         return runAllowDiffExit(projectRoot, List.of("git", "diff", branchA + ".." + branchB));
+    }
+
+    public void pushCurrentBranch(Path projectRoot) {
+        try {
+            run(projectRoot, List.of("git", "push"));
+        } catch (IllegalArgumentException ex) {
+            if (!isMissingUpstreamPushError(ex.getMessage())) {
+                throw ex;
+            }
+            run(projectRoot, List.of("git", "push", "-u", DEFAULT_REMOTE, "HEAD"));
+        }
+    }
+
+    private boolean isMissingUpstreamPushError(String message) {
+        return message != null && message.contains("no upstream branch");
     }
 
     private List<String> withNoPager(List<String> command) {
@@ -97,6 +149,15 @@ public class GitProcessRunner {
         }
         if (!BRANCH_NAME_PATTERN.matcher(branchName.trim()).matches()) {
             throw new IllegalArgumentException("Invalid branch name: " + branchName);
+        }
+    }
+
+    private void validateCommitHash(String commitHash) {
+        if (commitHash == null || commitHash.isBlank()) {
+            throw new IllegalArgumentException("Commit hash is required.");
+        }
+        if (!COMMIT_HASH_PATTERN.matcher(commitHash.trim()).matches()) {
+            throw new IllegalArgumentException("Invalid commit hash: " + commitHash);
         }
     }
 

@@ -1,0 +1,43 @@
+.markdown-preview-container {
+    width: 100%;
+}
+
+.markdown-preview-pane {
+    min-height: 120px;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    overflow-y: auto;
+}
+
+.markdown-preview-pane h1,
+.markdown-preview-pane h2,
+.markdown-preview-pane h3 {
+    border-bottom: 1px solid #eaecef;
+    padding-bottom: 0.3em;
+}
+
+.markdown-preview-pane pre {
+    background-color: #f1f3f5;
+    padding: 0.75rem;
+    border-radius: 0.25rem;
+    overflow-x: auto;
+}
+
+.markdown-preview-pane code {
+    font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 85%;
+}
+
+.markdown-preview-pane table {
+    width: 100%;
+    margin-bottom: 1rem;
+    border-collapse: collapse;
+}
+
+.markdown-preview-pane table th,
+.markdown-preview-pane table td {
+    border: 1px solid #dee2e6;
+    padding: 0.5rem;
+}

@@ -5,9 +5,9 @@ import com.code.atlas.web.domain.PromptOptimizerMode;
 import com.code.atlas.web.domain.Project;
 import com.code.atlas.web.service.dto.*;
 import jakarta.transaction.Transactional;
-import org.springframework.stereotype.Service;
-
 import java.util.Map;
+
+import org.springframework.stereotype.Service;
 
 @Service
 public class PromptService {
@@ -22,7 +22,8 @@ public class PromptService {
             PromptOptimizerModeService promptOptimizerModeService,
             ProjectService projectService,
             PromptContextService promptContextService,
-            AIModelService aiModelService, PromptFormatService promptFormatService
+            AIModelService aiModelService,
+            PromptFormatService promptFormatService
     ) {
         this.promptOptimizerModeService = promptOptimizerModeService;
         this.projectService = projectService;
@@ -38,7 +39,7 @@ public class PromptService {
         }
         Project project = resolveProject(requestDto.projectId());
         String template = mode.getPrompt();
-        String context = promptContextService.buildContext(project, requestDto.userRequest());
+        String context = resolveContext(project, requestDto);
         String agentsFileContent = requestDto.shouldSendAgentsFile() ? projectService.resolveAgentsFileContent(project) : "";
         String designFileContent = requestDto.shouldSendDesignFile() ? projectService.resolveDesignFileContent(project) : "";
         Map<String, String> parameters = Map.of(
@@ -62,6 +63,24 @@ public class PromptService {
                 + ". PromptMode: " + modeLabel;
         ModelResponseDto modelResponseDto = aiModelService.sendToModel(project, model, exactPrompt, notes);
         return new SendPromptResponseDto(modelResponseDto.reponse(), modelResponseDto.estimatedTokens());
+    }
+
+    private String resolveContext(Project project, BuildPreviewRequestDto requestDto) {
+        switch (requestDto.contextStrategy()) {
+            case DETERMINISTIC -> {
+                return promptContextService.buildDeterministicContext(project, requestDto.userRequest());
+            }
+            case INDEXED -> {
+                if (requestDto.contextAiModelId() == null) {
+                    throw new IllegalArgumentException(
+                            "Context AI model id is required when indexed context strategy is selected.");
+                }
+                AIModel aiModel = aiModelService.getModelEntity(requestDto.contextAiModelId());
+                return promptContextService.buildIndexedContext(project, requestDto.userRequest(), aiModel);
+            }
+            default -> { return ""; }
+        }
+
     }
 
     private String resolveModeLabel(Long promptModeId) {

@@ -11,7 +11,7 @@
 
 <main class="container py-4">
     <h1 class="mb-3">Code Review</h1>
-    <p class="text-muted mb-3">Compare two branches and review changes with selected AI model.</p>
+    <p class="text-muted mb-3">Compare two branches or review uncommitted working-tree changes with a selected AI model.</p>
 
     <div class="alert alert-info alert-dismissible fade show mb-4" role="alert" data-alert-id="code-review.large-context-hint">
         Use model with large context window for better review quality.
@@ -21,12 +21,16 @@
     <div class="card mb-4">
         <div class="card-header">Review Setup</div>
         <div class="card-body">
-            <div class="row g-3 align-items-end">
+            <div class="row g-3 align-items-start">
                 <div class="col-md-6 col-lg-3">
                     <label for="projectSelect" class="form-label">Project</label>
                     <select id="projectSelect" class="form-select">
                         <option value="">Select project</option>
                     </select>
+                    <div class="form-check mt-2">
+                        <input class="form-check-input" type="checkbox" id="currentChangesOnly">
+                        <label class="form-check-label" for="currentChangesOnly">Review current changes only</label>
+                    </div>
                 </div>
                 <div class="col-md-6 col-lg-3">
                     <label for="modelSelect" class="form-label">AI Model</label>
@@ -34,6 +38,7 @@
                         <option value="">Select AI model</option>
                     </select>
                 </div>
+                
                 <div class="col-md-6 col-lg-3">
                     <label for="branchA" class="form-label">Base Branch</label>
                     <select id="branchA" class="form-select" disabled>
@@ -53,6 +58,7 @@
                         </button>
                     </div>
                 </div>
+
             </div>
         </div>
     </div>
@@ -91,6 +97,7 @@
                 <div id="severityFilters" class="btn-group btn-group-sm d-none" role="group" aria-label="Severity filters"></div>
             </div>
             <div class="card-body">
+                <!-- Finding cards rendered by code-review.js; each includes Copy Prompt + Details buttons -->
                 <div id="findingsContainer"></div>
             </div>
         </div>

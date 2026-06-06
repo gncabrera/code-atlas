@@ -2,9 +2,11 @@ package com.code.atlas.web.service;
 
 import com.code.atlas.web.domain.ProjectFileIndex;
 import com.code.atlas.web.domain.Project;
-import com.code.atlas.web.service.context.ContextFileSupport;
-import com.code.atlas.web.service.context.ContextQuery;
-import com.code.atlas.web.service.context.ContextSymbolExtractor;
+import com.code.atlas.web.service.context.deterministic.ContextFileSupport;
+import com.code.atlas.web.service.context.deterministic.ContextQuery;
+import com.code.atlas.web.service.context.deterministic.ContextSymbolExtractor;
+import com.code.atlas.web.service.context.indexed.ContextPipelineLogger;
+import com.code.atlas.web.service.context.indexed.indexer.IndexBuildService;
 import com.code.atlas.web.repository.ProjectFileIndexRepository;
 import jakarta.transaction.Transactional;
 import java.io.IOException;
@@ -34,41 +36,71 @@ public class ProjectIndexService {
 
     private final ProjectFileIndexRepository projectFileIndexRepository;
     private final ContextSymbolExtractor contextSymbolExtractor;
+    private final IndexBuildService indexBuildService;
+    private final ContextPipelineLogger pipelineLogger;
     private final Duration maxAge;
 
     public ProjectIndexService(
             ProjectFileIndexRepository projectFileIndexRepository,
             ContextSymbolExtractor contextSymbolExtractor,
+            IndexBuildService indexBuildService,
+            ContextPipelineLogger pipelineLogger,
             @Value("${codeatlas.context.index-max-age-minutes:30}") long maxAgeMinutes
     ) {
         this.projectFileIndexRepository = projectFileIndexRepository;
         this.contextSymbolExtractor = contextSymbolExtractor;
+        this.indexBuildService = indexBuildService;
+        this.pipelineLogger = pipelineLogger;
         this.maxAge = Duration.ofMinutes(Math.max(1, maxAgeMinutes));
     }
 
     @Transactional
     public void refreshIndex(Project project) {
-        Path projectRoot = Path.of(project.getPath()).normalize();
-        if (!Files.exists(projectRoot)) {
-            projectFileIndexRepository.deleteByProjectId(project.getId());
-            return;
-        }
-        List<Path> files = collectRelevantFiles(projectRoot);
-        List<String> activeRelativePaths = new ArrayList<>();
-        Map<String, ProjectFileIndex> existingByPath = projectFileIndexRepository.findByProjectId(project.getId()).stream()
-                .collect(Collectors.toMap(ProjectFileIndex::getFilePath, Function.identity(), (left, right) -> left));
+        refreshIndex(project, "index");
+    }
 
-        for (Path filePath : files) {
-            String relativePath = projectRoot.relativize(filePath).toString().replace('\\', '/');
-            activeRelativePaths.add(relativePath);
-            ProjectFileIndex existing = existingByPath.get(relativePath);
-            upsertIndexEntry(project, filePath, relativePath, existing);
+    @Transactional
+    public void refreshIndex(Project project, String phase) {
+        long started = System.nanoTime();
+        pipelineLogger.stepStart(project, phase, 1, 2, "Scan project files and refresh file index");
+        try {
+            Path projectRoot = Path.of(project.getPath()).normalize();
+            if (!Files.exists(projectRoot)) {
+                projectFileIndexRepository.deleteByProjectId(project.getId());
+                pipelineLogger.stepComplete(project, phase, 1, 2, "Scan project files and refresh file index", elapsedMs(started));
+                return;
+            }
+            List<Path> files = collectRelevantFiles(projectRoot);
+            List<String> activeRelativePaths = new ArrayList<>();
+            Map<String, ProjectFileIndex> existingByPath = projectFileIndexRepository.findByProjectId(project.getId()).stream()
+                    .collect(Collectors.toMap(ProjectFileIndex::getFilePath, Function.identity(), (left, right) -> left));
+
+            for (Path filePath : files) {
+                String relativePath = projectRoot.relativize(filePath).toString().replace('\\', '/');
+                activeRelativePaths.add(relativePath);
+                ProjectFileIndex existing = existingByPath.get(relativePath);
+                upsertIndexEntry(project, filePath, relativePath, existing);
+            }
+            if (!activeRelativePaths.isEmpty()) {
+                projectFileIndexRepository.deleteByProjectIdAndFilePathNotIn(project.getId(), activeRelativePaths);
+            } else {
+                projectFileIndexRepository.deleteByProjectId(project.getId());
+            }
+            pipelineLogger.stepComplete(project, phase, 1, 2, "Scan project files and refresh file index", elapsedMs(started));
+            pipelineLogger.message(project, phase, "Indexed " + activeRelativePaths.size() + " project files");
+
+            long rebuildStarted = System.nanoTime();
+            pipelineLogger.stepStart(project, phase, 2, 2, "Rebuild structural indices");
+            indexBuildService.rebuildProject(project, phase);
+            pipelineLogger.stepComplete(project, phase, 2, 2, "Rebuild structural indices", elapsedMs(rebuildStarted));
+        } catch (RuntimeException ex) {
+            pipelineLogger.stepFailed(project, phase, 1, 2, "Refresh file index", elapsedMs(started), ex.getMessage());
+            throw ex;
         }
-        if (!activeRelativePaths.isEmpty()) {
-            projectFileIndexRepository.deleteByProjectIdAndFilePathNotIn(project.getId(), activeRelativePaths);
-        } else {
-            projectFileIndexRepository.deleteByProjectId(project.getId());
-        }
+    }
+
+    private static long elapsedMs(long startedNanos) {
+        return (System.nanoTime() - startedNanos) / 1_000_000L;
     }
 
     public List<ProjectFileIndex> search(Project project, ContextQuery query, int limit) {

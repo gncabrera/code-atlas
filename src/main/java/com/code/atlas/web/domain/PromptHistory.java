@@ -11,10 +11,12 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import lombok.Data;
+import lombok.ToString;
 
 @Entity
 @Table(name = "prompt_history")
 @Data
+@ToString
 public class PromptHistory {
 
     @Id

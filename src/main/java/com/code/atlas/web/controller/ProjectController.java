@@ -1,11 +1,15 @@
 package com.code.atlas.web.controller;
 
 import com.code.atlas.web.api.ApiResponse;
-import com.code.atlas.web.api.GlobalExceptionHandler;
+import com.code.atlas.web.domain.AIModel;
+import com.code.atlas.web.domain.Project;
+import com.code.atlas.web.service.AIModelService;
+import com.code.atlas.web.service.ProjectIndexService;
 import com.code.atlas.web.service.ProjectService;
+import com.code.atlas.web.service.context.indexed.offline.OfflineIndexService;
+import com.code.atlas.web.service.dto.OfflineIndexRequestDto;
 import com.code.atlas.web.service.dto.ProjectRequestDto;
 import com.code.atlas.web.service.dto.ProjectResponseDto;
-
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
@@ -24,9 +28,20 @@ import org.springframework.web.bind.annotation.RestController;
 public class ProjectController extends BaseRestController {
 
     private final ProjectService projectService;
+    private final ProjectIndexService projectIndexService;
+    private final OfflineIndexService offlineIndexService;
+    private final AIModelService aiModelService;
 
-    public ProjectController(ProjectService projectService) {
+    public ProjectController(
+            ProjectService projectService,
+            ProjectIndexService projectIndexService,
+            OfflineIndexService offlineIndexService,
+            AIModelService aiModelService
+    ) {
         this.projectService = projectService;
+        this.projectIndexService = projectIndexService;
+        this.offlineIndexService = offlineIndexService;
+        this.aiModelService = aiModelService;
     }
 
     @GetMapping
@@ -76,6 +91,38 @@ public class ProjectController extends BaseRestController {
             return ResponseEntity.ok(ApiResponse.success("Project deleted.", null));
         } catch (Exception ex) {
             return handledException("DELETE /api/projects/{id}", ex);
+        }
+    }
+
+    @PostMapping("/{id}/index/offline")
+    public ResponseEntity<ApiResponse<?>> regenerateOfflineIndex(
+            @PathVariable Long id,
+            @RequestBody OfflineIndexRequestDto requestDto
+    ) {
+        try {
+            Project project = projectService.getProjectEntity(id);
+            AIModel aiModel = aiModelService.getModelEntity(requestDto.aiModelId());
+            projectIndexService.refreshIndex(project, "offline");
+            offlineIndexService.regenerate(project, aiModel);
+            return ResponseEntity.ok(ApiResponse.success("Offline indices regenerated.", null));
+        } catch (Exception ex) {
+            return handledException("POST /api/projects/{id}/index/offline", ex);
+        }
+    }
+
+    @PostMapping("/{id}/index/offline/incremental")
+    public ResponseEntity<ApiResponse<?>> regenerateOfflineIndexIncremental(
+            @PathVariable Long id,
+            @RequestBody OfflineIndexRequestDto requestDto
+    ) {
+        try {
+            Project project = projectService.getProjectEntity(id);
+            AIModel aiModel = aiModelService.getModelEntity(requestDto.aiModelId());
+            projectIndexService.refreshIndex(project, "offline");
+            offlineIndexService.regenerateIncremental(project, aiModel);
+            return ResponseEntity.ok(ApiResponse.success("Offline indices regenerated incrementally.", null));
+        } catch (Exception ex) {
+            return handledException("POST /api/projects/{id}/index/offline/incremental", ex);
         }
     }
 }

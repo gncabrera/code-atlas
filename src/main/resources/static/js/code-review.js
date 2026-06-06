@@ -9,6 +9,9 @@ $(function () {
     const $model = $("#modelSelect");
     const $branchA = $("#branchA");
     const $branchB = $("#branchB");
+    const $branchAField = $branchA.closest(".col-md-6");
+    const $branchBField = $branchB.closest(".col-md-6");
+    const $currentChangesCheckbox = $("#currentChangesOnly");
     const $btn = $("#btnRunReview");
     const $progress = $("#reviewProgress");
     const $result = $("#reviewResult");
@@ -45,8 +48,20 @@ $(function () {
         branches = [];
     }
 
+    function toggleBranchDropdowns(hidden) {
+        $branchAField.add($branchBField)
+            .toggleClass("invisible", hidden)
+            .attr("aria-hidden", hidden ? "true" : null);
+    }
+
+    function isCurrentChangesOnly() {
+        return $currentChangesCheckbox.is(":checked");
+    }
+
     function checkFormState() {
-        const valid = $project.val() && $model.val() && $branchA.val() && $branchB.val();
+        const hasProjectAndModel = $project.val() && $model.val();
+        const hasBranches = $branchA.val() && $branchB.val();
+        const valid = hasProjectAndModel && (isCurrentChangesOnly() || hasBranches);
         $btn.prop("disabled", !valid);
     }
 
@@ -56,6 +71,9 @@ $(function () {
         }
         if (!$model.val()) {
             return "Select AI model.";
+        }
+        if (isCurrentChangesOnly()) {
+            return "";
         }
         if (!$branchA.val() || !$branchB.val()) {
             return "Select both branches.";
@@ -92,6 +110,9 @@ $(function () {
                     if (projectId) {
                         $project.val(String(projectId));
                     }
+                    if (isCurrentChangesOnly()) {
+                        toggleBranchDropdowns(true);
+                    }
                     checkFormState();
                 };
                 if (window.CodeAtlasUserPreferences) {
@@ -120,6 +141,11 @@ $(function () {
     $branchA.on("change", checkFormState);
     $branchB.on("change", checkFormState);
 
+    $currentChangesCheckbox.on("change", function () {
+        toggleBranchDropdowns($(this).is(":checked"));
+        checkFormState();
+    });
+
     $btn.on("click", function () {
         const validationError = validateRunReview();
         if (validationError) {
@@ -134,9 +160,13 @@ $(function () {
         const payload = {
             projectId: Number($project.val()),
             modelId: Number($model.val()),
-            branchA: $branchA.val(),
-            branchB: $branchB.val()
+            currentChangesOnly: isCurrentChangesOnly()
         };
+
+        if (!payload.currentChangesOnly) {
+            payload.branchA = $branchA.val();
+            payload.branchB = $branchB.val();
+        }
 
         $.ajax({
             url: "/api/code-review",
@@ -168,6 +198,39 @@ $(function () {
         $severityFilters.find(".severity-filter").removeClass("active");
         $(this).addClass("active");
         applySeverityFilter();
+    });
+
+    $("#findingsContainer").on("click", ".btn-copy-prompt", function (e) {
+        e.preventDefault();
+        const $btn = $(this);
+        const findingIndex = Number($btn.attr("data-finding-index"));
+        const promptText = lastReviewData
+            && lastReviewData.findings
+            && lastReviewData.findings[findingIndex]
+            ? lastReviewData.findings[findingIndex].prompt
+            : "";
+
+        if (!promptText) {
+            CodeAtlas.showToast("No prompt found to copy", "warning");
+            return;
+        }
+
+        const copied = CodeAtlas.copyToClipboard(promptText);
+        if (!copied) {
+            CodeAtlas.showToast("Failed to copy prompt.", "danger");
+            return;
+        }
+
+        CodeAtlas.showToast("Prompt copied to clipboard!", "success");
+        const originalHtml = $btn.html();
+        $btn.html('<i class="bi bi-check-lg me-1"></i>Copied!')
+            .removeClass("btn-outline-info")
+            .addClass("btn-success");
+        setTimeout(function () {
+            $btn.html(originalHtml)
+                .removeClass("btn-success")
+                .addClass("btn-outline-info");
+        }, 1500);
     });
 
     function renderReviewResult(data) {
@@ -270,8 +333,13 @@ $(function () {
                 " : line " +
                 escapeHtml(finding.line != null ? String(finding.line) : "N/A") +
                 "</p></div>" +
-                '<button type="button" class="btn btn-sm btn-outline-secondary finding-toggle" aria-expanded="false">' +
-                "Details</button></div>" +
+                '<div class="btn-group btn-group-sm">' +
+                '<button type="button" class="btn btn-outline-info btn-copy-prompt" data-finding-index="' +
+                index +
+                '">' +
+                '<i class="bi bi-clipboard me-1"></i>Copy Prompt</button>' +
+                '<button type="button" class="btn btn-outline-secondary finding-toggle" aria-expanded="false">' +
+                "Details</button></div></div>" +
                 '<p class="mb-2 text-secondary small mt-2 finding-summary">' +
                 escapeHtml(finding.description || "") +
                 "</p>" +
@@ -316,5 +384,12 @@ $(function () {
             .replace(/'/g, "&#39;");
     }
 
-    loadMetadata(null);
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialProjectId = urlParams.get("projectId");
+    if (urlParams.get("currentChangesOnly") === "true") {
+        $currentChangesCheckbox.prop("checked", true);
+        toggleBranchDropdowns(true);
+    }
+
+    loadMetadata(initialProjectId ? Number(initialProjectId) : null);
 });
