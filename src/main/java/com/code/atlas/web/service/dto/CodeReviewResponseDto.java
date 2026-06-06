@@ -22,7 +22,8 @@ public record CodeReviewResponseDto(
             String description,
             String impact,
             String suggestion,
-            String suggestedPatch
+            String suggestedPatch,
+            String prompt
     ) {
     }
 }

@@ -200,6 +200,39 @@ $(function () {
         applySeverityFilter();
     });
 
+    $("#findingsContainer").on("click", ".btn-copy-prompt", function (e) {
+        e.preventDefault();
+        const $btn = $(this);
+        const findingIndex = Number($btn.attr("data-finding-index"));
+        const promptText = lastReviewData
+            && lastReviewData.findings
+            && lastReviewData.findings[findingIndex]
+            ? lastReviewData.findings[findingIndex].prompt
+            : "";
+
+        if (!promptText) {
+            CodeAtlas.showToast("No prompt found to copy", "warning");
+            return;
+        }
+
+        const copied = CodeAtlas.copyToClipboard(promptText);
+        if (!copied) {
+            CodeAtlas.showToast("Failed to copy prompt.", "danger");
+            return;
+        }
+
+        CodeAtlas.showToast("Prompt copied to clipboard!", "success");
+        const originalHtml = $btn.html();
+        $btn.html('<i class="bi bi-check-lg me-1"></i>Copied!')
+            .removeClass("btn-outline-info")
+            .addClass("btn-success");
+        setTimeout(function () {
+            $btn.html(originalHtml)
+                .removeClass("btn-success")
+                .addClass("btn-outline-info");
+        }, 1500);
+    });
+
     function renderReviewResult(data) {
         const summary = data.summary || {};
         $("#summaryScore").text(summary.score != null ? summary.score : "-");
@@ -300,8 +333,13 @@ $(function () {
                 " : line " +
                 escapeHtml(finding.line != null ? String(finding.line) : "N/A") +
                 "</p></div>" +
-                '<button type="button" class="btn btn-sm btn-outline-secondary finding-toggle" aria-expanded="false">' +
-                "Details</button></div>" +
+                '<div class="btn-group btn-group-sm">' +
+                '<button type="button" class="btn btn-outline-info btn-copy-prompt" data-finding-index="' +
+                index +
+                '">' +
+                '<i class="bi bi-clipboard me-1"></i>Copy Prompt</button>' +
+                '<button type="button" class="btn btn-outline-secondary finding-toggle" aria-expanded="false">' +
+                "Details</button></div></div>" +
                 '<p class="mb-2 text-secondary small mt-2 finding-summary">' +
                 escapeHtml(finding.description || "") +
                 "</p>" +
