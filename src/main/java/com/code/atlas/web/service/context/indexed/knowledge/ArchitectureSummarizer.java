@@ -11,7 +11,6 @@ import com.code.atlas.web.service.context.indexed.Intent;
 import com.code.atlas.web.service.context.indexed.RetrievedFile;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -41,7 +40,7 @@ public class ArchitectureSummarizer {
                 "USER_REQUEST", userRequest,
                 "INTENT", formatIntent(intent),
                 "FILE_SUMMARIES", formatSummaries(project, files),
-                "RETRIEVED_FILES", files.stream().map(RetrievedFile::relativePath).collect(Collectors.joining("\n"))
+                "RETRIEVED_FILES", formatRetrievedFiles(files)
         ));
         return aiModelService.sendToModel(project, aiModel, prompt, NOTES, "Indexed context: architecture summary").reponse();
     }
@@ -60,6 +59,26 @@ public class ArchitectureSummarizer {
                     .map(FileSummaryIndexEntry::getSummary)
                     .orElse("(no summary)");
             builder.append(file.relativePath()).append(": ").append(summary).append('\n');
+        }
+        return builder.toString().trim();
+    }
+
+    private String formatRetrievedFiles(List<RetrievedFile> files) {
+        if (files.isEmpty()) {
+            return "No files retrieved.";
+        }
+        StringBuilder builder = new StringBuilder();
+        for (RetrievedFile file : files) {
+            builder.append("## ").append(file.relativePath())
+                    .append(" (score=").append(file.score()).append(")\n");
+            for (String reason : file.reasons()) {
+                builder.append("- ").append(reason).append('\n');
+            }
+            if (!file.symbols().isEmpty()) {
+                builder.append("symbols: ").append(String.join(", ", file.symbols())).append('\n');
+            }
+            builder.append("```").append(file.language()).append('\n');
+            builder.append(file.snippet().isBlank() ? "// No snippet" : file.snippet()).append("\n```\n\n");
         }
         return builder.toString().trim();
     }

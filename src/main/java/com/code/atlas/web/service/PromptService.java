@@ -3,13 +3,11 @@ package com.code.atlas.web.service;
 import com.code.atlas.web.domain.AIModel;
 import com.code.atlas.web.domain.PromptOptimizerMode;
 import com.code.atlas.web.domain.Project;
-import com.code.atlas.web.service.dto.BuildPreviewRequestDto;
-import com.code.atlas.web.service.dto.BuildPreviewResponseDto;
-import com.code.atlas.web.service.dto.ModelResponseDto;
-import com.code.atlas.web.service.dto.SendPromptRequestDto;
-import com.code.atlas.web.service.dto.SendPromptResponseDto;
+import com.code.atlas.web.service.dto.*;
 import jakarta.transaction.Transactional;
 import java.util.Map;
+import java.util.Objects;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -77,7 +75,13 @@ public class PromptService {
             if (requestDto.aiModelId() == null) {
                 throw new IllegalArgumentException("AI model id is required when indexed context strategy is enabled.");
             }
-            AIModel aiModel = aiModelService.getModelEntity(requestDto.aiModelId());
+            // TODO: select AIModel from frontend
+            AIModel aiModel = aiModelService.getEnabledModels()
+                    .stream()
+                    .filter(a -> Objects.equals(a.name(), "gemma-4-31b-it"))
+                    .map(AIModelResponseDto::id)
+                    .map(aiModelService::getModelEntity)
+                    .findFirst().orElseThrow();
             return promptContextService.buildIndexedContext(project, requestDto.userRequest(), aiModel);
         }
         return promptContextService.buildDeterministicContext(project, requestDto.userRequest());

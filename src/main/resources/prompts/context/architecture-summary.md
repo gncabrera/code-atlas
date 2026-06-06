@@ -6,15 +6,16 @@ User request:
 Intent:
 {{INTENT}}
 
-File summaries:
+File summaries (offline index):
 {{FILE_SUMMARIES}}
 
-Retrieved file paths:
+Retrieved files (paths, retrieval signals, and code snippets):
 {{RETRIEVED_FILES}}
 
 Produce plain text (not JSON) starting with "Current pattern:" followed by bullet facts.
 Rules:
-- State explicit facts only; do not invent files
+- Use offline file summaries and retrieved snippets together; state explicit facts only
+- Do not invent files, classes, or behavior not present in the inputs
 - Mention layering, persistence, and gaps relevant to the request
 - Keep under 20 bullet lines
 
