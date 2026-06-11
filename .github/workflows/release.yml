@@ -66,6 +66,11 @@ jobs:
     needs: build
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
@@ -80,7 +85,7 @@ jobs:
             exit 1
           fi
 
-      - name: Create release with generated notes
+      - name: Create release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -89,8 +94,27 @@ jobs:
             echo "No release files found."
             exit 1
           fi
-          gh release create "${GITHUB_REF_NAME}" "${files[@]}" \
-            --repo "${GITHUB_REPOSITORY}" \
-            --title "${GITHUB_REF_NAME}" \
-            --latest \
-            --generate-notes
+
+          tag_message="$(git for-each-ref --format='%(contents)' "refs/tags/${GITHUB_REF_NAME}")"
+          release_args=(
+            --repo "${GITHUB_REPOSITORY}"
+            --title "${GITHUB_REF_NAME}"
+            --latest
+          )
+
+          if [ -n "$(printf '%s' "$tag_message" | tr -d '[:space:]')" ]; then
+            auto_notes="$(gh api "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
+              -f tag_name="${GITHUB_REF_NAME}" \
+              -f target_commitish="${GITHUB_SHA}" \
+              --jq .body)"
+            notes_file="$(mktemp)"
+            {
+              printf '%s\n\n' "$tag_message"
+              printf '%s\n' "$auto_notes"
+            } > "$notes_file"
+            release_args+=(--notes-file "$notes_file")
+          else
+            release_args+=(--generate-notes)
+          fi
+
+          gh release create "${GITHUB_REF_NAME}" "${files[@]}" "${release_args[@]}"
