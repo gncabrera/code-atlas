@@ -1,5 +1,6 @@
 package com.code.atlas.web.service.context.indexed.indexer;
 
+import com.code.atlas.web.domain.IndexerProfile;
 import com.code.atlas.web.service.context.deterministic.ContextSymbolExtractor;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -41,6 +42,11 @@ public class JavaIndexer implements LanguageIndexer {
 
     public JavaIndexer(ContextSymbolExtractor contextSymbolExtractor) {
         this.contextSymbolExtractor = contextSymbolExtractor;
+    }
+
+    @Override
+    public IndexerProfile profile() {
+        return IndexerProfile.SPRING_JAVA;
     }
 
     @Override

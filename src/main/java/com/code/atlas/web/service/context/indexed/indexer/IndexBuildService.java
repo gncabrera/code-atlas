@@ -4,6 +4,7 @@ import com.code.atlas.web.domain.DatabaseIndexEntry;
 import com.code.atlas.web.domain.EndpointIndexEntry;
 import com.code.atlas.web.domain.FrontendIndexEntry;
 import com.code.atlas.web.domain.GraphEdgeEntry;
+import com.code.atlas.web.domain.IndexerProfile;
 import com.code.atlas.web.domain.Project;
 import com.code.atlas.web.domain.ProjectFileIndex;
 import com.code.atlas.web.domain.SymbolIndexEntry;
@@ -93,7 +94,7 @@ public class IndexBuildService {
         if (!Files.isRegularFile(filePath)) {
             return false;
         }
-        LanguageIndexer indexer = resolveIndexer(entry.getFileExtension());
+        LanguageIndexer indexer = resolveIndexer(entry.getFileExtension(), project.getIndexerProfiles());
         if (indexer == null) {
             return false;
         }
@@ -108,9 +109,9 @@ public class IndexBuildService {
         }
     }
 
-    private LanguageIndexer resolveIndexer(String extension) {
+    private LanguageIndexer resolveIndexer(String extension, Set<IndexerProfile> profiles) {
         for (LanguageIndexer indexer : languageIndexers) {
-            if (indexer.supports(extension)) {
+            if (profiles.contains(indexer.profile()) && indexer.supports(extension)) {
                 return indexer;
             }
         }

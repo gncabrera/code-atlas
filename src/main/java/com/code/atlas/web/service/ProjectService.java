@@ -1,5 +1,6 @@
 package com.code.atlas.web.service;
 
+import com.code.atlas.web.domain.IndexerProfile;
 import com.code.atlas.web.domain.Project;
 import com.code.atlas.web.repository.ProjectRepository;
 import com.code.atlas.web.service.dto.ProjectRequestDto;
@@ -10,7 +11,10 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -37,18 +41,21 @@ public class ProjectService {
     @Transactional
     public ProjectResponseDto createProject(ProjectRequestDto requestDto) {
         Path normalizedPath = validateAndNormalizePath(requestDto.path());
+        Set<IndexerProfile> profiles = resolveProfiles(requestDto.indexerProfiles());
         Project project = new Project();
         project.setPath(normalizedPath.toString());
         project.setName(requestDto.name().trim());
         project.setDescription(requestDto.description().trim());
         project.setUseAgentsFile(requestDto.useAgentsFile());
         project.setUseDesignFile(requestDto.useDesignFile());
+        project.setIndexerProfiles(profiles);
         return toResponseDto(projectRepository.save(project));
     }
 
     @Transactional
     public ProjectResponseDto updateProject(Long id, ProjectRequestDto requestDto) {
         Path normalizedPath = validateAndNormalizePath(requestDto.path());
+        Set<IndexerProfile> profiles = resolveProfiles(requestDto.indexerProfiles());
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Project not found for id: " + id));
         project.setPath(normalizedPath.toString());
@@ -56,6 +63,7 @@ public class ProjectService {
         project.setDescription(requestDto.description().trim());
         project.setUseAgentsFile(requestDto.useAgentsFile());
         project.setUseDesignFile(requestDto.useDesignFile());
+        project.setIndexerProfiles(profiles);
         return toResponseDto(projectRepository.save(project));
     }
 
@@ -71,6 +79,30 @@ public class ProjectService {
                 .orElseThrow(() -> new IllegalArgumentException("Project not found for id: " + id));
     }
 
+    private Set<IndexerProfile> resolveProfiles(List<String> rawProfiles) {
+        Set<IndexerProfile> profiles = new LinkedHashSet<>();
+        if (rawProfiles != null) {
+            for (String raw : rawProfiles) {
+                if (raw == null || raw.isBlank()) {
+                    continue;
+                }
+                try {
+                    profiles.add(IndexerProfile.valueOf(raw.trim().toUpperCase(Locale.ROOT)));
+                } catch (IllegalArgumentException ex) {
+                    throw new IllegalArgumentException("Unknown indexer profile: " + raw);
+                }
+            }
+        }
+        if (profiles.isEmpty()) {
+            throw new IllegalArgumentException("At least one indexer profile is required.");
+        }
+        List<String> conflicts = IndexerProfile.conflicts(profiles);
+        if (!conflicts.isEmpty()) {
+            throw new IllegalArgumentException("Conflicting indexer profiles: " + String.join("; ", conflicts));
+        }
+        return profiles;
+    }
+
     private Path validateAndNormalizePath(String rawPath) {
         Path normalizedPath = Paths.get(rawPath.trim()).normalize();
         if (!Files.exists(normalizedPath)) {
@@ -80,13 +112,18 @@ public class ProjectService {
     }
 
     private ProjectResponseDto toResponseDto(Project project) {
+        List<String> profiles = project.getIndexerProfiles().stream()
+                .map(Enum::name)
+                .sorted()
+                .toList();
         return new ProjectResponseDto(
                 project.getId(),
                 project.getPath(),
                 project.getName(),
                 project.getDescription(),
                 project.isUseAgentsFile(),
-                project.isUseDesignFile()
+                project.isUseDesignFile(),
+                profiles
         );
     }
 

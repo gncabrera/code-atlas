@@ -1,5 +1,6 @@
 package com.code.atlas.web.service.context.indexed.indexer;
 
+import com.code.atlas.web.domain.IndexerProfile;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -7,6 +8,11 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class ThymeleafStaticIndexer implements LanguageIndexer {
+
+    @Override
+    public IndexerProfile profile() {
+        return IndexerProfile.THYMELEAF;
+    }
 
     @Override
     public boolean supports(String extension) {

@@ -7,7 +7,7 @@ import java.util.Set;
 public final class ContextFileSupport {
 
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of(
-            "java", "sql", "xml", "yml", "yaml", "properties", "md", "html", "js", "ts", "json"
+            "java", "sql", "xml", "yml", "yaml", "properties", "md", "html", "js", "ts", "json", "scss", "css"
     );
     private static final Set<String> EXCLUDED_DIRECTORIES = Set.of(
             ".git", ".idea", ".cursor", "target", "build", "node_modules", ".mvn", ".gradle"
@@ -47,6 +47,8 @@ public final class ContextFileSupport {
             case "xml" -> "xml";
             case "html" -> "html";
             case "json" -> "json";
+            case "scss" -> "scss";
+            case "css" -> "css";
             default -> "text";
         };
     }

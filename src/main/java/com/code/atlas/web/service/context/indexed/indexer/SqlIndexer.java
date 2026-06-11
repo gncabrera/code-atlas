@@ -1,5 +1,6 @@
 package com.code.atlas.web.service.context.indexed.indexer;
 
+import com.code.atlas.web.domain.IndexerProfile;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -16,6 +17,11 @@ public class SqlIndexer implements LanguageIndexer {
             "CREATE\\s+TABLE\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?([A-Za-z0-9_\"']+)",
             Pattern.CASE_INSENSITIVE
     );
+
+    @Override
+    public IndexerProfile profile() {
+        return IndexerProfile.SPRING_FLYWAY;
+    }
 
     @Override
     public boolean supports(String extension) {
