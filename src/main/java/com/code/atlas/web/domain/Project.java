@@ -43,11 +43,4 @@ public class Project {
 
     @Column(name = "use_design_file", nullable = false)
     private boolean useDesignFile = true;
-
-    // EAGER: small set, read outside transactions when mapping response DTOs and during index routing.
-    @ElementCollection(fetch = FetchType.EAGER)
-    @CollectionTable(name = "project_indexer_types", joinColumns = @JoinColumn(name = "project_id"))
-    @Column(name = "profile", nullable = false)
-    @Enumerated(EnumType.STRING)
-    private Set<IndexerProfile> indexerProfiles = new LinkedHashSet<>();
 }

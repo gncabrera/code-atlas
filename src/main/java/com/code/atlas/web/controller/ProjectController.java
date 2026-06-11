@@ -103,7 +103,7 @@ public class ProjectController extends BaseRestController {
             Project project = projectService.getProjectEntity(id);
             AIModel aiModel = aiModelService.getModelEntity(requestDto.aiModelId());
             projectIndexService.refreshIndex(project, "offline");
-            indexBuilderService.regenerate(project, aiModel);
+            //indexBuilderService.regenerate(project, aiModel);
             return ResponseEntity.ok(ApiResponse.success("Offline indices regenerated.", null));
         } catch (Exception ex) {
             return handledException("POST /api/projects/{id}/index/offline", ex);
@@ -119,7 +119,7 @@ public class ProjectController extends BaseRestController {
             Project project = projectService.getProjectEntity(id);
             AIModel aiModel = aiModelService.getModelEntity(requestDto.aiModelId());
             projectIndexService.refreshIndex(project, "offline");
-            indexBuilderService.regenerateIncremental(project, aiModel);
+            //indexBuilderService.regenerateIncremental(project, aiModel);
             return ResponseEntity.ok(ApiResponse.success("Offline indices regenerated incrementally.", null));
         } catch (Exception ex) {
             return handledException("POST /api/projects/{id}/index/offline/incremental", ex);

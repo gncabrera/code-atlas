@@ -81,11 +81,6 @@ public class ProjectIndexService {
             }
             pipelineLogger.stepComplete(project, phase, 1, 2, "Scan project files and refresh file index", elapsedMs(started));
             pipelineLogger.message(project, phase, "Indexed " + activeRelativePaths.size() + " project files");
-
-            long rebuildStarted = System.nanoTime();
-            pipelineLogger.stepStart(project, phase, 2, 2, "Rebuild summaries");
-            // TODO: rebuildSummaries
-            pipelineLogger.stepComplete(project, phase, 2, 2, "Rebuild summaries", elapsedMs(rebuildStarted));
         } catch (RuntimeException ex) {
             pipelineLogger.stepFailed(project, phase, 1, 2, "Refresh file index", elapsedMs(started), ex.getMessage());
             throw ex;
@@ -102,14 +97,8 @@ public class ProjectIndexService {
             return List.of();
         }
         return entries.stream()
-                .sorted(Comparator.comparingInt((ProjectFileIndex entry) -> scoreIndexEntry(entry, query)).reversed())
                 .limit(limit)
                 .toList();
-    }
-
-    private int scoreIndexEntry(ProjectFileIndex entry, ContextQuery query) {
-        //TODO: implement it
-        return 0;
     }
 
     public boolean isStale(Project project) {

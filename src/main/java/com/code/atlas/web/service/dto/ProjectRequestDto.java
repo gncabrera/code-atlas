@@ -7,8 +7,7 @@ public record ProjectRequestDto(
         String name,
         String description,
         boolean useAgentsFile,
-        boolean useDesignFile,
-        List<String> indexerProfiles
+        boolean useDesignFile
 ) {
     public ProjectRequestDto {
         if (path == null || path.isBlank()) {
@@ -17,6 +16,5 @@ public record ProjectRequestDto(
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("Project name is required.");
         }
-        indexerProfiles = indexerProfiles == null ? List.of() : List.copyOf(indexerProfiles);
     }
 }

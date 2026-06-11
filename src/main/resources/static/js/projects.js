@@ -30,10 +30,6 @@ CodeAtlas.initCrudPage({
         $("#projectDescription").val(project.description);
         $("#projectUseAgentsFile").prop("checked", project.useAgentsFile);
         $("#projectUseDesignFile").prop("checked", project.useDesignFile);
-        const profiles = project.indexerProfiles || [];
-        $(".project-profile").each(function () {
-            $(this).prop("checked", profiles.indexOf($(this).val()) !== -1);
-        });
     },
     buildPayload: function () {
         const profiles = [];
@@ -45,8 +41,7 @@ CodeAtlas.initCrudPage({
             path: $("#projectPath").val().trim(),
             description: $("#projectDescription").val().trim(),
             useAgentsFile: $("#projectUseAgentsFile").is(":checked"),
-            useDesignFile: $("#projectUseDesignFile").is(":checked"),
-            indexerProfiles: profiles
+            useDesignFile: $("#projectUseDesignFile").is(":checked")
         };
     },
     validateSave: function () {
@@ -62,12 +57,6 @@ CodeAtlas.initCrudPage({
         if (!description) {
             return "Description is required.";
         }
-        if ($(".project-profile:checked").length === 0) {
-            return "Select at least one indexer profile.";
-        }
-        if ($("#profileThymeleaf").is(":checked") && $("#profileAngular").is(":checked")) {
-            return "Thymeleaf and Angular conflict (both index html).";
-        }
         return null;
     },
     renderColumns: function (project) {
@@ -76,8 +65,7 @@ CodeAtlas.initCrudPage({
             $("<td></td>").text(project.path),
             $("<td></td>").text(project.description),
             $("<td></td>").text(project.useAgentsFile ? "Yes" : "No"),
-            $("<td></td>").text(project.useDesignFile ? "Yes" : "No"),
-            $("<td></td>").text((project.indexerProfiles || []).join(", "))
+            $("<td></td>").text(project.useDesignFile ? "Yes" : "No")
         ];
     }
 });

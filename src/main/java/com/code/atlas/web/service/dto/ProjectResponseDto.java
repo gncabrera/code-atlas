@@ -8,7 +8,6 @@ public record ProjectResponseDto(
         String name,
         String description,
         boolean useAgentsFile,
-        boolean useDesignFile,
-        List<String> indexerProfiles
+        boolean useDesignFile
 ) {
 }
