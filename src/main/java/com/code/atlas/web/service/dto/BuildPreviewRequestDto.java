@@ -1,6 +1,6 @@
 package com.code.atlas.web.service.dto;
 
-import com.code.atlas.web.service.context.indexed.ContextStrategy;
+import com.code.atlas.web.domain.ContextStrategy;
 
 public record BuildPreviewRequestDto(
         Long projectId,

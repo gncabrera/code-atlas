@@ -306,4 +306,11 @@ public class GitProcessRunner {
         String osName = System.getProperty("os.name", "").toLowerCase();
         return osName.contains("win") ? "NUL" : "/dev/null";
     }
+
+    public void assertGitRepository(Path projectRoot) {
+        String result = run(projectRoot, List.of("git", "rev-parse", "--is-inside-work-tree"));
+        if (!"true".equalsIgnoreCase(result.trim())) {
+            throw new IllegalArgumentException("Project path is not a git repository: " + projectRoot);
+        }
+    }
 }

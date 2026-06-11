@@ -17,7 +17,6 @@ import org.springframework.stereotype.Service;
 @Service
 public class CommitHelperService {
 
-    private static final String COMMIT_TEMPLATE_PATH = "prompts/commit-message.md";
     private static final String DIFF_PARAMETER_KEY = "DIFF";
     private static final String TRUNCATION_SUFFIX = "\n\n[diff truncated]";
     private static final String COMMIT_HELPER_NOTES = "Commit Helper";
@@ -38,7 +37,7 @@ public class CommitHelperService {
         this.aiModelService = aiModelService;
         this.gitProcessRunner = gitProcessRunner;
         this.promptFormatService = promptFormatService;
-        this.commitTemplate = loadCommitTemplate();
+        this.commitTemplate = PromptTemplateService.load(PromptTemplate.COMMIT_MESSAGE);
     }
 
     public CommitHelperMetadataDto getMetadata(Long projectId) {
@@ -51,17 +50,17 @@ public class CommitHelperService {
     }
 
     String resolveCurrentBranch(Long projectId) {
-        Path projectRoot = resolveProjectRoot(projectService.getProjectEntity(projectId));
-        assertGitRepository(projectRoot);
+        Path projectRoot = projectService.resolveProjectRoot(projectService.getProjectEntity(projectId));
+        gitProcessRunner.assertGitRepository(projectRoot);
         return gitProcessRunner.run(projectRoot, List.of("git", "rev-parse", "--abbrev-ref", "HEAD")).trim();
     }
 
     public String generateCommitMessage(Long projectId, Long aiModelId) {
         Project project = projectService.getProjectEntity(projectId);
         AIModel model = aiModelService.getModelEntity(aiModelId);
-        Path projectRoot = resolveProjectRoot(project);
+        Path projectRoot = projectService.resolveProjectRoot(project);
 
-        assertGitRepository(projectRoot);
+        gitProcessRunner.assertGitRepository(projectRoot);
         String diff = gitProcessRunner.collectWorkingTreeDiff(projectRoot);
         if (diff.isBlank()) {
             throw new IllegalArgumentException("No uncommitted changes found for project.");
@@ -75,16 +74,16 @@ public class CommitHelperService {
 
     public void executeCommit(Long projectId, String message) {
         message = cleanMessage(message);
-        Path projectRoot = resolveProjectRoot(projectService.getProjectEntity(projectId));
-        assertGitRepository(projectRoot);
+        Path projectRoot = projectService.resolveProjectRoot(projectService.getProjectEntity(projectId));
+        gitProcessRunner.assertGitRepository(projectRoot);
         gitProcessRunner.run(projectRoot, List.of("git", "add", "-A"));
         gitProcessRunner.run(projectRoot, List.of("git", "commit", "-m", message.trim()));
     }
 
     public void executeCommitAndPush(Long projectId, String message) {
         message = cleanMessage(message);
-        Path projectRoot = resolveProjectRoot(projectService.getProjectEntity(projectId));
-        assertGitRepository(projectRoot);
+        Path projectRoot = projectService.resolveProjectRoot(projectService.getProjectEntity(projectId));
+        gitProcessRunner.assertGitRepository(projectRoot);
         gitProcessRunner.run(projectRoot, List.of("git", "add", "-A"));
         gitProcessRunner.run(projectRoot, List.of("git", "commit", "-m", message.trim()));
         gitProcessRunner.pushCurrentBranch(projectRoot);
@@ -118,38 +117,5 @@ public class CommitHelperService {
         }
 
         return diff.substring(0, maxDiffChars - suffixLength) + TRUNCATION_SUFFIX;
-    }
-
-
-
-
-
-    private Path resolveProjectRoot(Project project) {
-        Path projectRoot = Paths.get(project.getPath()).normalize();
-        if (!Files.exists(projectRoot)) {
-            throw new IllegalArgumentException("Project path does not exist: " + projectRoot);
-        }
-        if (!Files.isDirectory(projectRoot)) {
-            throw new IllegalArgumentException("Project path is not a directory: " + projectRoot);
-        }
-        return projectRoot;
-    }
-
-    private void assertGitRepository(Path projectRoot) {
-        String result = gitProcessRunner.run(projectRoot, List.of("git", "rev-parse", "--is-inside-work-tree"));
-        if (!"true".equalsIgnoreCase(result.trim())) {
-            throw new IllegalArgumentException("Project path is not a git repository: " + projectRoot);
-        }
-    }
-
-    private String loadCommitTemplate() {
-        try (InputStream inputStream = CommitHelperService.class.getClassLoader().getResourceAsStream(COMMIT_TEMPLATE_PATH)) {
-            if (inputStream == null) {
-                throw new IllegalStateException("Commit template not found in classpath: " + COMMIT_TEMPLATE_PATH);
-            }
-            return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
-        } catch (IOException ex) {
-            throw new IllegalStateException("Failed reading commit template: " + COMMIT_TEMPLATE_PATH, ex);
-        }
     }
 }

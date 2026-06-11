@@ -21,7 +21,6 @@ import org.springframework.stereotype.Service;
 @Service
 public class CodeReviewService {
 
-    private static final String CODE_REVIEW_TEMPLATE_PATH = "prompts/code-review.md";
     private static final String CODE_REVIEW_NOTES = "Code Review";
     private static final String AGENTS_FILE_KEY = "AGENTS_FILE";
     private static final String DESIGN_FILE_KEY = "DESIGN_FILE";
@@ -51,14 +50,14 @@ public class CodeReviewService {
         this.promptFormatService = promptFormatService;
         this.promptContextService = promptContextService;
         this.objectMapper = objectMapper;
-        this.codeReviewTemplate = loadCodeReviewTemplate();
+        this.codeReviewTemplate = PromptTemplateService.load(PromptTemplate.CODE_REVIEW);
     }
 
     public CodeReviewMetadataDto getMetadata(Long projectId) {
         List<String> branches = List.of();
         if (projectId != null) {
-            Path projectRoot = resolveProjectRoot(projectService.getProjectEntity(projectId));
-            assertGitRepository(projectRoot);
+            Path projectRoot = projectService.resolveProjectRoot(projectService.getProjectEntity(projectId));
+            gitProcessRunner.assertGitRepository(projectRoot);
             branches = gitProcessRunner.listBranches(projectRoot);
         }
         return new CodeReviewMetadataDto(
@@ -82,8 +81,8 @@ public class CodeReviewService {
 
     public CodeReviewResponseDto runCurrentChangesCodeReview(Long projectId, Long modelId) {
         Project project = projectService.getProjectEntity(projectId);
-        Path projectRoot = resolveProjectRoot(project);
-        assertGitRepository(projectRoot);
+        Path projectRoot = projectService.resolveProjectRoot(project);
+        gitProcessRunner.assertGitRepository(projectRoot);
 
         String diff = gitProcessRunner.collectWorkingTreeDiff(projectRoot);
         if (diff.isBlank()) {
@@ -101,8 +100,8 @@ public class CodeReviewService {
         }
 
         Project project = projectService.getProjectEntity(projectId);
-        Path projectRoot = resolveProjectRoot(project);
-        assertGitRepository(projectRoot);
+        Path projectRoot = projectService.resolveProjectRoot(project);
+        gitProcessRunner.assertGitRepository(projectRoot);
 
         String diff = gitProcessRunner.diffBetweenBranches(projectRoot, normalizedBranchA, normalizedBranchB);
         if (diff.isBlank()) {
@@ -268,34 +267,5 @@ public class CodeReviewService {
 
     private String nullToEmpty(String value) {
         return value == null ? "" : value;
-    }
-
-    private Path resolveProjectRoot(Project project) {
-        Path projectRoot = Paths.get(project.getPath()).normalize();
-        if (!Files.exists(projectRoot)) {
-            throw new IllegalArgumentException("Project path does not exist: " + projectRoot);
-        }
-        if (!Files.isDirectory(projectRoot)) {
-            throw new IllegalArgumentException("Project path is not a directory: " + projectRoot);
-        }
-        return projectRoot;
-    }
-
-    private void assertGitRepository(Path projectRoot) {
-        String result = gitProcessRunner.run(projectRoot, List.of("git", "rev-parse", "--is-inside-work-tree"));
-        if (!"true".equalsIgnoreCase(result.trim())) {
-            throw new IllegalArgumentException("Project path is not a git repository: " + projectRoot);
-        }
-    }
-
-    private String loadCodeReviewTemplate() {
-        try (InputStream inputStream = CodeReviewService.class.getClassLoader().getResourceAsStream(CODE_REVIEW_TEMPLATE_PATH)) {
-            if (inputStream == null) {
-                throw new IllegalStateException("Code review template not found in classpath: " + CODE_REVIEW_TEMPLATE_PATH);
-            }
-            return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
-        } catch (IOException ex) {
-            throw new IllegalStateException("Failed reading code review template: " + CODE_REVIEW_TEMPLATE_PATH, ex);
-        }
     }
 }

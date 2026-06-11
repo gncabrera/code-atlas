@@ -26,7 +26,6 @@ import org.springframework.stereotype.Service;
 @Service
 public class ChangelogBuilderService {
 
-    private static final String CHANGELOG_TEMPLATE_PATH = "prompts/changelog-builder.md";
     private static final String CHANGELOG_NOTES = "Changelog Builder";
     private static final int COMMIT_LOG_LIMIT = 100;
     private static final String DIFFS_KEY = "DIFFS";
@@ -51,18 +50,18 @@ public class ChangelogBuilderService {
         this.aiModelService = aiModelService;
         this.promptFormatService = promptFormatService;
         this.objectMapper = objectMapper;
-        this.changelogTemplate = loadChangelogTemplate();
+        this.changelogTemplate = PromptTemplateService.load(PromptTemplate.CHANGELOG_BUILDER);
     }
 
     public List<String> getBranches(Long projectId) {
-        Path projectRoot = resolveProjectRoot(projectService.getProjectEntity(projectId));
-        assertGitRepository(projectRoot);
+        Path projectRoot = projectService.resolveProjectRoot(projectService.getProjectEntity(projectId));
+        gitProcessRunner.assertGitRepository(projectRoot);
         return gitProcessRunner.listBranches(projectRoot);
     }
 
     public List<GitCommitDto> getCommits(Long projectId, String branch) {
-        Path projectRoot = resolveProjectRoot(projectService.getProjectEntity(projectId));
-        assertGitRepository(projectRoot);
+        Path projectRoot = projectService.resolveProjectRoot(projectService.getProjectEntity(projectId));
+        gitProcessRunner.assertGitRepository(projectRoot);
 
         List<String[]> rawCommits = gitProcessRunner.listCommits(projectRoot, branch, COMMIT_LOG_LIMIT);
         LocalDate today = LocalDate.now();
@@ -96,8 +95,8 @@ public class ChangelogBuilderService {
     public ChangelogBuilderResponseDto generateChangelog(ChangelogBuilderRequestDto request) {
         Project project = projectService.getProjectEntity(request.projectId());
         AIModel model = aiModelService.getModelEntity(request.modelId());
-        Path projectRoot = resolveProjectRoot(project);
-        assertGitRepository(projectRoot);
+        Path projectRoot = projectService.resolveProjectRoot(project);
+        gitProcessRunner.assertGitRepository(projectRoot);
 
         StringBuilder diffsBuilder = new StringBuilder();
         for (String hash : request.commitHashes()) {
@@ -140,35 +139,5 @@ public class ChangelogBuilderService {
                     Format the changelog field as plain text with simple section labels and hyphen bullets.
                     No Markdown, no special formatting characters.""";
         };
-    }
-
-    private Path resolveProjectRoot(Project project) {
-        Path projectRoot = Paths.get(project.getPath()).normalize();
-        if (!Files.exists(projectRoot)) {
-            throw new IllegalArgumentException("Project path does not exist: " + projectRoot);
-        }
-        if (!Files.isDirectory(projectRoot)) {
-            throw new IllegalArgumentException("Project path is not a directory: " + projectRoot);
-        }
-        return projectRoot;
-    }
-
-    private void assertGitRepository(Path projectRoot) {
-        String result = gitProcessRunner.run(projectRoot, List.of("git", "rev-parse", "--is-inside-work-tree"));
-        if (!"true".equalsIgnoreCase(result.trim())) {
-            throw new IllegalArgumentException("Project path is not a git repository: " + projectRoot);
-        }
-    }
-
-    private String loadChangelogTemplate() {
-        try (InputStream inputStream = ChangelogBuilderService.class.getClassLoader()
-                .getResourceAsStream(CHANGELOG_TEMPLATE_PATH)) {
-            if (inputStream == null) {
-                throw new IllegalStateException("Changelog template not found in classpath: " + CHANGELOG_TEMPLATE_PATH);
-            }
-            return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8);
-        } catch (IOException ex) {
-            throw new IllegalStateException("Failed reading changelog template: " + CHANGELOG_TEMPLATE_PATH, ex);
-        }
     }
 }

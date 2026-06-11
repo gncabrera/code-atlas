@@ -6,7 +6,7 @@ import com.code.atlas.web.domain.Project;
 import com.code.atlas.web.service.AIModelService;
 import com.code.atlas.web.service.ProjectIndexService;
 import com.code.atlas.web.service.ProjectService;
-import com.code.atlas.web.service.context.indexed.offline.OfflineIndexService;
+import com.code.atlas.web.service.context.indexed.IndexBuilderService;
 import com.code.atlas.web.service.dto.OfflineIndexRequestDto;
 import com.code.atlas.web.service.dto.ProjectRequestDto;
 import com.code.atlas.web.service.dto.ProjectResponseDto;
@@ -29,18 +29,18 @@ public class ProjectController extends BaseRestController {
 
     private final ProjectService projectService;
     private final ProjectIndexService projectIndexService;
-    private final OfflineIndexService offlineIndexService;
+    private final IndexBuilderService indexBuilderService;
     private final AIModelService aiModelService;
 
     public ProjectController(
             ProjectService projectService,
             ProjectIndexService projectIndexService,
-            OfflineIndexService offlineIndexService,
+            IndexBuilderService indexBuilderService,
             AIModelService aiModelService
     ) {
         this.projectService = projectService;
         this.projectIndexService = projectIndexService;
-        this.offlineIndexService = offlineIndexService;
+        this.indexBuilderService = indexBuilderService;
         this.aiModelService = aiModelService;
     }
 
@@ -103,7 +103,7 @@ public class ProjectController extends BaseRestController {
             Project project = projectService.getProjectEntity(id);
             AIModel aiModel = aiModelService.getModelEntity(requestDto.aiModelId());
             projectIndexService.refreshIndex(project, "offline");
-            offlineIndexService.regenerate(project, aiModel);
+            indexBuilderService.regenerate(project, aiModel);
             return ResponseEntity.ok(ApiResponse.success("Offline indices regenerated.", null));
         } catch (Exception ex) {
             return handledException("POST /api/projects/{id}/index/offline", ex);
@@ -119,7 +119,7 @@ public class ProjectController extends BaseRestController {
             Project project = projectService.getProjectEntity(id);
             AIModel aiModel = aiModelService.getModelEntity(requestDto.aiModelId());
             projectIndexService.refreshIndex(project, "offline");
-            offlineIndexService.regenerateIncremental(project, aiModel);
+            indexBuilderService.regenerateIncremental(project, aiModel);
             return ResponseEntity.ok(ApiResponse.success("Offline indices regenerated incrementally.", null));
         } catch (Exception ex) {
             return handledException("POST /api/projects/{id}/index/offline/incremental", ex);

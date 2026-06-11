@@ -6,7 +6,6 @@ import com.code.atlas.web.service.context.deterministic.ContextFileSupport;
 import com.code.atlas.web.service.context.deterministic.ContextQuery;
 import com.code.atlas.web.service.context.deterministic.ContextSymbolExtractor;
 import com.code.atlas.web.service.context.indexed.ContextPipelineLogger;
-import com.code.atlas.web.service.context.indexed.indexer.IndexBuildService;
 import com.code.atlas.web.repository.ProjectFileIndexRepository;
 import jakarta.transaction.Transactional;
 import java.io.IOException;
@@ -35,21 +34,15 @@ import org.springframework.stereotype.Service;
 public class ProjectIndexService {
 
     private final ProjectFileIndexRepository projectFileIndexRepository;
-    private final ContextSymbolExtractor contextSymbolExtractor;
-    private final IndexBuildService indexBuildService;
     private final ContextPipelineLogger pipelineLogger;
     private final Duration maxAge;
 
     public ProjectIndexService(
             ProjectFileIndexRepository projectFileIndexRepository,
-            ContextSymbolExtractor contextSymbolExtractor,
-            IndexBuildService indexBuildService,
             ContextPipelineLogger pipelineLogger,
             @Value("${codeatlas.context.index-max-age-minutes:30}") long maxAgeMinutes
     ) {
         this.projectFileIndexRepository = projectFileIndexRepository;
-        this.contextSymbolExtractor = contextSymbolExtractor;
-        this.indexBuildService = indexBuildService;
         this.pipelineLogger = pipelineLogger;
         this.maxAge = Duration.ofMinutes(Math.max(1, maxAgeMinutes));
     }
@@ -90,9 +83,9 @@ public class ProjectIndexService {
             pipelineLogger.message(project, phase, "Indexed " + activeRelativePaths.size() + " project files");
 
             long rebuildStarted = System.nanoTime();
-            pipelineLogger.stepStart(project, phase, 2, 2, "Rebuild structural indices");
-            indexBuildService.rebuildProject(project, phase);
-            pipelineLogger.stepComplete(project, phase, 2, 2, "Rebuild structural indices", elapsedMs(rebuildStarted));
+            pipelineLogger.stepStart(project, phase, 2, 2, "Rebuild summaries");
+            // TODO: rebuildSummaries
+            pipelineLogger.stepComplete(project, phase, 2, 2, "Rebuild summaries", elapsedMs(rebuildStarted));
         } catch (RuntimeException ex) {
             pipelineLogger.stepFailed(project, phase, 1, 2, "Refresh file index", elapsedMs(started), ex.getMessage());
             throw ex;
@@ -112,6 +105,11 @@ public class ProjectIndexService {
                 .sorted(Comparator.comparingInt((ProjectFileIndex entry) -> scoreIndexEntry(entry, query)).reversed())
                 .limit(limit)
                 .toList();
+    }
+
+    private int scoreIndexEntry(ProjectFileIndex entry, ContextQuery query) {
+        //TODO: implement it
+        return 0;
     }
 
     public boolean isStale(Project project) {
@@ -138,9 +136,6 @@ public class ProjectIndexService {
                 return;
             }
             String extension = ContextFileSupport.extensionOf(filePath.getFileName().toString());
-            List<String> symbols = contextSymbolExtractor.extractSymbols(content, extension, 12);
-            List<String> endpointHints = contextSymbolExtractor.extractEndpointHints(content, 8);
-            String searchableText = buildSearchableText(relativePath, content, symbols, endpointHints);
 
             ProjectFileIndex entity = existing == null ? new ProjectFileIndex() : existing;
             entity.setProject(project);
@@ -149,42 +144,11 @@ public class ProjectIndexService {
             entity.setLastModifiedEpoch(lastModified);
             entity.setContentHash(contentHash);
             entity.setTokenCount((content.length() + 3) / 4);
-            entity.setSymbols(String.join(",", symbols));
-            entity.setEndpointHints(String.join(",", endpointHints));
-            entity.setSearchableText(searchableText);
             entity.setUpdatedAt(LocalDateTime.now());
             projectFileIndexRepository.save(entity);
         } catch (IOException ex) {
             // Skip unreadable files and keep index refresh resilient.
         }
-    }
-
-    private int scoreIndexEntry(ProjectFileIndex entry, ContextQuery query) {
-        String searchableText = entry.getSearchableText().toLowerCase(Locale.ROOT);
-        int score = 0;
-        for (String keyword : query.keywords()) {
-            String normalizedKeyword = keyword.toLowerCase(Locale.ROOT);
-            if (entry.getFilePath().toLowerCase(Locale.ROOT).contains(normalizedKeyword)) {
-                score += 8;
-            }
-            if (searchableText.contains(normalizedKeyword)) {
-                score += 5;
-            }
-        }
-        if (query.hasEndpoint()) {
-            String endpoint = query.endpointMethod() + " " + query.endpointPath();
-            if (entry.getEndpointHints().toLowerCase(Locale.ROOT).contains(endpoint.toLowerCase(Locale.ROOT))) {
-                score += 40;
-            } else if (searchableText.contains(query.endpointPath().toLowerCase(Locale.ROOT))) {
-                score += 20;
-            }
-        }
-        for (String area : query.focusAreas()) {
-            if (entry.getFilePath().toLowerCase(Locale.ROOT).contains(area.toLowerCase(Locale.ROOT))) {
-                score += 15;
-            }
-        }
-        return score;
     }
 
     private List<Path> collectRelevantFiles(Path projectRoot) {
@@ -197,22 +161,6 @@ public class ProjectIndexService {
         } catch (IOException ex) {
             return List.of();
         }
-    }
-
-    private String buildSearchableText(
-            String relativePath,
-            String content,
-            List<String> symbols,
-            List<String> endpointHints
-    ) {
-        int limit = Math.min(content.length(), 4000);
-        String contentSample = content.substring(0, limit);
-        Set<String> tokens = new LinkedHashSet<>();
-        tokens.add(relativePath);
-        tokens.add(contentSample);
-        tokens.add(String.join(" ", symbols));
-        tokens.add(String.join(" ", endpointHints));
-        return String.join(" ", tokens).toLowerCase(Locale.ROOT);
     }
 
     private String hash(String input) {

@@ -8,7 +8,7 @@ import static org.mockito.Mockito.when;
 import com.code.atlas.web.domain.AIModel;
 import com.code.atlas.web.domain.PromptOptimizerMode;
 import com.code.atlas.web.domain.Project;
-import com.code.atlas.web.service.context.indexed.ContextStrategy;
+import com.code.atlas.web.domain.ContextStrategy;
 import com.code.atlas.web.service.dto.BuildPreviewRequestDto;
 import com.code.atlas.web.service.dto.BuildPreviewResponseDto;
 import org.junit.jupiter.api.BeforeEach;

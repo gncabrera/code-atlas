@@ -3,7 +3,10 @@ CREATE TABLE IF NOT EXISTS user_preferences (
     prompt_optimizer_default_ai_model_id INTEGER NOT NULL DEFAULT 0,
     prompt_optimizer_default_prompt_mode_id INTEGER NOT NULL DEFAULT 0,
     commit_helper_default_ai_model_id INTEGER NOT NULL DEFAULT 0,
-    code_review_default_ai_model_id INTEGER NOT NULL DEFAULT 0
+    code_review_default_ai_model_id INTEGER NOT NULL DEFAULT 0,
+    prompt_optimizer_default_context_strategy TEXT NOT NULL DEFAULT 'deterministic',
+    prompt_optimizer_default_context_ai_model_id INTEGER NOT NULL DEFAULT 0,
+    changelog_builder_default_ai_model_id INTEGER NOT NULL DEFAULT 0
 );
 
 INSERT INTO user_preferences (

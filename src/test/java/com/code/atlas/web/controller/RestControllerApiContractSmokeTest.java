@@ -9,7 +9,7 @@ import com.code.atlas.web.service.CodeReviewService;
 import com.code.atlas.web.service.CommitHelperService;
 import com.code.atlas.web.service.ProjectService;
 import com.code.atlas.web.service.ProjectIndexService;
-import com.code.atlas.web.service.context.indexed.offline.OfflineIndexService;
+import com.code.atlas.web.service.context.indexed.IndexBuilderService;
 import com.code.atlas.web.service.PromptHistoryService;
 import com.code.atlas.web.service.PromptOptimizerModeService;
 import com.code.atlas.web.service.PromptService;
@@ -17,7 +17,7 @@ import com.code.atlas.web.service.SkillService;
 import com.code.atlas.web.service.dto.CodeReviewMetadataDto;
 import com.code.atlas.web.service.dto.CommitHelperMetadataDto;
 import com.code.atlas.web.service.dto.LogTailResponse;
-import com.code.atlas.web.service.dto.PromptPageMetadataDto;
+
 import java.util.List;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -55,7 +55,7 @@ class RestControllerApiContractSmokeTest {
         private ProjectIndexService projectIndexService;
 
         @MockBean
-        private OfflineIndexService offlineIndexService;
+        private IndexBuilderService indexBuilderService;
 
         @MockBean
         private AIModelService aiModelService;

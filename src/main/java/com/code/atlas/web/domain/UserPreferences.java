@@ -1,6 +1,5 @@
 package com.code.atlas.web.domain;
 
-import com.code.atlas.web.service.context.indexed.ContextStrategy;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;

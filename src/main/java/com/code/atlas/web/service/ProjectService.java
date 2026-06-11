@@ -181,4 +181,15 @@ public class ProjectService {
             return "No DESIGN.md found";
         }
     }
+
+    public Path resolveProjectRoot(Project project) {
+        Path projectRoot = Paths.get(project.getPath()).normalize();
+        if (!Files.exists(projectRoot)) {
+            throw new IllegalArgumentException("Project path does not exist: " + projectRoot);
+        }
+        if (!Files.isDirectory(projectRoot)) {
+            throw new IllegalArgumentException("Project path is not a directory: " + projectRoot);
+        }
+        return projectRoot;
+    }
 }

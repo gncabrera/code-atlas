@@ -42,15 +42,6 @@ public class ProjectFileIndex {
     @Column(name = "token_count", nullable = false)
     private int tokenCount;
 
-    @Column(name = "symbols", nullable = false, columnDefinition = "TEXT")
-    private String symbols;
-
-    @Column(name = "endpoint_hints", nullable = false, columnDefinition = "TEXT")
-    private String endpointHints;
-
-    @Column(name = "searchable_text", nullable = false, columnDefinition = "TEXT")
-    private String searchableText;
-
     @Convert(converter = SqliteLocalDateTimeConverter.class)
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
