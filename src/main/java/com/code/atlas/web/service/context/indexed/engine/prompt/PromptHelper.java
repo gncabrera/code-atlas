@@ -16,6 +16,35 @@ public class PromptHelper {
         this.projectFileMetadataIndexRepository = projectFileMetadataIndexRepository;
     }
 
+    public String formatMetadata(List<RetrievedFile> files) {
+        if (files.isEmpty()) {
+            return "No files retrieved.";
+        }
+        StringBuilder builder = new StringBuilder();
+        for (RetrievedFile retrievedFile : files) {
+            builder.append(formatMetadataBlock(retrievedFile));
+            builder.append("\n\n");
+        }
+        return builder.toString().trim();
+    }
+
+    private String formatMetadataBlock(RetrievedFile retrievedFile) {
+        StringBuilder builder = new StringBuilder();
+        builder.append("=== FILE START ===\n\n");
+        builder.append("filePath: ").append(retrievedFile.file().getFilePath()).append("\n\n");
+        builder.append("metadataJson:\n");
+        builder.append(resolveMetadataJson(retrievedFile.file().getId()));
+        builder.append("\n\n=== FILE END ===");
+        return builder.toString();
+    }
+
+    private String resolveMetadataJson(Long fileIndexId) {
+        return projectFileMetadataIndexRepository.findByFileId(fileIndexId)
+                .map(ProjectFileMetadataIndex::getMetadataJson)
+                .filter(json -> json != null && !json.isBlank())
+                .orElse("(no metadata)");
+    }
+
     public String formatFiles(List<RetrievedFile> files) {
         if (files.isEmpty()) {
             return "No files retrieved.";
@@ -45,16 +74,9 @@ public class PromptHelper {
         }
         builder.append("\nsnippet:\n");
         builder.append(retrievedFile.snippet().isBlank() ? "(no snippet)" : retrievedFile.snippet()).append("\n\n");
-        builder.append("metadataJson:\n");
-        builder.append(resolveMetadataJson(retrievedFile.file().getId()));
         builder.append("\n\n=== FILE END ===");
         return builder.toString();
     }
 
-    private String resolveMetadataJson(Long fileIndexId) {
-        return projectFileMetadataIndexRepository.findByFileId(fileIndexId)
-                .map(ProjectFileMetadataIndex::getMetadataJson)
-                .filter(json -> json != null && !json.isBlank())
-                .orElse("(no metadata)");
-    }
+
 }

@@ -30,7 +30,6 @@ public class PromptBuilder {
         appendSection(builder, "# Architecture Facts", knowledgeResult.architectureFacts());
         appendSection(builder, "# Relevant Files", formatFileList(knowledgeResult.files()));
         appendSection(builder, "# Code Snippets", formatSnippets(knowledgeResult.files()));
-        //return limitSize(builder.toString().trim());
         return builder.toString().trim();
     }
 

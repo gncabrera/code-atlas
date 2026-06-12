@@ -14,6 +14,10 @@ Original intent:
 
 {{INTENT}}
 
+Retrieved file metadata
+
+{{FILE_METADATA}}
+
 Retrieved files:
 
 {{RETRIEVED_FILES}}

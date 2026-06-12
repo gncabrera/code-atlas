@@ -56,6 +56,7 @@ public class MissingContextDetector {
                 "USER_REQUEST", userRequest,
                 "INTENT", IntentEngine.formatIntent(intent),
                 "RETRIEVED_FILES", promptHelper.formatFiles(contextResult.files()),
+                "FILE_METADATA", promptHelper.formatMetadata(contextResult.files()),
                 "AGENTS_FILE", agentsFileContent,
                 "DESIGN_FILE", designFileContent
         ));
