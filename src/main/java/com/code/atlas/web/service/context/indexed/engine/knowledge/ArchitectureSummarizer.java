@@ -1,4 +1,4 @@
-package com.code.atlas.web.service.context.indexed.step.s04_architecture;
+package com.code.atlas.web.service.context.indexed.engine.knowledge;
 
 import com.code.atlas.web.domain.AIModel;
 import com.code.atlas.web.domain.Project;

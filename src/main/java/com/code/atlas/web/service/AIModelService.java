@@ -3,6 +3,7 @@ package com.code.atlas.web.service;
 import com.code.atlas.web.domain.*;
 import com.code.atlas.web.repository.AIModelApiKeyRepository;
 import com.code.atlas.web.repository.AIModelRepository;
+import com.code.atlas.web.service.context.indexed.ContextPipelineLogger;
 import com.code.atlas.web.service.dto.*;
 import com.google.genai.Client;
 import com.google.genai.types.GenerateContentResponse;
@@ -171,7 +172,7 @@ public class AIModelService {
             promptHistoryService.success(history, outputText);
             if (logLlmCall) {
                 log.info("[Context][project={}] LLM — completed: {} ({} ms, estTokens={})",
-                        project.getId(), logLabel, elapsedMs(startedNanos), estimatedTokens);
+                        project.getId(), logLabel, ContextPipelineLogger.elapsedMs(startedNanos), estimatedTokens);
             }
             return new ModelResponseDto(outputText, estimatedTokens);
         } catch (Exception ex) {
@@ -179,7 +180,7 @@ public class AIModelService {
             promptHistoryService.error(history, errorDetail);
             if (logLlmCall) {
                 log.error("[Context][project={}] LLM — failed: {} ({} ms, model={}): {}",
-                        project.getId(), logLabel, elapsedMs(startedNanos), model.getName(), errorDetail, ex);
+                        project.getId(), logLabel, ContextPipelineLogger.elapsedMs(startedNanos), model.getName(), errorDetail, ex);
             } else {
                 log.error("Failed calling AI model (model={}, historyId={}): {}",
                         model.getName(), history.getId(), errorDetail, ex);
@@ -190,9 +191,7 @@ public class AIModelService {
         }
     }
 
-    private static long elapsedMs(long startedNanos) {
-        return (System.nanoTime() - startedNanos) / 1_000_000L;
-    }
+
 
     public static int estimateTokens(String input) {
         int characters = input == null ? 0 : input.length();

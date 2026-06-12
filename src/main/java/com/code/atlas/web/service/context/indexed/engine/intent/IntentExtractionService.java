@@ -1,4 +1,4 @@
-package com.code.atlas.web.service.context.indexed.step.s01_intent;
+package com.code.atlas.web.service.context.indexed.engine.intent;
 
 import com.code.atlas.web.domain.AIModel;
 import com.code.atlas.web.domain.Project;

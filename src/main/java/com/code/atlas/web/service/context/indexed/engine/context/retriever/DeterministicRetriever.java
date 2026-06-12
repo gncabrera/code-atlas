@@ -1,4 +1,4 @@
-package com.code.atlas.web.service.context.indexed.step.s02_retrieval;
+package com.code.atlas.web.service.context.indexed.engine.context.retriever;
 
 import com.code.atlas.web.domain.Project;
 import com.code.atlas.web.service.context.indexed.dto.ContextResult;

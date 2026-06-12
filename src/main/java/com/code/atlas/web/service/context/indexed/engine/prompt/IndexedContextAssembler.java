@@ -1,4 +1,4 @@
-package com.code.atlas.web.service.context.indexed.step.s05_assembler;
+package com.code.atlas.web.service.context.indexed.engine.prompt;
 
 import com.code.atlas.web.service.context.indexed.dto.Intent;
 import com.code.atlas.web.service.context.indexed.dto.KnowledgeResult;

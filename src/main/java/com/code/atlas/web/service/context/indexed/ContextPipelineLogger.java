@@ -26,4 +26,8 @@ public class ContextPipelineLogger {
     public void message(Project project, String phase, String text) {
         log.info("[Context][project={}][phase={}] {}", project.getId(), phase, text);
     }
+
+    public static long elapsedMs(long startedNanos) {
+        return (System.nanoTime() - startedNanos) / 1_000_000L;
+    }
 }

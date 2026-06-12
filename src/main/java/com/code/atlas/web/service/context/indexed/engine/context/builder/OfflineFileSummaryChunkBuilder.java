@@ -1,4 +1,4 @@
-package com.code.atlas.web.service.context.indexed.builder;
+package com.code.atlas.web.service.context.indexed.engine.context.builder;
 
 import com.code.atlas.web.domain.AIModel;
 import com.code.atlas.web.domain.Project;

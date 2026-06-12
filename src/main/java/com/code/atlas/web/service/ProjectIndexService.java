@@ -60,7 +60,7 @@ public class ProjectIndexService {
             Path projectRoot = Path.of(project.getPath()).normalize();
             if (!Files.exists(projectRoot)) {
                 projectFileIndexRepository.deleteByProjectId(project.getId());
-                pipelineLogger.stepComplete(project, phase, 1, 2, "Scan project files and refresh file index", elapsedMs(started));
+                pipelineLogger.stepComplete(project, phase, 1, 2, "Scan project files and refresh file index", ContextPipelineLogger.elapsedMs(started));
                 return;
             }
             List<Path> files = collectRelevantFiles(projectRoot);
@@ -79,16 +79,12 @@ public class ProjectIndexService {
             } else {
                 projectFileIndexRepository.deleteByProjectId(project.getId());
             }
-            pipelineLogger.stepComplete(project, phase, 1, 2, "Scan project files and refresh file index", elapsedMs(started));
+            pipelineLogger.stepComplete(project, phase, 1, 2, "Scan project files and refresh file index", ContextPipelineLogger.elapsedMs(started));
             pipelineLogger.message(project, phase, "Indexed " + activeRelativePaths.size() + " project files");
         } catch (RuntimeException ex) {
-            pipelineLogger.stepFailed(project, phase, 1, 2, "Refresh file index", elapsedMs(started), ex.getMessage());
+            pipelineLogger.stepFailed(project, phase, 1, 2, "Refresh file index", ContextPipelineLogger.elapsedMs(started), ex.getMessage());
             throw ex;
         }
-    }
-
-    private static long elapsedMs(long startedNanos) {
-        return (System.nanoTime() - startedNanos) / 1_000_000L;
     }
 
     public List<ProjectFileIndex> search(Project project, ContextQuery query, int limit) {
