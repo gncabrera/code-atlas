@@ -48,7 +48,7 @@ public class PromptBuilder {
         StringBuilder builder = new StringBuilder();
         int index = 1;
         for (RetrievedFile file : files) {
-            builder.append(index++).append(". ").append(file.relativePath())
+            builder.append(index++).append(". ").append(file.file().getFilePath())
                     .append(" (score=").append(file.score()).append(")\n");
             for (String reason : file.reasons()) {
                 builder.append("   - ").append(reason).append('\n');
@@ -63,7 +63,7 @@ public class PromptBuilder {
         }
         StringBuilder builder = new StringBuilder();
         for (RetrievedFile file : files) {
-            builder.append("## ").append(file.relativePath()).append("\n```")
+            builder.append("## ").append(file.file().getFilePath()).append("\n```")
                     .append(file.language()).append('\n');
             builder.append(file.snippet().isBlank() ? "// No snippet" : file.snippet()).append("\n```\n\n");
         }

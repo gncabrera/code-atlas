@@ -62,7 +62,7 @@ public class ArchitectureSummarizer {
         }
         StringBuilder builder = new StringBuilder();
         for (RetrievedFile file : files) {
-            builder.append("## ").append(file.relativePath())
+            builder.append("## ").append(file.file().getFilePath())
                     .append(" (score=").append(file.score()).append(")\n");
             for (String reason : file.reasons()) {
                 builder.append("- ").append(reason).append('\n');

@@ -4,7 +4,9 @@ import com.code.atlas.web.domain.*;
 import com.code.atlas.web.repository.AIModelApiKeyRepository;
 import com.code.atlas.web.repository.AIModelRepository;
 import com.code.atlas.web.service.context.indexed.ContextPipelineLogger;
+import com.code.atlas.web.service.context.indexed.dto.MissingContextResponse;
 import com.code.atlas.web.service.dto.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.genai.Client;
 import com.google.genai.types.GenerateContentResponse;
 import com.google.genai.types.HttpOptions;
@@ -22,18 +24,21 @@ public class AIModelService {
     private final AIModelApiKeyRepository aiModelApiKeyRepository;
     private final PromptHistoryService promptHistoryService;
     private final int timeoutSeconds;
+    private final ObjectMapper objectMapper;
+
 
 
     public AIModelService(
             AIModelRepository aiModelRepository,
             AIModelApiKeyRepository aiModelApiKeyRepository,
             PromptHistoryService promptHistoryService,
-            @Value("${codeatlas.gemini.timeout-seconds:60}") int timeoutSeconds
+            @Value("${codeatlas.gemini.timeout-seconds:60}") int timeoutSeconds, ObjectMapper objectMapper
     ) {
         this.aiModelRepository = aiModelRepository;
         this.aiModelApiKeyRepository = aiModelApiKeyRepository;
         this.promptHistoryService = promptHistoryService;
         this.timeoutSeconds = timeoutSeconds;
+        this.objectMapper = objectMapper;
     }
 
     public List<AIModelResponseDto> getAllModels() {
@@ -137,6 +142,14 @@ public class AIModelService {
         return sendToModel(project, model, prompt, notes, null);
     }
 
+    public <T> T sendToModel(Class<T> reponseClass, Project project, AIModel model, String prompt, String notes, String logLabel) {
+        String raw = sendToModel(project, model, prompt, notes, logLabel).reponse();
+        return JsonResponseExtractor.parseResponse(
+                raw,
+                reponseClass,
+                objectMapper
+        );
+    }
     @Transactional
     public ModelResponseDto sendToModel(Project project, AIModel model, String prompt, String notes, String logLabel) {
         if (!model.isEnabled()) {

@@ -62,7 +62,7 @@ public class DeterministicRetriever {
         int returnLimit = intent.confidence() < LOW_CONFIDENCE_THRESHOLD ? maxFiles * 2 : maxFiles;
         List<ScoredCandidate> selectedCandidates = scoredCandidates.stream()
                 .sorted(Comparator.comparingInt(ScoredCandidate::score).reversed()
-                        .thenComparing(ScoredCandidate::relativePath))
+                        .thenComparing(c -> c.file.getFilePath()))
                 .limit(returnLimit)
                 .toList();
 
@@ -88,7 +88,7 @@ public class DeterministicRetriever {
         String architecturalRole = metadata.architecturalRole() == null ? "" : metadata.architecturalRole().trim();
         String extension = ContextFileSupport.extensionOf(Path.of(relativePath).getFileName().toString());
         return new ScoredCandidate(
-                relativePath,
+                metadataRow.getFile(),
                 ContextFileSupport.languageByExtension(extension),
                 architecturalRole,
                 scoreResult.score(),
@@ -130,7 +130,7 @@ public class DeterministicRetriever {
         String snippet = extractSnippet(projectRoot, candidate);
         List<String> symbols = candidate.matchedSymbols().isEmpty() ? intent.symbols() : candidate.matchedSymbols();
         return new RetrievedFile(
-                candidate.relativePath(),
+                candidate.file(),
                 candidate.language(),
                 candidate.type(),
                 candidate.score(),
@@ -141,7 +141,7 @@ public class DeterministicRetriever {
     }
 
     private String extractSnippet(Path projectRoot, ScoredCandidate candidate) {
-        Path filePath = projectRoot.resolve(candidate.relativePath()).normalize();
+        Path filePath = projectRoot.resolve(candidate.file().getFilePath()).normalize();
         if (!Files.exists(filePath) || !Files.isRegularFile(filePath)) {
             return "";
         }
@@ -159,7 +159,7 @@ public class DeterministicRetriever {
     }
 
     private record ScoredCandidate(
-            String relativePath,
+            ProjectFileIndex file,
             String language,
             String type,
             int score,

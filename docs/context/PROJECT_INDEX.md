@@ -27,7 +27,7 @@ Scans the project workspace and records one row per relevant source file. No AI.
 
 - Staleness checks before context build (`ProjectIndexService.isStale`)
 - File inventory for offline metadata generation
-- Target: deterministic retrieval (path, extension, token budget, content hash)
+- Deterministic retrieval: joined from `project_file_metadata_index` (`@EntityGraph` on `file`) to supply `file_path`, `file_extension`, and the `ProjectFileIndex` reference on `RetrievedFile`
 
 ---
 
@@ -359,9 +359,123 @@ Confidence validation:
 
 **Used for:**
 
-- Semantic search during deterministic retrieval (target — not implemented yet)
-- Architecture summary input (target — partial wiring in `ArchitectureSummarizer`)
-- Missing-context analysis (target — partial wiring in `MissingContextDetector`)
+- **Primary** — deterministic retrieval scoring (`DeterministicRetriever` → `MetadataMatchScorer`)
+- **Primary** — missing-context prompt blocks (`PromptHelper` → `findByFileId` loads raw `metadata_json` per retrieved file)
+- Architecture summary input (partial — `formatSummaries` TODO in `ArchitectureSummarizer`)
+
+---
+
+## Prompt file blocks (`PromptHelper`)
+
+**Class:** `PromptHelper`  
+**Repository:** `ProjectFileMetadataIndexRepository.findByFileId`
+
+Shared formatter for AI prompts that need rich retrieved-file context (step 4 today; reusable by other Knowledge Engine steps).
+
+For each `RetrievedFile`, emits one block:
+
+```text
+=== FILE START ===
+
+filePath: <project_file_index.file_path>
+language: <RetrievedFile.language>
+type: <RetrievedFile.type — metadata architecturalRole>
+score: <RetrievedFile.score>
+reasons:
+<one reason per line>
+symbols:
+<one symbol per line>
+snippet:
+<disk excerpt or "(no snippet)">
+metadataJson:
+<raw metadata_json row, or "(no metadata)">
+
+=== FILE END ===
+```
+
+Metadata lookup uses `project_file_index.id` from `RetrievedFile.file`. Missing rows render `(no metadata)`; the block is still included.
+
+---
+
+## Deterministic retrieval scoring
+
+**Service:** `DeterministicRetriever` (steps 3 and 5)  
+**Scorer:** `MetadataMatchScorer`  
+**Normalizer:** `TermNormalizer`
+
+Retrieval is fully deterministic: no AI, embeddings, or external search. Only rows in `project_file_metadata_index` are scored; indexed files without metadata are skipped.
+
+### Intent as search query
+
+`Intent` fields drive matching:
+
+| Intent field | Typical metadata targets |
+| --- | --- |
+| `symbols` | `symbols` (+100) |
+| `symbols` + `concepts` + `capabilities` (search term set) | `dataStructures` (+90), `dependencies` (+40), `businessDomains` (+30), `keywords` (+20), `summary` (+20), `searchText` (+10) |
+| `concepts` | `concepts` (+80) |
+| `capabilities` | `capabilities` (+70) |
+| `architecturalRoles` | `architecturalRole` (+60) |
+| `changeImpactAreas` | `changeImpactAreas` (+50) |
+
+`frontendImpact` does not affect scoring. `action` is not scored.
+
+### Additive weights
+
+| Match type | Score |
+| --- | --- |
+| symbol exact match | +100 |
+| dataStructure exact match | +90 |
+| concept match | +80 |
+| capability match | +70 |
+| architecturalRole match | +60 |
+| changeImpactArea match | +50 |
+| dependency match | +40 |
+| businessDomain match | +30 |
+| keyword match | +20 |
+| summary contains term | +20 |
+| searchText contains term | +10 |
+
+Weights are constants in `MetadataMatchScorer`. Multiple intent terms can each contribute; duplicate reasons for the same match type are deduplicated.
+
+### String normalization
+
+`TermNormalizer` applies before all comparisons:
+
+- ignore case
+- trim whitespace
+- collapse separators — `soft delete`, `soft-delete`, and `soft_delete` are equal
+
+List fields use exact normalized equality. `summary` and `searchText` use normalized substring containment.
+
+### Ranking and limits
+
+1. Score every metadata row; discard `score <= 0`.
+2. Sort `score DESC`, then `file_path ASC`.
+3. Return top N where N = `codeatlas.context.indexed.max-files` (default 16), or `max-files * 2` when `intent.confidence() < 0.50`.
+
+### Snippet extraction
+
+After ranking, source files are read from disk for final picks only.
+
+`SymbolCenteredSnippetExtractor`:
+
+- anchor symbols = matched metadata symbols + intent `symbols`
+- ±20 lines around each symbol occurrence in file content
+- merge overlapping ranges; cap by `codeatlas.context.max-snippet-lines` and `codeatlas.context.max-snippet-chars`
+- fallback: first non-empty lines when no symbol anchor found
+
+### RetrievedFile population
+
+| Field | Source |
+| --- | --- |
+| `file` | `ProjectFileIndex` (via metadata FK) |
+| `language` | `ContextFileSupport.languageByExtension` |
+| `type` | metadata `architecturalRole` |
+| `score` | additive match total |
+| `reasons` | e.g. `symbol: User`, `concept: soft-delete`, `architecturalRole: repository` |
+| `symbols` | matched metadata symbols (or intent symbols if none matched) |
+| `snippet` | disk excerpt (symbol-centered or fallback) |
 
 ---
 
@@ -371,11 +485,11 @@ Confidence validation:
 | --- | --- | --- |
 | 1 — Ensure indices fresh | **Primary** (scan / refresh) | — |
 | 2 — Extract intent | — | — |
-| 3 — Deterministic retrieval | **Target** | **Target** |
-| 4 — Detect missing context | — | Secondary (target) |
-| 5 — Second deterministic retrieval | **Target** | **Target** |
+| 3 — Deterministic retrieval | **Primary** (path via metadata join) | **Primary** (scoring) |
+| 4 — Detect missing context | Secondary (`RetrievedFile.file` ref) | **Primary** (`metadata_json` in prompt via `PromptHelper`) |
+| 5 — Second deterministic retrieval | **Primary** (path via metadata join) | **Primary** (scoring) |
 | 6 — Merge second retrieval files | — | — |
-| 7 — Summarize architecture | — | **Target** |
+| 7 — Summarize architecture | — | **Partial** (`formatSummaries` TODO) |
 | 8 — Assemble context | — | — |
 
-**Legend:** **Primary** = actively used today. **Target** = designed usage; retrieval and some knowledge steps are still stubs or TODO.
+**Legend:** **Primary** = actively used. **Partial** = wired but incomplete. **Secondary** = designed usage not fully wired.

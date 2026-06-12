@@ -57,7 +57,7 @@ public class IndexedContextService {
             Intent intent = runStep(project, 2, "Extract intent", () -> intentEngine.extract(project, userRequest, aiModel));
             ContextResult contextResult = runStep(project, 3, "Deterministic retrieval", () -> contextEngine.retrieve(project, intent));
             Intent missingIntent = runStep(project, 4, "Detect missing context",
-                    () -> knowlegeEngine.detect(project, userRequest, intent, contextResult, aiModel));
+                    () -> knowlegeEngine.detectMissingContext(project, userRequest, intent, contextResult, aiModel));
             ContextResult missingContext = runStep(project, 5, "Second deterministic retrieval",
                     () -> contextEngine.retrieve(project, missingIntent));
             List<RetrievedFile> mergedFiles = runStep(project, 6, "Merge second retrieval files",
@@ -109,10 +109,10 @@ public class IndexedContextService {
     private List<RetrievedFile> mergeFiles(List<RetrievedFile> primary, List<RetrievedFile> secondary) {
         Map<String, RetrievedFile> merged = new LinkedHashMap<>();
         for (RetrievedFile file : primary) {
-            merged.put(file.relativePath(), file);
+            merged.put(file.file().getFilePath(), file);
         }
         for (RetrievedFile file : secondary) {
-            merged.putIfAbsent(file.relativePath(), file);
+            merged.putIfAbsent(file.file().getFilePath(), file);
         }
         return new ArrayList<>(merged.values());
     }

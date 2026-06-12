@@ -1,9 +1,11 @@
 package com.code.atlas.web.service.context.indexed.dto;
 
+import com.code.atlas.web.domain.ProjectFileIndex;
+
 import java.util.List;
 
 public record RetrievedFile(
-        String relativePath,
+        ProjectFileIndex file,
         String language,
         String type,
         int score,
@@ -12,8 +14,8 @@ public record RetrievedFile(
         String snippet
 ) {
     public RetrievedFile {
-        if (relativePath == null || relativePath.isBlank()) {
-            throw new IllegalArgumentException("Retrieved file path is required.");
+        if (file == null) {
+            throw new IllegalArgumentException("Retrieved file is required.");
         }
         language = language == null ? "" : language;
         type = type == null ? "" : type;

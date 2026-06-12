@@ -23,8 +23,8 @@ public class KnowlegeEngine {
         return architectureSummarizer.summarize(project, userRequest, intent, files, aiModel);
     }
 
-    public Intent detect(Project project, String userRequest, Intent intent,
-            ContextResult contextResult, AIModel aiModel) {
+    public Intent detectMissingContext(Project project, String userRequest, Intent intent,
+                                       ContextResult contextResult, AIModel aiModel) {
         return missingContextDetector.detect(project, userRequest, intent, contextResult, aiModel);
     }
 }
