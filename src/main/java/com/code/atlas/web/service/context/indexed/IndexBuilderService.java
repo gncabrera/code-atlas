@@ -1,25 +1,22 @@
 package com.code.atlas.web.service.context.indexed;
 
 import com.code.atlas.web.domain.AIModel;
-import com.code.atlas.web.domain.FileSummaryIndexEntry;
 import com.code.atlas.web.domain.Project;
 import com.code.atlas.web.domain.ProjectFileIndex;
-import com.code.atlas.web.repository.FileSummaryIndexRepository;
+import com.code.atlas.web.domain.ProjectFileMetadataIndex;
 import com.code.atlas.web.repository.ProjectFileIndexRepository;
+import com.code.atlas.web.repository.ProjectFileMetadataIndexRepository;
 import com.code.atlas.web.service.*;
 import com.code.atlas.web.service.context.indexed.builder.OfflineFileSummaryChunkBuilder;
 import com.code.atlas.web.service.context.indexed.dto.FileSummaryOfflineResponse;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
+
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Function;
-import java.util.stream.Collectors;
+import java.util.*;
+
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -33,40 +30,41 @@ public class IndexBuilderService {
     private final AIModelService aiModelService;
     private final PromptFormatService promptFormatService;
     private final ObjectMapper objectMapper;
-    private final EntityManager entityManager;
     private final ContextPipelineLogger pipelineLogger;
+    private final IndexBuilderService self;
     private final String summaryTemplate;
-    private final FileSummaryIndexRepository fileSummaryIndexRepository;
     private final OfflineFileSummaryChunkBuilder fileSummaryChunkBuilder;
+    private final ProjectFileMetadataIndexRepository projectFileMetadataIndexRepository;
+    private final ProjectService projectService;
 
     public IndexBuilderService(
             ProjectFileIndexRepository projectFileIndexRepository,
             AIModelService aiModelService,
             PromptFormatService promptFormatService,
             ObjectMapper objectMapper,
-            EntityManager entityManager,
-            ContextPipelineLogger pipelineLogger, FileSummaryIndexRepository fileSummaryIndexRepository, OfflineFileSummaryChunkBuilder fileSummaryChunkBuilder
+            ContextPipelineLogger pipelineLogger,
+            OfflineFileSummaryChunkBuilder fileSummaryChunkBuilder,
+            ProjectFileMetadataIndexRepository projectFileMetadataIndexRepository,
+            ProjectService projectService,
+            @Lazy IndexBuilderService self
     ) {
         this.projectFileIndexRepository = projectFileIndexRepository;
         this.aiModelService = aiModelService;
         this.promptFormatService = promptFormatService;
         this.objectMapper = objectMapper;
-        this.entityManager = entityManager;
         this.pipelineLogger = pipelineLogger;
-        this.fileSummaryIndexRepository = fileSummaryIndexRepository;
         this.fileSummaryChunkBuilder = fileSummaryChunkBuilder;
+        this.projectFileMetadataIndexRepository = projectFileMetadataIndexRepository;
+        this.projectService = projectService;
+        this.self = self;
         this.summaryTemplate = PromptTemplateService.load(PromptTemplate.CONTEXT_FILE_SUMMARY);
     }
 
-    @Transactional
     public void regenerate(Project project, AIModel aiModel) {
         pipelineLogger.message(project, PHASE, "Starting offline index regeneration (full)");
         long started = System.nanoTime();
         try {
-            runStep(project, 1, "Purge offline indices", () -> {
-                purgeOfflineIndices(project.getId());
-                entityManager.flush();
-            });
+            runStep(project, 1, "Purge offline indices", () -> self.purgeOfflineIndices(project.getId()));
             runStep(project, 2, "Generate file summaries", () -> regenerateSummaries(project, aiModel, false));
             pipelineLogger.message(project, PHASE, "Offline index regeneration finished (" + elapsedMs(started) + " ms)");
         } catch (RuntimeException ex) {
@@ -75,7 +73,6 @@ public class IndexBuilderService {
         }
     }
 
-    @Transactional
     public void regenerateIncremental(Project project, AIModel aiModel) {
         pipelineLogger.message(project, PHASE, "Starting offline incremental index regeneration");
         long started = System.nanoTime();
@@ -101,7 +98,9 @@ public class IndexBuilderService {
         }
     }
 
-    private void purgeOfflineIndices(Long projectId) {
+    @Transactional
+    public void purgeOfflineIndices(Long projectId) {
+        projectFileMetadataIndexRepository.deleteByProjectId(projectId);
     }
 
     private void regenerateSummaries(Project project, AIModel aiModel, boolean incremental) {
@@ -112,11 +111,8 @@ public class IndexBuilderService {
         }
         List<ProjectFileIndex> filesToSummarize;
         if (incremental) {
-            List<String> activePaths = allFiles.stream().map(ProjectFileIndex::getFilePath).toList();
-            purgeStaleFileSummaries(project.getId(), activePaths);
-            entityManager.flush();
-            Map<String, FileSummaryIndexEntry> existingSummaries = fileSummaryIndexRepository.findByProjectId(project.getId()).stream()
-                    .collect(Collectors.toMap(FileSummaryIndexEntry::getFilePath, Function.identity(), (left, right) -> left));
+            self.purgeStaleFileSummaries(project.getId(), allFiles);
+            List<ProjectFileMetadataIndex> existingSummaries = projectFileMetadataIndexRepository.findByProjectId(project.getId());
             filesToSummarize = selectFilesNeedingSummary(allFiles, existingSummaries);
             int unchanged = allFiles.size() - filesToSummarize.size();
             pipelineLogger.message(project, PHASE, "Incremental file summaries: " + filesToSummarize.size()
@@ -129,24 +125,29 @@ public class IndexBuilderService {
 
     static List<ProjectFileIndex> selectFilesNeedingSummary(
             List<ProjectFileIndex> allFiles,
-            Map<String, FileSummaryIndexEntry> existingSummariesByPath
+            List<ProjectFileMetadataIndex> existingSummaries
     ) {
         List<ProjectFileIndex> selected = new ArrayList<>();
         for (ProjectFileIndex file : allFiles) {
-            FileSummaryIndexEntry existing = existingSummariesByPath.get(file.getFilePath());
-            if (existing == null || !file.getContentHash().equals(existing.getContentHash())) {
+            ProjectFileMetadataIndex existing = existingSummaries
+                    .stream()
+                    .filter(s -> Objects.equals(s.getFile(), file))
+                    .findFirst()
+                    .orElse(null);
+            if(existing == null || !file.getContentHash().equals(existing.getContentHash())) {
                 selected.add(file);
             }
         }
         return selected;
     }
 
-    private void purgeStaleFileSummaries(Long projectId, List<String> activePaths) {
-        if (activePaths.isEmpty()) {
-            fileSummaryIndexRepository.deleteByProjectId(projectId);
+    @Transactional
+    public void purgeStaleFileSummaries(Long projectId, List<ProjectFileIndex> files) {
+        if (files.isEmpty()) {
+            projectFileMetadataIndexRepository.deleteByProjectId(projectId);
             return;
         }
-        fileSummaryIndexRepository.deleteByProjectIdAndFilePathNotIn(projectId, activePaths);
+        projectFileMetadataIndexRepository.deleteByProjectIdAndFileIdNotIn(projectId, files.stream().map(ProjectFileIndex::getId).toList());
     }
 
     private void summarizeAndPersistFiles(Project project, AIModel aiModel, List<ProjectFileIndex> filesToSummarize) {
@@ -154,82 +155,97 @@ public class IndexBuilderService {
             pipelineLogger.message(project, PHASE, "No file summaries needed");
             return;
         }
-        Map<String, String> contentHashByPath = filesToSummarize.stream()
-                .collect(Collectors.toMap(ProjectFileIndex::getFilePath, ProjectFileIndex::getContentHash, (left, right) -> left));
         List<String> chunks = fileSummaryChunkBuilder.buildChunks(project, filesToSummarize, aiModel, summaryTemplate);
         pipelineLogger.message(project, PHASE, "Summarizing " + filesToSummarize.size() + " files in " + chunks.size() + " chunk(s)");
-        List<FileSummaryOfflineResponse.SummaryItem> summaries = new ArrayList<>();
         for (int chunkIndex = 0; chunkIndex < chunks.size(); chunkIndex++) {
-            summaries.addAll(getFileSummaryOffline(
+            int chunkNumber = chunkIndex + 1;
+            List<FileSummaryOfflineResponse> chunkSummaries = getFileSummaryOffline(
                     project,
                     aiModel,
                     chunks.get(chunkIndex),
-                    chunkIndex + 1,
+                    chunkNumber,
                     chunks.size()
-            ));
+            );
+            self.persistSummaryItems(project, chunkSummaries, filesToSummarize, chunkNumber, chunks.size());
         }
-        persistSummaryItems(project, summaries, contentHashByPath);
     }
 
-    private void persistSummaryItems(
+    @Transactional
+    public void persistSummaryItems(
             Project project,
-            List<FileSummaryOfflineResponse.SummaryItem> summaries,
-            Map<String, String> contentHashByPath
+            List<FileSummaryOfflineResponse> summaries,
+            List<ProjectFileIndex> filesToSummarize,
+            int chunkIndex,
+            int chunkCount
     ) {
         if (summaries.isEmpty()) {
-            pipelineLogger.message(project, PHASE, "File summaries response empty — skipped persistence");
+            pipelineLogger.message(project, PHASE, "File summaries response empty — skipped persistence (chunk "
+                    + chunkIndex + "/" + chunkCount + ")");
             return;
         }
         Set<String> seenFiles = new HashSet<>();
         int saved = 0;
-        for (FileSummaryOfflineResponse.SummaryItem item : summaries) {
-            if (item.file() == null || item.file().isBlank()) {
+        for (FileSummaryOfflineResponse item : summaries) {
+            if (item.filePath() == null || item.filePath().isBlank() || item.metadata() == null) {
                 continue;
             }
-            String fileKey = item.file().trim();
+            String fileKey = item.filePath().trim();
             if (!seenFiles.add(fileKey)) {
                 continue;
             }
-            String contentHash = contentHashByPath.getOrDefault(fileKey, "");
-            saveSummary(project, fileKey, item.summary(), contentHash);
+            filesToSummarize
+                    .stream()
+                    .filter(f -> Objects.equals(f.getFilePath(), fileKey))
+                    .findFirst()
+                    .ifPresent(f -> saveSummary(item.metadata(), f));
             saved++;
         }
-        pipelineLogger.message(project, PHASE, "Persisted " + saved + " file summaries");
+        pipelineLogger.message(project, PHASE, "Persisted " + saved + " file summaries (chunk "
+                + chunkIndex + "/" + chunkCount + ")");
     }
 
-    private void saveSummary(Project project, String filePath, String summary, String contentHash) {
-        FileSummaryIndexEntry entry = fileSummaryIndexRepository.findByProjectIdAndFilePath(project.getId(), filePath)
+    private void saveSummary(FileSummaryOfflineResponse.Metadata metadata, ProjectFileIndex fileIndex) {
+        ProjectFileMetadataIndex entry = projectFileMetadataIndexRepository.findByFileId(fileIndex.getId())
                 .orElseGet(() -> {
-                    FileSummaryIndexEntry newEntry = new FileSummaryIndexEntry();
-                    newEntry.setProject(project);
-                    newEntry.setFilePath(filePath);
+                    ProjectFileMetadataIndex newEntry = new ProjectFileMetadataIndex();
+                    newEntry.setProject(fileIndex.getProject());
+                    newEntry.setFile(fileIndex);
                     return newEntry;
                 });
-        entry.setSummary(summary == null ? "" : summary);
-        entry.setContentHash(contentHash == null ? "" : contentHash);
+        try {
+            entry.setMetadataJson(objectMapper.writeValueAsString(metadata));
+        } catch (JsonProcessingException ex) {
+            throw new IllegalStateException("Failed serializing file metadata for " + fileIndex.getFilePath(), ex);
+        }
+        entry.setContentHash(fileIndex.getContentHash());
         entry.setUpdatedAt(LocalDateTime.now());
-        fileSummaryIndexRepository.save(entry);
+        projectFileMetadataIndexRepository.save(entry);
     }
 
-    private List<FileSummaryOfflineResponse.SummaryItem> getFileSummaryOffline(
+    private List<FileSummaryOfflineResponse> getFileSummaryOffline(
             Project project,
             AIModel aiModel,
             String filesBlock,
             int chunkIndex,
             int chunkCount
     ) {
-        String prompt = promptFormatService.formatPrompt(summaryTemplate, Map.of("FILES", filesBlock));
+        String agentsFile = projectService.resolveAgentsFileContent(project);
+        String prompt = promptFormatService.formatPrompt(summaryTemplate, Map.of(
+                "FILES", filesBlock,
+                "PROJECT_ARCHITECTURE", project.getDescription(),
+                "AGENTS_FILE", agentsFile
+        ));
         String logLabel = "Offline index: file summaries chunk " + chunkIndex + "/" + chunkCount;
         String raw = aiModelService.sendToModel(project, aiModel, prompt, NOTES, logLabel).reponse();
-        FileSummaryOfflineResponse response = JsonResponseExtractor.parseResponse(
+        FileSummaryOfflineResponse[] entries = JsonResponseExtractor.parseResponse(
                 raw,
-                FileSummaryOfflineResponse.class,
+                FileSummaryOfflineResponse[].class,
                 objectMapper
         );
-        if (response.summaries() == null) {
+        if (entries == null || entries.length == 0) {
             return List.of();
         }
-        return response.summaries();
+        return List.of(entries);
     }
 
     private static long elapsedMs(long startedNanos) {

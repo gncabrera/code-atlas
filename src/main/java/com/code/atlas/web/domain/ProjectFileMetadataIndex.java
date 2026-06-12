@@ -15,6 +15,10 @@ public class ProjectFileMetadataIndex {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "project_id", nullable = false)
+    private Project project;
+
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(
             name = "project_file_index_id",
@@ -26,6 +30,9 @@ public class ProjectFileMetadataIndex {
     @Lob
     @Column(name = "metadata_json", nullable = false)
     private String metadataJson;
+
+    @Column(name = "content_hash", nullable = false, length = 64)
+    private String contentHash;
 
     @Convert(converter = SqliteLocalDateTimeConverter.class)
     @Column(name = "updated_at", nullable = false)

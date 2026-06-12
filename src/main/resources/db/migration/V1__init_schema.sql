@@ -77,12 +77,18 @@ CREATE INDEX IF NOT EXISTS idx_project_file_index_project_updated
 
 CREATE TABLE IF NOT EXISTS project_file_metadata_index (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER NOT NULL,
     project_file_index_id INTEGER NOT NULL UNIQUE,
     metadata_json TEXT NOT NULL,
+    content_hash VARCHAR(64) NOT NULL,
     -- App-managed timestamp; JPA writes LocalDateTime (see AGENTS.md SQLite timestamps).
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (project_id) REFERENCES projects(id),
     FOREIGN KEY (project_file_index_id) REFERENCES project_file_index(id)
 );
+
+CREATE INDEX IF NOT EXISTS idx_project_file_metadata_index_project
+    ON project_file_metadata_index(project_id);
 
 INSERT INTO ai_model_api_key (name, api_key, provider, is_active)
 VALUES ('Default Gemini', 'changeme', 'Gemini', 1);

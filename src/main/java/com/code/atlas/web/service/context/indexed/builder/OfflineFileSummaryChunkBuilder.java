@@ -9,6 +9,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -29,8 +31,8 @@ public class OfflineFileSummaryChunkBuilder {
 
     public OfflineFileSummaryChunkBuilder(
             PromptFormatService promptFormatService,
-            @Value("${codeatlas.context.offline-summary.max-files-per-chunk:5}") int maxFilesPerChunk,
-            @Value("${codeatlas.context.offline-summary.max-tokens-per-file:2000}") int maxTokensPerFile,
+            @Value("${codeatlas.context.offline-summary.max-files-per-chunk:10}") int maxFilesPerChunk,
+            @Value("${codeatlas.context.offline-summary.max-tokens-per-file:30000}") int maxTokensPerFile,
             @Value("${codeatlas.context.offline-summary.prompt-budget-ratio:0.8}") double promptBudgetRatio
     ) {
         this.promptFormatService = promptFormatService;
@@ -53,15 +55,21 @@ public class OfflineFileSummaryChunkBuilder {
         List<String> chunks = new ArrayList<>();
         for (int start = 0; start < files.size(); start += maxFilesPerChunk) {
             int end = Math.min(start + maxFilesPerChunk, files.size());
-            chunks.add(buildChunkBlock(projectRoot, files.subList(start, end), contentTokenBudget));
+            chunks.add(buildChunkBlock(projectRoot, files, files.subList(start, end), contentTokenBudget));
         }
         return chunks;
     }
 
-    private String buildChunkBlock(Path projectRoot, List<ProjectFileIndex> batch, int contentTokenBudget) {
+    private String buildChunkBlock(
+            Path projectRoot,
+            List<ProjectFileIndex> allFiles,
+            List<ProjectFileIndex> batch,
+            int contentTokenBudget
+    ) {
+        Map<String, List<String>> neighborsByDirectory = buildNeighborsByDirectory(allFiles);
         List<FileBlock> blocks = new ArrayList<>();
         for (ProjectFileIndex entry : batch) {
-            loadFileBlock(projectRoot, entry)
+            loadFileBlock(projectRoot, entry, neighborsByDirectory)
                     .ifPresent(blocks::add);
         }
         applyTokenBudget(blocks, contentTokenBudget);
@@ -75,13 +83,53 @@ public class OfflineFileSummaryChunkBuilder {
         return builder.toString();
     }
 
-    private Optional<FileBlock> loadFileBlock(Path projectRoot, ProjectFileIndex entry) {
+    private Optional<FileBlock> loadFileBlock(
+            Path projectRoot,
+            ProjectFileIndex entry,
+            Map<String, List<String>> neighborsByDirectory
+    ) {
         String filePath = entry.getFilePath();
         String diskContent = readFileContent(projectRoot, filePath);
         if (diskContent != null) {
-            return Optional.of(FileBlock.withContent(filePath, diskContent));
+            String relativeDirectory = parentDirectory(filePath);
+            List<String> neighborFiles = neighborFilesFor(filePath, neighborsByDirectory);
+            return Optional.of(FileBlock.withContent(filePath, relativeDirectory, neighborFiles, diskContent));
         }
         return Optional.empty();
+    }
+
+    private static Map<String, List<String>> buildNeighborsByDirectory(List<ProjectFileIndex> allFiles) {
+        Map<String, List<String>> byDirectory = new HashMap<>();
+        for (ProjectFileIndex entry : allFiles) {
+            String filePath = entry.getFilePath();
+            byDirectory
+                    .computeIfAbsent(parentDirectory(filePath), ignored -> new ArrayList<>())
+                    .add(fileName(filePath));
+        }
+        for (List<String> names : byDirectory.values()) {
+            Collections.sort(names);
+        }
+        return byDirectory;
+    }
+
+    private static List<String> neighborFilesFor(String filePath, Map<String, List<String>> neighborsByDirectory) {
+        String selfName = fileName(filePath);
+        return neighborsByDirectory.getOrDefault(parentDirectory(filePath), List.of()).stream()
+                .filter(name -> !name.equals(selfName))
+                .toList();
+    }
+
+    private static String parentDirectory(String filePath) {
+        int lastSlash = filePath.lastIndexOf('/');
+        if (lastSlash < 0) {
+            return "";
+        }
+        return filePath.substring(0, lastSlash);
+    }
+
+    private static String fileName(String filePath) {
+        int lastSlash = filePath.lastIndexOf('/');
+        return lastSlash < 0 ? filePath : filePath.substring(lastSlash + 1);
     }
 
     private String normalizeIndexedContent(String searchableText) {
@@ -144,27 +192,38 @@ public class OfflineFileSummaryChunkBuilder {
 
     private static final class FileBlock {
         private final String filePath;
-        private String body;
+        private final String relativeDirectory;
+        private final List<String> neighborFiles;
+        private String content;
 
-        private FileBlock(String filePath, String body) {
+        private FileBlock(String filePath, String relativeDirectory, List<String> neighborFiles, String content) {
             this.filePath = filePath;
-            this.body = body;
+            this.relativeDirectory = relativeDirectory;
+            this.neighborFiles = neighborFiles;
+            this.content = content;
         }
 
-        static FileBlock withContent(String filePath, String content) {
-            return new FileBlock(filePath, content);
+        static FileBlock withContent(
+                String filePath,
+                String relativeDirectory,
+                List<String> neighborFiles,
+                String content
+        ) {
+            return new FileBlock(filePath, relativeDirectory, List.copyOf(neighborFiles), content);
         }
 
         void truncateToTokens(int maxTokens, String suffix) {
-            int maxChars = Math.max(1, maxTokens) * 4;
-            if (body.length() <= maxChars) {
+            int metadataTokens = AIModelService.estimateTokens(formatBlock(""));
+            int contentTokenBudget = Math.max(1, maxTokens - metadataTokens);
+            int maxChars = Math.max(1, contentTokenBudget) * 4;
+            if (content.length() <= maxChars) {
                 return;
             }
             if (maxChars <= suffix.length()) {
-                body = body.substring(0, maxChars);
+                content = content.substring(0, maxChars);
                 return;
             }
-            body = body.substring(0, maxChars - suffix.length()) + suffix;
+            content = content.substring(0, maxChars - suffix.length()) + suffix;
         }
 
         int estimatedTokens() {
@@ -172,7 +231,22 @@ public class OfflineFileSummaryChunkBuilder {
         }
 
         String formattedBlock() {
-            return filePath + ":\n---\n" + body + "\n---";
+            return formatBlock(content);
+        }
+
+        private String formatBlock(String contentValue) {
+            StringBuilder builder = new StringBuilder();
+            builder.append("=== FILE START ===\n\n");
+            builder.append("filePath: ").append(filePath).append("\n\n");
+            builder.append("relativeDirectory: ").append(relativeDirectory).append("\n\n");
+            builder.append("neighborFiles:\n");
+            for (String neighbor : neighborFiles) {
+                builder.append(neighbor).append('\n');
+            }
+            builder.append("\ncontent:\n");
+            builder.append(contentValue);
+            builder.append("\n\n=== FILE END ===");
+            return builder.toString();
         }
     }
 }

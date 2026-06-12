@@ -36,7 +36,11 @@ public final class JsonResponseExtractor {
         candidates.addAll(extractJsonFencedBlocks(raw));
         candidates.addAll(extractGenericFencedBlocks(raw));
         candidates.addAll(findBalancedJsonObjects(raw));
+        candidates.addAll(findBalancedJsonArrays(raw));
         if (raw.startsWith("{") && raw.endsWith("}")) {
+            candidates.add(raw);
+        }
+        if (raw.startsWith("[") && raw.endsWith("]")) {
             candidates.add(raw);
         }
         return List.copyOf(candidates);
@@ -88,7 +92,7 @@ public final class JsonResponseExtractor {
                 break;
             }
             String content = raw.substring(contentStart, fenceEnd).trim();
-            if (content.startsWith("{")) {
+            if (content.startsWith("{") || content.startsWith("[")) {
                 blocks.add(content);
             }
             searchFrom = fenceEnd + 3;
@@ -113,6 +117,57 @@ public final class JsonResponseExtractor {
             index = end + 1;
         }
         return objects;
+    }
+
+    private static List<String> findBalancedJsonArrays(String text) {
+        List<String> arrays = new ArrayList<>();
+        int index = 0;
+        while (index < text.length()) {
+            int start = text.indexOf('[', index);
+            if (start < 0) {
+                break;
+            }
+            int end = findBalancedArrayEnd(text, start);
+            if (end < 0) {
+                index = start + 1;
+                continue;
+            }
+            arrays.add(text.substring(start, end + 1));
+            index = end + 1;
+        }
+        return arrays;
+    }
+
+    private static int findBalancedArrayEnd(String text, int start) {
+        int depth = 0;
+        boolean inString = false;
+        boolean escaped = false;
+        for (int i = start; i < text.length(); i++) {
+            char current = text.charAt(i);
+            if (inString) {
+                if (escaped) {
+                    escaped = false;
+                } else if (current == '\\') {
+                    escaped = true;
+                } else if (current == '"') {
+                    inString = false;
+                }
+                continue;
+            }
+            if (current == '"') {
+                inString = true;
+                continue;
+            }
+            if (current == '[') {
+                depth++;
+            } else if (current == ']') {
+                depth--;
+                if (depth == 0) {
+                    return i;
+                }
+            }
+        }
+        return -1;
     }
 
     private static int findBalancedObjectEnd(String text, int start) {
