@@ -16,4 +16,15 @@ public class IntentEngine {
         return intentExtractionService.extract(project, userRequest, aiModel);
     }
 
+    public static String formatIntent(Intent intent) {
+        return "action=" + intent.action()
+                + ", symbols=" + intent.symbols()
+                + ", concepts=" + intent.concepts()
+                + ", capabilities=" + intent.capabilities()
+                + ", architecturalRoles=" + intent.architecturalRoles()
+                + ", changeImpactAreas=" + intent.changeImpactAreas()
+                + ", frontendImpact=" + intent.frontendImpact()
+                + ", confidence=" + intent.confidence();
+    }
+
 }

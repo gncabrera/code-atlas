@@ -10,6 +10,8 @@ import com.code.atlas.web.service.context.indexed.dto.Intent;
 import com.code.atlas.web.service.context.indexed.dto.RetrievedFile;
 import java.util.List;
 import java.util.Map;
+
+import com.code.atlas.web.service.context.indexed.engine.intent.IntentEngine;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -33,19 +35,14 @@ public class ArchitectureSummarizer {
     public String summarize(Project project, String userRequest, Intent intent, List<RetrievedFile> files, AIModel aiModel) {
         String prompt = promptFormatService.formatPrompt(template, Map.of(
                 "USER_REQUEST", userRequest,
-                "INTENT", formatIntent(intent),
+                "INTENT", IntentEngine.formatIntent(intent),
                 "FILE_SUMMARIES", formatSummaries(project, files),
                 "RETRIEVED_FILES", formatRetrievedFiles(files)
         ));
         return aiModelService.sendToModel(project, aiModel, prompt, NOTES, "Indexed context: architecture summary").reponse();
     }
 
-    private String formatIntent(Intent intent) {
-        return "action=" + intent.action()
-                + ", entities=" + intent.entities()
-                + ", operations=" + intent.operations()
-                + ", layers=" + intent.layers();
-    }
+
 
     private String formatSummaries(Project project, List<RetrievedFile> files) {
         StringBuilder builder = new StringBuilder();

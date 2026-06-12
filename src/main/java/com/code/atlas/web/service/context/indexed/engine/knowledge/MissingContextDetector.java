@@ -7,6 +7,7 @@ import com.code.atlas.web.service.context.indexed.dto.ContextResult;
 import com.code.atlas.web.service.context.indexed.dto.Intent;
 import com.code.atlas.web.service.context.indexed.dto.MissingContextResponse;
 import com.code.atlas.web.service.context.indexed.dto.RetrievedFile;
+import com.code.atlas.web.service.context.indexed.engine.intent.IntentEngine;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Map;
@@ -44,7 +45,7 @@ public class MissingContextDetector {
         // TODO: Agregar el summary / modificar MissingContext > Intent
         String prompt = promptFormatService.formatPrompt(template, Map.of(
                 "USER_REQUEST", userRequest,
-                "INTENT", formatIntent(intent),
+                "INTENT", IntentEngine.formatIntent(intent),
                 "RETRIEVED_FILES", formatFiles(contextResult.files())
         ));
         String raw = aiModelService.sendToModel(project, aiModel, prompt, NOTES, "Indexed context: missing context detection").reponse();
@@ -54,14 +55,6 @@ public class MissingContextDetector {
                 objectMapper
         );
         return null;
-    }
-
-    private String formatIntent(Intent intent) {
-        return "action=" + intent.action()
-                + ", entities=" + intent.entities()
-                + ", operations=" + intent.operations()
-                + ", layers=" + intent.layers()
-                + ", frontendImpact=" + intent.frontendImpact();
     }
 
     private String formatFiles(List<RetrievedFile> files) {

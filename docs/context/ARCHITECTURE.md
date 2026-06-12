@@ -1,416 +1,279 @@
-# Final architecture
-Pasos de obtención de contexto:
+# Indexed context architecture
+
+End-to-end flow that turns a user request into a structured context block for downstream prompt optimization. Orchestrated by `IndexedContextService`.
+
+**Prerequisites:** see [PROJECT_INDEX.md](./PROJECT_INDEX.md) for the two indices and their builders.
+
+---
+
+## Engine modules
+
+Four engines replace the earlier flat step list. Graph Expansion is removed; retrieval runs twice instead (initial + missing-context pass).
 
 ```
-| Arquitectura             | Responsabilidad               | Modelo |
-| ------------------------ | ----------------------------- | ------ |
-| Intent Extraction        | Entender qué quiere usuario   | Gemma  |
-| Deterministic Retrieval  | Encontrar archivos candidatos | Código |
-| Graph Expansion          | Expandir dependencias         | Código |
-| Missing Context Detector | Detectar huecos               | Gemma  |
-| Second Retrieval         | Buscar faltantes              | Código |
-| Architecture Summary     | Comprimir conocimiento        | Gemma  |
-| Prompt Builder           | Construir prompt final        | Código |
-| Implementation           | Generar solución              | Gemini |
-
-```
-Crear 4 módulos:
-```
-Intent Engine = Intent Extraction
-    ↓
-Context Engine = Retrieval + Graph Expansion + Second Retrieval
-    ↓
-Knowledge Engine = Missing Context Detector + Architecture Summary
-    ↓
-Prompt Engine = Prompt Builder + Gemini
+Intent Engine     = Intent extraction
+       ↓
+Context Engine    = Deterministic retrieval + second retrieval
+       ↓
+Knowledge Engine  = Missing context detection + architecture summary
+       ↓
+Prompt Engine     = Prompt assembly (deterministic template)
 ```
 
+| Engine | Classes | Model |
+| --- | --- | --- |
+| Intent Engine | `IntentEngine` → `IntentExtractionService` | AI (`AIModelService.sendToModel`) |
+| Context Engine | `ContextEngine` → `DeterministicRetriever` | Code (index search) |
+| Knowledge Engine | `KnowlegeEngine` → `MissingContextDetector`, `ArchitectureSummarizer` | AI |
+| Prompt Engine | `PromptEngine` → `PromptBuilder` | Code (template only) |
 
-# Prerequisites
-Ver PROJECT_INDEX for index information
+---
 
-# Steps
-## 1. Intent extraction
-Input:
+## Pipeline steps
+
+Eight logged steps (`TOTAL_STEPS = 8` in `IndexedContextService`).
+
 ```
-Agregar soft delete a usuarios
+1. Ensure indices fresh          → ProjectIndexService
+2. Extract intent                → IntentEngine
+3. Deterministic retrieval       → ContextEngine
+4. Detect missing context        → KnowlegeEngine
+5. Second deterministic retrieval → ContextEngine
+6. Merge second retrieval files   → mergeFiles()
+7. Summarize architecture         → KnowlegeEngine
+8. Assemble context               → PromptEngine
 ```
-Output:
-```
+
+---
+
+### Step 1 — Ensure indices fresh
+
+**Service:** `ProjectIndexService`  
+**Model:** Code  
+
+Refreshes `project_file_index` when stale (`isStale` / `refreshIndex`). Does not regenerate AI metadata.
+
+| Index | Role |
+| --- | --- |
+| Project File Index | **Primary** |
+| Project File Metadata Index | — |
+
+---
+
+### Step 2 — Extract intent
+
+**Service:** `IntentEngine` → `IntentExtractionService`  
+**Prompt template:** `src/main/resources/prompts/context/intent-extraction.md`  
+**Model:** AI  
+
+**Input:** natural-language user request (+ project `AGENTS` / design context from prompt placeholders).
+
+**Output:** `Intent` record:
+
+```json
 {
-    "action":"modify",
-    "entities":["User"],
-    "operations":["soft delete"],
-    "layers":["controller","service","repository","entity","migration"],
-    "frontendImpact":true
-}
-```
-Objetivo: Convertir lenguaje humano → búsqueda estructurada.
-Herramienta: Gemma
-
-### Índices usados
-
-#### Principal
-
-Ninguno.
-
-#### Secundarios
-
-##### Business Concept Index
-
-Puede ayudar a mapear:
-
-```text
-usuarios
-↓
-user
-```
-
-o
-
-```text
-login
-↓
-authentication
-```
-
-Pero step está definido como:
-
-```text
-Herramienta: Gemma
-```
-
-Por lo tanto índice no es requisito.
-
-### Conclusión
-
-| Índice                 | Uso        |
-| ---------------------- | ---------- |
-| Business Concept Index | Secundario |
-| Resto                  | No usado   |
-
-
-## 2. Deterministic Retrieval
-
-Input:
-```
-{
-    "entities":["User"],
-    "operations":["soft delete"]
-}
-```
-Busca:
-```
-UserController
-UserService
-UserRepository
-User.java
-```
-Todavía sin IA. Sólo índice.
-
-### Índices principales
-
-#### Symbol Index
-
-Permite resolver:
-
-```text
-User
-↓
-UserService
-UserRepository
-UserController
-```
-
-#### Business Concept Index
-
-Permite búsquedas conceptuales:
-
-```text
-user
-↓
-archivos relacionados
-```
-
-### Índices secundarios
-
-#### Endpoint Index
-
-Si request menciona:
-
-```text
-GET /api/users
-```
-
-permite encontrar controlador inicial.
-
-#### Database Index
-
-Si request menciona:
-
-```text
-users table
-deleted column
-```
-
-permite encontrar entidad y repositorio.
-
-### Conclusión
-
-| Índice                 | Uso        |
-| ---------------------- | ---------- |
-| Symbol Index           | Principal  |
-| Business Concept Index | Principal  |
-| Endpoint Index         | Secundario |
-| Database Index         | Secundario |
-
-## 3. Graph Expansion
-Expandir dependencias:
-Input:
-```
-UserController
-UserService
-UserRepository
-```
-Expande:
-```
-UserDto
-UserMapper
-UserListComponent
-UserApiService
-V12__user_table.sql
-```
-Usando grafo.
-
-Ejemplo:
-```
-UserController
-↓
-UserService
-↓
-UserRepository
-↓
-User
-```
-y
-```
-UserController
-↑
-UserApiService
-↑
-UserListComponent
-```
-Acá suele aparecer contexto que keyword search nunca encuentra.
-
-### Índice principal
-
-#### Dependency Graph
-
-Este step existe específicamente para recorrer relaciones.
-
-Ejemplos:
-
-```text
-CALLS
-USES
-IMPLEMENTS
-EXTENDS
-MAPS_TO
-CONSUMES
-```
-
-Todo sale del grafo.
-
-### Índices secundarios
-
-#### Frontend Route Index
-
-Permite saltar:
-
-```text
-endpoint
-↓
-frontend callers
-```
-
-Más eficiente que recorrer parte del grafo.
-
-#### Database Index
-
-Permite conectar:
-
-```text
-Entity
-↓
-Migration
-```
-
-sin recorrer demasiados nodos.
-
-### Conclusión
-
-| Índice               | Uso        |
-| -------------------- | ---------- |
-| Dependency Graph     | Principal  |
-| Frontend Route Index | Secundario |
-| Database Index       | Secundario |
-
-## 4. Missing Context Detector
-
-Gemma recibe:
-```
-Request
-+
-Retrieved Files
-```
-Pregunta:
-```
-¿Qué falta para implementar esto?
-```
-Respuesta:
-```
-{
-    "missing":[
-        "migration",
-        "frontend caller"
-    ]
-}
-```
-o
-```
-{
-    "missing":[]
+  "action": "modify",
+  "entities": ["User"],
+  "operations": ["soft delete"],
+  "layers": ["controller", "service", "repository", "entity", "migration"],
+  "frontendImpact": true
 }
 ```
 
-### Índices principales
+Converts human language into structured search parameters.
 
-Ninguno.
+**Prompt placeholders**
 
-Step definido explícitamente como:
+| Placeholder | Wired in `IntentExtractionService` |
+| --- | --- |
+| `{{USER_REQUEST}}` | Yes |
+| `{{AGENTS_FILE}}` | No (template only) |
+| `{{DESIGN_FILE}}` | No (template only) |
 
-```text
-Gemma recibe:
-Request + Retrieved Files
-```
-
-Analiza contexto ya recuperado.
-
-### Índices secundarios
-
-#### Pattern Index
-
-Puede ayudar a detectar faltantes típicos.
-
-Ejemplo:
+**Prompt**
 
 ```text
-soft-delete
-```
+Extract structured intent from the user request.
 
-requiere:
+User request:
+{{USER_REQUEST}}
 
-```text
-migration
-repository
-entity
-```
+Return exactly one JSON object. No markdown fences or prose.
 
-Pero no es obligatorio según arquitectura.
-
-#### AI Summary Index
-
-Puede facilitar análisis rápido de archivos.
-
-Tampoco obligatorio.
-
-### Conclusión
-
-| Índice           | Uso        |
-| ---------------- | ---------- |
-| Pattern Index    | Secundario |
-| AI Summary Index | Secundario |
-| Resto            | No usado   |
-
-
-## 5. Second Retrieval
-
-Input:
-```
+Schema:
 {
-    "missing":[
-        "migration",
-        "frontend caller"
-    ]
+  "action": "create|modify|delete|investigate",
+  "entities": ["EntityName"],
+  "operations": ["operation phrase"],
+  "layers": ["controller","service","repository","entity","migration","frontend"],
+  "frontendImpact": true
+}
+
+Rules:
+- entities are PascalCase class or domain names when identifiable
+- layers reflect likely touch points for the change
+- include migration in layers when schema, database, columns, tables, flyway, liquibase, sql, or persistence changes are implied
+- include frontend in layers when UI, templates, html, js, css, pages, or client behavior may change
+- frontendImpact true when UI or API consumers may change
+
+# General context from project:
+
+{{AGENTS_FILE}}
+
+{{DESIGN_FILE}}
+```
+
+| Index | Role |
+| --- | --- |
+| Project File Index | — |
+| Project File Metadata Index | — |
+
+---
+
+### Step 3 — Deterministic retrieval
+
+**Service:** `ContextEngine` → `DeterministicRetriever`  
+**Model:** Code (no AI)  
+
+**Input:** `Intent` from step 2.
+
+**Output:** `ContextResult` with `List<RetrievedFile>` (path, score, reasons, symbols, snippet).
+
+**Target behavior (not implemented yet):** search `project_file_index` for candidate paths and `project_file_metadata_index` for semantic matches (symbols, keywords, concepts, dependencies, `searchText`). Rank, cap by `codeatlas.context.indexed.max-files`, attach snippets from disk.
+
+**Current behavior:** `DeterministicRetriever.retrieve` returns an empty file list (stub).
+
+| Index | Role |
+| --- | --- |
+| Project File Index | **Target — primary** |
+| Project File Metadata Index | **Target — primary** |
+
+---
+
+### Step 4 — Detect missing context
+
+**Service:** `KnowlegeEngine` → `MissingContextDetector`  
+**Prompt template:** `src/main/resources/prompts/context/missing-context.md`  
+**Model:** AI  
+
+**Input:** user request + original `Intent` + files from step 3.
+
+**Output (target):** refined `Intent` or follow-up search terms derived from missing categories.
+
+**Prompt response shape:**
+
+```json
+{
+  "missing": ["migration", "frontend"]
 }
 ```
-Busca:
-```
-V15__add_deleted_flag.sql
-UserApiService.ts
-```
-Ahora contexto queda completo.
 
-### Índices principales
+Categories are short labels: `migration`, `frontend`, `repository`, `entity`, `dto`, `test`, `config`. Empty array when context looks sufficient.
 
-#### Database Index
+**Current behavior:** detector parses the model response but returns `null` (TODO — map `missing` → retrieval `Intent`).
 
-Para:
+**Prompt placeholders**
 
-```text
-migration
-table
-entity
-repository
-```
+| Placeholder | Wired in `MissingContextDetector` |
+| --- | --- |
+| `{{USER_REQUEST}}` | Yes |
+| `{{INTENT}}` | Yes |
+| `{{RETRIEVED_FILES}}` | Yes (paths only) |
+| `{{PATTERN_HINTS}}` | No (template only) |
+| `{{AGENTS_FILE}}` | No (template only) |
+| `{{DESIGN_FILE}}` | No (template only) |
 
-#### Frontend Route Index
-
-Para:
+**Prompt**
 
 ```text
-frontend caller
-component
-service
-endpoint
+Detect missing context categories needed to implement the user request.
+
+User request:
+{{USER_REQUEST}}
+
+Intent:
+{{INTENT}}
+
+Retrieved files:
+{{RETRIEVED_FILES}}
+
+Pattern hints:
+{{PATTERN_HINTS}}
+
+Return exactly one JSON object. No markdown fences or prose.
+
+Schema:
+{
+  "missing": ["migration","frontend caller","repository","entity","test"]
+}
+
+Rules:
+- use short canonical category labels only: migration, frontend, repository, entity, dto, test, config
+- missing is empty when retrieved files appear sufficient
+- common categories: migration, frontend, repository, entity, dto, test, config
+
+# General context from project:
+
+{{AGENTS_FILE}}
+
+{{DESIGN_FILE}}
 ```
 
-#### Symbol Index
+| Index | Role |
+| --- | --- |
+| Project File Index | — |
+| Project File Metadata Index | Secondary (target — summaries in prompt) |
 
-Para buscar clases concretas faltantes.
+---
 
-### Índices secundarios
+### Step 5 — Second deterministic retrieval
 
-#### Dependency Graph
+**Service:** `ContextEngine` → `DeterministicRetriever`  
+**Model:** Code (no AI)  
 
-Para expandir desde archivos encontrados.
+**Input:** `Intent` from step 4 (missing-context search intent).
 
-#### Pattern Index
+**Output:** `ContextResult` with additional `RetrievedFile` candidates.
 
-Para localizar implementaciones similares.
+Same retriever as step 3, driven by the missing-context `Intent`.
 
-### Conclusión
+**Target behavior (not implemented yet):** same index search as step 3, scoped to gaps reported in step 4.
 
-| Índice               | Uso        |
-| -------------------- | ---------- |
-| Database Index       | Principal  |
-| Frontend Route Index | Principal  |
-| Symbol Index         | Principal  |
-| Dependency Graph     | Secundario |
-| Pattern Index        | Secundario |
+**Current behavior:** stub — returns an empty file list.
 
-## 6. Architecture Summary
+| Index | Role |
+| --- | --- |
+| Project File Index | **Target — primary** |
+| Project File Metadata Index | **Target — primary** |
 
-Gemma recibe:
-```
-Request
-+
-Todos archivos recuperados
-```
-Produce:
-```
+---
+
+### Step 6 — Merge second retrieval files
+
+**Service:** `IndexedContextService.mergeFiles`  
+**Model:** Code  
+
+Merges files from step 3 and step 5. Deduplicates by `relativePath`; primary list wins on conflict.
+
+| Index | Role |
+| --- | --- |
+| Project File Index | — (operates on in-memory `RetrievedFile` lists) |
+| Project File Metadata Index | — |
+
+---
+
+### Step 7 — Summarize architecture
+
+**Service:** `KnowlegeEngine` → `ArchitectureSummarizer`  
+**Prompt template:** `src/main/resources/prompts/context/architecture-summary.md`  
+**Model:** AI  
+
+**Input:** user request + `Intent` + merged `RetrievedFile` list.
+
+**Output:** prose architecture facts, e.g.:
+
+```text
 Current pattern:
-
 - Controllers delegate to Services
 - Services own business logic
 - Repositories use Spring Data JPA
@@ -418,89 +281,102 @@ Current pattern:
 - No soft delete mechanism exists
 - Migrations managed by Flyway
 ```
-LLM recibe hechos explícitos. No tiene que deducirlos.
 
-### Índices principales
+Gives the downstream model explicit facts instead of raw code only.
 
-#### AI Summary Index
+**Target:** inject per-file summaries from `project_file_metadata_index` into the prompt (`formatSummaries` — TODO).
 
-Fue creado exactamente para resumir archivos.
+**Prompt placeholders**
 
-Permite reducir tokens antes de enviar a Gemma.
+| Placeholder | Wired in `ArchitectureSummarizer` |
+| --- | --- |
+| `{{USER_REQUEST}}` | Yes |
+| `{{INTENT}}` | Yes |
+| `{{FILE_SUMMARIES}}` | Yes (currently empty — TODO) |
+| `{{RETRIEVED_FILES}}` | Yes |
+| `{{AGENTS_FILE}}` | No (template only) |
+| `{{DESIGN_FILE}}` | No (template only) |
 
-### Índices secundarios
-
-#### Pattern Index
-
-Permite detectar patrones repetidos:
+**Prompt**
 
 ```text
-crud-resource
-soft-delete
-audit
+Summarize architecture facts for the implementation model.
+
+User request:
+{{USER_REQUEST}}
+
+Intent:
+{{INTENT}}
+
+File summaries (offline index):
+{{FILE_SUMMARIES}}
+
+Retrieved files (paths, retrieval signals, and code snippets):
+{{RETRIEVED_FILES}}
+
+Produce plain text (not JSON) starting with "Current pattern:" followed by bullet facts.
+Rules:
+- Use offline file summaries and retrieved snippets together; state explicit facts only
+- Do not invent files, classes, or behavior not present in the inputs
+- Mention layering, persistence, and gaps relevant to the request
+- Keep under 20 bullet lines
+
+# General context from project:
+
+{{AGENTS_FILE}}
+
+{{DESIGN_FILE}}
 ```
 
-#### Dependency Graph
+| Index | Role |
+| --- | --- |
+| Project File Index | — |
+| Project File Metadata Index | **Target — primary** |
 
-Permite entender estructura general.
+---
 
-#### Database Index
+### Step 8 — Assemble context
 
-Aporta relaciones entidad-tabla-migration.
+**Service:** `PromptEngine` → `PromptBuilder`  
+**Model:** Code (pure template, no AI prompt file)  
 
-### Conclusión
+**Input:** `Intent` + `KnowledgeResult` (architecture facts + merged files).
 
-| Índice           | Uso        |
-| ---------------- | ---------- |
-| AI Summary Index | Principal  |
-| Pattern Index    | Secundario |
-| Dependency Graph | Secundario |
-| Database Index   | Secundario |
+**Output sections:**
 
-## 7. Prompt Builder (What Will Be Sent To AIModel (AIModelPrompt))
-
-Acá no usar IA.
-
-Template puro.
-```
-# User Request
-
+```text
+# User Request Context
 # Architecture Facts
-
-# Dependency Graph
-
 # Relevant Files
-
 # Code Snippets
-
-# Agents
-
-# Design
-
-# Instructions
 ```
-Todo determinístico.
 
-### Índices principales
+Deterministic formatting only. Size limiting via `codeatlas.context.indexed.max-total-chars` exists but is currently disabled in code.
 
-Ninguno.
+| Index | Role |
+| --- | --- |
+| Project File Index | — |
+| Project File Metadata Index | — |
 
-### Conclusión
+---
 
-| Índice  | Uso       |
-| ------- | --------- |
-| Ninguno | Principal |
+## Index summary
 
-# Resumen final
+| Index | Primary steps |
+| --- | --- |
+| Project File Index | Step 1 (refresh); steps 3 & 5 (retrieval — target) |
+| Project File Metadata Index | Steps 3, 4, 5, 7 (search & summaries — target) |
 
-| Índice                 | Step principal                                           |
-| ---------------------- | -------------------------------------------------------- |
-| File Index             | Infraestructura base. No asociado directamente a un step |
-| Symbol Index           | Deterministic Retrieval, Second Retrieval                |
-| Endpoint Index         | Deterministic Retrieval                                  |
-| Dependency Graph       | Graph Expansion                                          |
-| Database Index         | Second Retrieval                                         |
-| Frontend Route Index   | Second Retrieval                                         |
-| Business Concept Index | Deterministic Retrieval                                  |
-| Pattern Index          | Support de Missing Context Detector                      |
-| AI Summary Index       | Architecture Summary                                     |
+---
+
+## Implementation status
+
+| Component | Status |
+| --- | --- |
+| File index scan / staleness | Implemented |
+| AI metadata generation (`FileSummariesIndexService`) | Implemented |
+| Intent extraction | Implemented |
+| Deterministic retrieval | **Stub** — returns empty list |
+| Missing context → retrieval intent | **Stub** — returns `null` |
+| Architecture summary metadata lookup | **Partial** — `formatSummaries` TODO |
+| Prompt assembly | Implemented |

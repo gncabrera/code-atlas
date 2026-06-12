@@ -40,10 +40,13 @@ public class IntentExtractionService {
         );
         return new Intent(
                 response.action(),
-                response.entities(),
-                response.operations(),
-                response.layers(),
-                response.frontendImpact()
+                response.symbols(),
+                response.concepts(),
+                response.capabilities(),
+                response.architecturalRoles(),
+                response.changeImpactAreas(),
+                response.frontendImpact(),
+                response.confidence()
         );
     }
 }

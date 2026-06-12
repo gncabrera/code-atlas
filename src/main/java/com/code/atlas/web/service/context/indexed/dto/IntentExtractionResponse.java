@@ -6,9 +6,12 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record IntentExtractionResponse(
         String action,
-        List<String> entities,
-        List<String> operations,
-        List<String> layers,
-        boolean frontendImpact
+        List<String> symbols,
+        List<String> concepts,
+        List<String> capabilities,
+        List<String> architecturalRoles,
+        List<String> changeImpactAreas,
+        boolean frontendImpact,
+        double confidence
 ) {
 }

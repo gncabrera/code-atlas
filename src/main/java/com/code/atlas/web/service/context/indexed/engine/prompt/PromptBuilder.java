@@ -9,20 +9,24 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
-public class IndexedContextAssembler {
+public class PromptBuilder {
 
     private final int maxTotalChars;
 
-    public IndexedContextAssembler(@Value("${codeatlas.context.indexed.max-total-chars:7000}") int maxTotalChars) {
+    public PromptBuilder(@Value("${codeatlas.context.indexed.max-total-chars:7000}") int maxTotalChars) {
         this.maxTotalChars = Math.max(1000, maxTotalChars);
     }
 
     public String assemble(Intent intent, KnowledgeResult knowledgeResult) {
         StringBuilder builder = new StringBuilder();
         appendSection(builder, "# User Request Context", "Action: " + intent.action()
-                + "\nEntities: " + intent.entities()
-                + "\nOperations: " + intent.operations()
-                + "\nLayers: " + intent.layers());
+                + "\nSymbols: " + intent.symbols()
+                + "\nConcepts: " + intent.concepts()
+                + "\nCapabilities: " + intent.capabilities()
+                + "\nArchitectural roles: " + intent.architecturalRoles()
+                + "\nChange impact areas: " + intent.changeImpactAreas()
+                + "\nFrontend impact: " + intent.frontendImpact()
+                + "\nConfidence: " + intent.confidence());
         appendSection(builder, "# Architecture Facts", knowledgeResult.architectureFacts());
         appendSection(builder, "# Relevant Files", formatFileList(knowledgeResult.files()));
         appendSection(builder, "# Code Snippets", formatSnippets(knowledgeResult.files()));

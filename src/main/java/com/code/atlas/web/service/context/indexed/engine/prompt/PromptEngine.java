@@ -6,13 +6,13 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class PromptEngine {
-    private final IndexedContextAssembler indexedContextAssembler;
+    private final PromptBuilder promptBuilder;
 
-    public PromptEngine(IndexedContextAssembler indexedContextAssembler) {
-        this.indexedContextAssembler = indexedContextAssembler;
+    public PromptEngine(PromptBuilder promptBuilder) {
+        this.promptBuilder = promptBuilder;
     }
 
     public String assemble(Intent intent, KnowledgeResult knowledgeResult) {
-        return indexedContextAssembler.assemble(intent, knowledgeResult);
+        return promptBuilder.assemble(intent, knowledgeResult);
     }
 }

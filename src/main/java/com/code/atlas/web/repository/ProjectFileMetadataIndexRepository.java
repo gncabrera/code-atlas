@@ -1,6 +1,7 @@
 package com.code.atlas.web.repository;
 
 import com.code.atlas.web.domain.ProjectFileMetadataIndex;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -12,6 +13,7 @@ public interface ProjectFileMetadataIndexRepository extends JpaRepository<Projec
 
     Optional<ProjectFileMetadataIndex> findByFileId(Long fileIndexId);
 
+    @EntityGraph(attributePaths = {"file"})
     List<ProjectFileMetadataIndex> findByProjectId(Long projectId);
 
     void deleteByProjectId(Long projectId);

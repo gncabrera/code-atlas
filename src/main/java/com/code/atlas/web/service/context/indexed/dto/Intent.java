@@ -4,17 +4,22 @@ import java.util.List;
 
 public record Intent(
         String action,
-        List<String> entities,
-        List<String> operations,
-        List<String> layers,
-        boolean frontendImpact
+        List<String> symbols,
+        List<String> concepts,
+        List<String> capabilities,
+        List<String> architecturalRoles,
+        List<String> changeImpactAreas,
+        boolean frontendImpact,
+        double confidence
 ) {
     public Intent {
         if (action == null || action.isBlank()) {
             throw new IllegalArgumentException("Intent action is required.");
         }
-        entities = entities == null ? List.of() : List.copyOf(entities);
-        operations = operations == null ? List.of() : List.copyOf(operations);
-        layers = layers == null ? List.of() : List.copyOf(layers);
+        symbols = symbols == null ? List.of() : List.copyOf(symbols);
+        concepts = concepts == null ? List.of() : List.copyOf(concepts);
+        capabilities = capabilities == null ? List.of() : List.copyOf(capabilities);
+        architecturalRoles = architecturalRoles == null ? List.of() : List.copyOf(architecturalRoles);
+        changeImpactAreas = changeImpactAreas == null ? List.of() : List.copyOf(changeImpactAreas);
     }
 }

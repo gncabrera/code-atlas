@@ -5,13 +5,9 @@ import com.code.atlas.web.domain.Project;
 import com.code.atlas.web.service.ProjectIndexService;
 import com.code.atlas.web.service.context.indexed.dto.*;
 import com.code.atlas.web.service.context.indexed.engine.context.ContextEngine;
-import com.code.atlas.web.service.context.indexed.engine.context.retriever.DeterministicRetriever;
 import com.code.atlas.web.service.context.indexed.engine.intent.IntentEngine;
-import com.code.atlas.web.service.context.indexed.engine.intent.IntentExtractionService;
-import com.code.atlas.web.service.context.indexed.engine.knowledge.ArchitectureSummarizer;
 import com.code.atlas.web.service.context.indexed.engine.knowledge.KnowlegeEngine;
-import com.code.atlas.web.service.context.indexed.engine.knowledge.MissingContextDetector;
-import com.code.atlas.web.service.context.indexed.engine.prompt.IndexedContextAssembler;
+
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -60,10 +56,11 @@ public class IndexedContextService {
             runVoidStep(project, 1, "Ensure indices are fresh", () -> ensureIndicesFresh(project));
             Intent intent = runStep(project, 2, "Extract intent", () -> intentEngine.extract(project, userRequest, aiModel));
             ContextResult contextResult = runStep(project, 3, "Deterministic retrieval", () -> contextEngine.retrieve(project, intent));
-            Intent missingIntent = runStep(project, 5, "Detect missing context",
+            Intent missingIntent = runStep(project, 4, "Detect missing context",
                     () -> knowlegeEngine.detect(project, userRequest, intent, contextResult, aiModel));
-            ContextResult missingContext = contextEngine.retrieve(project, missingIntent);
-            List<RetrievedFile> mergedFiles = runStep(project, 6, "Second retrieval and merge",
+            ContextResult missingContext = runStep(project, 5, "Second deterministic retrieval",
+                    () -> contextEngine.retrieve(project, missingIntent));
+            List<RetrievedFile> mergedFiles = runStep(project, 6, "Merge second retrieval files",
                     () -> mergeFiles(contextResult.files(), missingContext.files()));
             String architectureFacts = runStep(project, 7, "Summarize architecture",
                     () -> knowlegeEngine.summarize(project, userRequest, intent, mergedFiles, aiModel));
