@@ -3,7 +3,8 @@ CREATE TABLE IF NOT EXISTS projects (
     path TEXT NOT NULL,
     name TEXT NOT NULL,
     description TEXT NOT NULL,
-    use_agents_file INTEGER NOT NULL DEFAULT 1
+    use_agents_file INTEGER NOT NULL DEFAULT 1,
+    use_design_file INTEGER NOT NULL DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS ai_model_api_key (

@@ -19,6 +19,69 @@
     let transientBadgeTimer = null;
     let activePreflightId = null;
     let clearModalInstance = null;
+    let loadedProjectTypes = [];
+
+    function populateProjectTypeMultiselect(projectTypes, selectedIds) {
+        const $select = $("#projectTypeMultiselect");
+        loadedProjectTypes = projectTypes || [];
+        if ($select.data("multiselect")) {
+            $select.multiselect("destroy");
+        }
+        $select.empty();
+        const initialSelection = selectedIds !== undefined && selectedIds !== null
+            ? selectedIds.map(String)
+            : [];
+        if (!projectTypes || projectTypes.length === 0) {
+            $select.multiselect({
+                enableFiltering: true,
+                includeSelectAllOption: true,
+                buttonWidth: "100%",
+                nonSelectedText: "No project types available",
+                numberDisplayed: 3
+            });
+            return;
+        }
+        projectTypes.forEach(function (projectType) {
+            const optionId = String(projectType.id);
+            $select.append(
+                $("<option>", {
+                    value: optionId,
+                    text: projectType.name,
+                    selected: initialSelection.indexOf(optionId) >= 0
+                })
+            );
+        });
+        $select.multiselect({
+            enableFiltering: true,
+            includeSelectAllOption: true,
+            buttonWidth: "100%",
+            nonSelectedText: "Select project types",
+            numberDisplayed: 3
+        });
+    }
+
+    function loadProjectTypes(selectedIds) {
+        $.ajax({
+            url: "/api/admin/project-types",
+            method: "GET"
+        }).done(function (response) {
+            if (response.result !== "success") {
+                CodeAtlas.showToast(response.message || "Failed loading project types.", "danger");
+                populateProjectTypeMultiselect([], selectedIds);
+                return;
+            }
+            populateProjectTypeMultiselect(response.data || [], selectedIds);
+        }).fail(function (xhr) {
+            CodeAtlas.showToast(CodeAtlas.apiMessage(xhr, "Failed loading project types."), "danger");
+            populateProjectTypeMultiselect([], selectedIds);
+        });
+    }
+
+    function getSelectedProjectTypeIds() {
+        return ($("#projectTypeMultiselect").val() || []).map(function (id) {
+            return Number(id);
+        });
+    }
 
     function getSelectedProjectId() {
         const id = $projectId.val();
@@ -271,6 +334,7 @@
         $("#projectDescription").val(project.description);
         $("#projectUseAgentsFile").prop("checked", project.useAgentsFile);
         $("#projectUseDesignFile").prop("checked", project.useDesignFile);
+        populateProjectTypeMultiselect(loadedProjectTypes, project.projectTypeIds || []);
         refreshIndexStatus();
     };
 
@@ -281,6 +345,7 @@
         $("#projectDescription").val("");
         $("#projectUseAgentsFile").prop("checked", true);
         $("#projectUseDesignFile").prop("checked", true);
+        populateProjectTypeMultiselect(loadedProjectTypes, []);
         $(".project-profile").prop("checked", false);
         $("#profileSpringJava, #profileSpringFlyway, #profileThymeleaf").prop("checked", true);
         hidePreflightPanel();
@@ -289,6 +354,7 @@
 
     $(function () {
         bindIndexControls();
+        loadProjectTypes([]);
         refreshIndexStatus();
     });
 
@@ -319,7 +385,8 @@
                 path: $("#projectPath").val().trim(),
                 description: $("#projectDescription").val().trim(),
                 useAgentsFile: $("#projectUseAgentsFile").is(":checked"),
-                useDesignFile: $("#projectUseDesignFile").is(":checked")
+                useDesignFile: $("#projectUseDesignFile").is(":checked"),
+                projectTypeIds: getSelectedProjectTypeIds()
             };
         },
         validateSave: function () {
@@ -338,12 +405,16 @@
             return null;
         },
         renderColumns: function (project) {
+            const typeNames = project.projectTypeNames && project.projectTypeNames.length
+                ? project.projectTypeNames.join(", ")
+                : "—";
             return [
                 $("<td></td>").text(project.name),
                 $("<td></td>").text(project.path),
                 $("<td></td>").text(project.description),
                 $("<td></td>").text(project.useAgentsFile ? "Yes" : "No"),
-                $("<td></td>").text(project.useDesignFile ? "Yes" : "No")
+                $("<td></td>").text(project.useDesignFile ? "Yes" : "No"),
+                $("<td></td>").text(typeNames)
             ];
         }
     });

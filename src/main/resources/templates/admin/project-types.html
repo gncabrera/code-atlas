@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Code Atlas - Project Types</title>
+    <th:block th:replace="~{fragments/head :: pageHead('project-types.css')}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<main class="container py-4">
+    <h1 class="mb-3">Project Types</h1>
+    <p class="text-muted">Define project categories and allowed file extensions for metadata tagging.</p>
+
+    <div class="card mb-4">
+        <div class="card-header">Project Type Form</div>
+        <div class="card-body">
+            <input id="projectTypeId" type="hidden">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label for="projectTypeName" class="form-label">Name</label>
+                    <input id="projectTypeName" class="form-control" type="text" placeholder="Java / Spring">
+                </div>
+                <div class="col-md-8">
+                    <label for="projectTypeExtensions" class="form-label">Allowed Extensions</label>
+                    <input id="projectTypeExtensions" class="form-control" type="text" placeholder="java,kt,groovy,gradle">
+                    <div class="form-text">Comma-separated extensions without dots, e.g. java,ts,md</div>
+                </div>
+                <div class="col-12">
+                    <label for="projectTypeDescription" class="form-label">Description</label>
+                    <textarea id="projectTypeDescription" class="form-control" rows="2"
+                              placeholder="Optional description"></textarea>
+                </div>
+            </div>
+            <div class="mt-3 d-flex gap-2">
+                <button id="saveProjectTypeBtn" class="btn btn-primary">Save</button>
+                <button id="resetProjectTypeBtn" class="btn btn-outline-secondary">Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">Project Type List</div>
+        <div class="card-body table-responsive">
+            <table class="table table-striped align-middle">
+                <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Extensions</th>
+                    <th>Description</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+                <tbody id="projectTypesTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<div th:replace="~{fragments/scripts :: pageScripts('project-types.js')}"></div>
+</body>
+</html>

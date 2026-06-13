@@ -1,7 +1,11 @@
 package com.code.atlas.web.service;
 
 import com.code.atlas.web.domain.Project;
+import com.code.atlas.web.domain.ProjectProjectType;
+import com.code.atlas.web.domain.ProjectType;
+import com.code.atlas.web.repository.ProjectProjectTypeRepository;
 import com.code.atlas.web.repository.ProjectRepository;
+import com.code.atlas.web.repository.ProjectTypeRepository;
 import com.code.atlas.web.service.dto.ProjectRequestDto;
 import com.code.atlas.web.service.dto.ProjectResponseDto;
 import jakarta.transaction.Transactional;
@@ -12,29 +16,46 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 @Service
 public class ProjectService {
 
     private final ProjectRepository projectRepository;
+    private final ProjectProjectTypeRepository projectProjectTypeRepository;
+    private final ProjectTypeRepository projectTypeRepository;
     private final GitProcessRunner gitProcessRunner;
 
-    public ProjectService(ProjectRepository projectRepository, GitProcessRunner gitProcessRunner) {
+    public ProjectService(
+            ProjectRepository projectRepository,
+            ProjectProjectTypeRepository projectProjectTypeRepository,
+            ProjectTypeRepository projectTypeRepository,
+            GitProcessRunner gitProcessRunner) {
         this.projectRepository = projectRepository;
+        this.projectProjectTypeRepository = projectProjectTypeRepository;
+        this.projectTypeRepository = projectTypeRepository;
         this.gitProcessRunner = gitProcessRunner;
     }
 
     public List<ProjectResponseDto> getAllProjects() {
-        return projectRepository.findAll().stream().map(this::toResponseDto).toList();
+        List<Project> projects = projectRepository.findAll();
+        if (projects.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, List<ProjectProjectType>> assignmentsByProjectId = loadAssignmentsByProjectId(
+                projects.stream().map(Project::getId).toList());
+        return projects.stream()
+                .map(project -> toResponseDto(project, assignmentsByProjectId.getOrDefault(project.getId(), List.of())))
+                .toList();
     }
 
     public ProjectResponseDto getProjectById(Long id) {
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Project not found for id: " + id));
-        return toResponseDto(project);
+        return toResponseDto(project, projectProjectTypeRepository.findByProjectIdOrderByProjectTypeNameAsc(id));
     }
 
     @Transactional
@@ -46,7 +67,9 @@ public class ProjectService {
         project.setDescription(requestDto.description().trim());
         project.setUseAgentsFile(requestDto.useAgentsFile());
         project.setUseDesignFile(requestDto.useDesignFile());
-        return toResponseDto(projectRepository.save(project));
+        Project saved = projectRepository.save(project);
+        syncProjectTypes(saved, requestDto.projectTypeIds());
+        return getProjectById(saved.getId());
     }
 
     @Transactional
@@ -59,7 +82,9 @@ public class ProjectService {
         project.setDescription(requestDto.description().trim());
         project.setUseAgentsFile(requestDto.useAgentsFile());
         project.setUseDesignFile(requestDto.useDesignFile());
-        return toResponseDto(projectRepository.save(project));
+        projectRepository.save(project);
+        syncProjectTypes(project, requestDto.projectTypeIds());
+        return getProjectById(id);
     }
 
     @Transactional
@@ -82,15 +107,66 @@ public class ProjectService {
         return normalizedPath;
     }
 
-    private ProjectResponseDto toResponseDto(Project project) {
+    private ProjectResponseDto toResponseDto(Project project, List<ProjectProjectType> assignments) {
+        List<Long> projectTypeIds = assignments.stream()
+                .map(assignment -> assignment.getProjectType().getId())
+                .toList();
+        List<String> projectTypeNames = assignments.stream()
+                .map(assignment -> assignment.getProjectType().getName())
+                .toList();
         return new ProjectResponseDto(
                 project.getId(),
                 project.getPath(),
                 project.getName(),
                 project.getDescription(),
                 project.isUseAgentsFile(),
-                project.isUseDesignFile()
+                project.isUseDesignFile(),
+                projectTypeIds,
+                projectTypeNames
         );
+    }
+
+    private Map<Long, List<ProjectProjectType>> loadAssignmentsByProjectId(List<Long> projectIds) {
+        if (projectIds.isEmpty()) {
+            return Map.of();
+        }
+        return projectProjectTypeRepository.findByProjectIdInOrderByProjectIdAscProjectTypeNameAsc(projectIds)
+                .stream()
+                .collect(Collectors.groupingBy(assignment -> assignment.getProject().getId()));
+    }
+
+    private void syncProjectTypes(Project project, List<Long> projectTypeIds) {
+        List<Long> normalizedIds = normalizeProjectTypeIds(projectTypeIds);
+        projectProjectTypeRepository.deleteByProjectId(project.getId());
+        if (normalizedIds.isEmpty()) {
+            return;
+        }
+        List<ProjectType> projectTypes = projectTypeRepository.findAllById(normalizedIds);
+        if (projectTypes.size() != normalizedIds.size()) {
+            throw new IllegalArgumentException("One or more project types were not found.");
+        }
+        Map<Long, ProjectType> projectTypeById = projectTypes.stream()
+                .collect(Collectors.toMap(ProjectType::getId, type -> type));
+        for (Long projectTypeId : normalizedIds) {
+            ProjectProjectType assignment = new ProjectProjectType();
+            assignment.setProject(project);
+            assignment.setProjectType(projectTypeById.get(projectTypeId));
+            projectProjectTypeRepository.save(assignment);
+        }
+    }
+
+    private List<Long> normalizeProjectTypeIds(List<Long> projectTypeIds) {
+        if (projectTypeIds == null || projectTypeIds.isEmpty()) {
+            return List.of();
+        }
+        Set<Long> normalized = new LinkedHashSet<>();
+        for (Long projectTypeId : projectTypeIds) {
+            if (projectTypeId == null) {
+                continue;
+            }
+            normalized.add(projectTypeId);
+        }
+        return List.copyOf(normalized);
     }
 
     public List<String> getProjectFiles(Project project) {

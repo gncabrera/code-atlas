@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Code Atlas - Projects</title>
     <th:block th:replace="~{fragments/head :: pageHead('projects.css')}"></th:block>
+    <link rel="stylesheet" th:href="@{/css/vendor/bootstrap-multiselect.css(v=${assetVersion})}">
 </head>
 <body>
 <div th:replace="~{fragments/navbar :: navbar}"></div>
@@ -33,6 +34,11 @@
                 <div class="col-12">
                     <label for="projectDescription" class="form-label">Description</label>
                     <textarea id="projectDescription" class="form-control" rows="3"></textarea>
+                </div>
+                <div id="projectTypeMultiselectWrapper" class="col-12">
+                    <label for="projectTypeMultiselect" class="form-label">Project Types</label>
+                    <select id="projectTypeMultiselect" multiple="multiple"></select>
+                    <div class="form-text">Optional tags for categorizing this project.</div>
                 </div>
                 <div class="col-12">
                     <div class="form-check">
@@ -96,6 +102,7 @@
                     <th>Description</th>
                     <th>Use AGENTS.md</th>
                     <th>Use DESIGN.md</th>
+                    <th>Types</th>
                     <th>Actions</th>
                 </tr>
                 </thead>
@@ -126,6 +133,6 @@
     </div>
 </div>
 
-<th:block th:replace="~{fragments/scripts :: pageScripts('projects.js')}"></th:block>
+<th:block th:replace="~{fragments/scripts :: pageScriptsWithVendor('projects.js', 'vendor/bootstrap-multiselect.js')}"></th:block>
 </body>
 </html>

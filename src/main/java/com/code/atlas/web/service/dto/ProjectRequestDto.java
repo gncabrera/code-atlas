@@ -7,7 +7,8 @@ public record ProjectRequestDto(
         String name,
         String description,
         boolean useAgentsFile,
-        boolean useDesignFile
+        boolean useDesignFile,
+        List<Long> projectTypeIds
 ) {
     public ProjectRequestDto {
         if (path == null || path.isBlank()) {

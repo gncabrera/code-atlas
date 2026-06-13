@@ -34,6 +34,7 @@ public class FileSummariesIndexService {
     private final OfflineFileSummaryChunkBuilder fileSummaryChunkBuilder;
     private final ProjectFileMetadataIndexRepository projectFileMetadataIndexRepository;
     private final ProjectService projectService;
+    private final MetadataFilter metadataFilter;
 
     public FileSummariesIndexService(
             ProjectFileIndexRepository projectFileIndexRepository,
@@ -44,7 +45,7 @@ public class FileSummariesIndexService {
             OfflineFileSummaryChunkBuilder fileSummaryChunkBuilder,
             ProjectFileMetadataIndexRepository projectFileMetadataIndexRepository,
             ProjectService projectService,
-            @Lazy FileSummariesIndexService self
+            @Lazy FileSummariesIndexService self, MetadataFilter metadataFilter
     ) {
         this.projectFileIndexRepository = projectFileIndexRepository;
         this.aiModelService = aiModelService;
@@ -55,6 +56,7 @@ public class FileSummariesIndexService {
         this.projectFileMetadataIndexRepository = projectFileMetadataIndexRepository;
         this.projectService = projectService;
         this.self = self;
+        this.metadataFilter = metadataFilter;
         this.summaryTemplate = PromptTemplateService.load(PromptTemplate.CONTEXT_FILE_SUMMARY);
     }
 
@@ -66,19 +68,25 @@ public class FileSummariesIndexService {
         }
         List<ProjectFileIndex> filesToSummarize;
         if (incremental) {
+            // TODO: Also purge files not needing more metadata metadataFilter.shouldGenerateMetadata
             self.purgeStaleFileSummaries(project.getId(), allFiles);
             List<ProjectFileMetadataIndex> existingSummaries = projectFileMetadataIndexRepository.findByProjectId(project.getId());
+
             filesToSummarize = selectFilesNeedingSummary(allFiles, existingSummaries);
             int unchanged = allFiles.size() - filesToSummarize.size();
             pipelineLogger.message(project, PHASE, "Incremental file summaries: " + filesToSummarize.size()
                     + " to process, " + unchanged + " unchanged");
         } else {
+
             filesToSummarize = allFiles;
         }
+        // TODO: Filter out files not needing metadataFilter.shouldGenerateMetadata
         summarizeAndPersistFiles(project, aiModel, filesToSummarize);
     }
 
-    private static List<ProjectFileIndex> selectFilesNeedingSummary(
+
+
+    private List<ProjectFileIndex> selectFilesNeedingSummary(
             List<ProjectFileIndex> allFiles,
             List<ProjectFileMetadataIndex> existingSummaries
     ) {

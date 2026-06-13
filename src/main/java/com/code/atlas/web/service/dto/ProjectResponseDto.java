@@ -8,6 +8,8 @@ public record ProjectResponseDto(
         String name,
         String description,
         boolean useAgentsFile,
-        boolean useDesignFile
+        boolean useDesignFile,
+        List<Long> projectTypeIds,
+        List<String> projectTypeNames
 ) {
 }
