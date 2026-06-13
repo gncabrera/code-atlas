@@ -19,6 +19,7 @@ Return markdown only. No preamble.
 7. Open Questions
 8. Acceptance Criteria
 9. Implementation Order
+10. Ideas for Developer
 
 ## Mandatory Inputs
 
@@ -310,6 +311,47 @@ Example:
 5. Validation
 
 Explain why the order minimizes risk.
+
+---
+
+## Ideas for Developer
+
+Include only when genuinely useful.
+
+Provide 10-12 concise ideas.
+
+For each idea include:
+
+* title
+* change
+* reason
+* impact/effort hint (Low / Medium / High)
+
+Mix categories:
+
+* feature
+* functional behavior
+* UX
+* architecture
+* developer experience
+* testing
+* observability
+* security
+* performance
+* rollout strategy
+
+Include at least two ideas inspired by successful product patterns adapted to this repository.
+
+Examples:
+
+* GitHub Checks
+* Linear Workflows
+* Stripe Idempotency
+* Notion Slash Commands
+* GitHub Code Owners
+* Pull Request Templates
+
+Ideas must be actionable and aligned with USER_REQUEST and CONTEXT.
 
 ---
 

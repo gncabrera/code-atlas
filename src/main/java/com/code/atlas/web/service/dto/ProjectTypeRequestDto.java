@@ -3,6 +3,7 @@ package com.code.atlas.web.service.dto;
 public record ProjectTypeRequestDto(
         String name,
         String allowedExtensions,
+        String allowedFiles,
         String description
 ) {
     public ProjectTypeRequestDto {

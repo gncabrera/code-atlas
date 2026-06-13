@@ -2,6 +2,7 @@ CREATE TABLE IF NOT EXISTS project_type (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     allowed_extensions TEXT NOT NULL,
+    allowed_files TEXT,
     description TEXT
 );
 

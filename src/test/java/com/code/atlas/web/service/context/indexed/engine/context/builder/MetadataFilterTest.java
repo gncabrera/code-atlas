@@ -58,8 +58,8 @@ class MetadataFilterTest {
 
     @Test
     void shouldGenerateMetadata_unionsExtensionsAcrossProjectTypes() {
-        ProjectType backend = type(1L, "Backend", "java");
-        ProjectType docs = type(2L, "Docs", "md,rst");
+        ProjectType backend = type(1L, "Backend", "java", null);
+        ProjectType docs = type(2L, "Docs", "md,rst", null);
         stubAssignments(
                 assignment(backend),
                 assignment(docs)
@@ -103,8 +103,30 @@ class MetadataFilterTest {
         assertFalse(metadataFilter.shouldGenerateMetadata(context, file("dist/App.java", "java")));
     }
 
+    @Test
+    void shouldGenerateMetadata_whenAllowedFileNameMatches_returnsTrueEvenWithoutExtension() {
+        ProjectType backend = type(1L, "Backend", "java", "dockerfile,pom.xml");
+        stubAssignments(assignment(backend));
+
+        MetadataFilter.MetadataFilterContext context = metadataFilter.createContext(project);
+
+        assertTrue(metadataFilter.shouldGenerateMetadata(context, file("Dockerfile", "")));
+        assertTrue(metadataFilter.shouldGenerateMetadata(context, file("module/pom.xml", "xml")));
+        assertFalse(metadataFilter.shouldGenerateMetadata(context, file("build.gradle", "gradle")));
+    }
+
+    @Test
+    void shouldGenerateMetadata_whenAllowedFileInExcludedPath_returnsFalse() {
+        ProjectType backend = type(1L, "Backend", "java", "dockerfile");
+        stubAssignments(assignment(backend));
+
+        MetadataFilter.MetadataFilterContext context = metadataFilter.createContext(project);
+
+        assertFalse(metadataFilter.shouldGenerateMetadata(context, file("node_modules/Dockerfile", "")));
+    }
+
     private void stubProjectTypes(String allowedExtensions) {
-        stubAssignments(assignment(type(10L, "Default", allowedExtensions)));
+        stubAssignments(assignment(type(10L, "Default", allowedExtensions, null)));
     }
 
     private void stubAssignments(ProjectProjectType... assignments) {
@@ -118,11 +140,12 @@ class MetadataFilterTest {
         return assignment;
     }
 
-    private ProjectType type(Long id, String name, String allowedExtensions) {
+    private ProjectType type(Long id, String name, String allowedExtensions, String allowedFiles) {
         ProjectType projectType = new ProjectType();
         projectType.setId(id);
         projectType.setName(name);
         projectType.setAllowedExtensions(allowedExtensions);
+        projectType.setAllowedFiles(allowedFiles);
         return projectType;
     }
 

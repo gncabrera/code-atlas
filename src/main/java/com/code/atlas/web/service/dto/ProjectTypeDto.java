@@ -4,6 +4,7 @@ public record ProjectTypeDto(
         Long id,
         String name,
         String allowedExtensions,
+        String allowedFiles,
         String description
 ) {
 }

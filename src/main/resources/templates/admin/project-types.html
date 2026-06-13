@@ -28,6 +28,22 @@
                     <div class="form-text">Comma-separated extensions without dots, e.g. java,ts,md</div>
                 </div>
                 <div class="col-12">
+                    <label class="form-label">Allowed Files</label>
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-2">
+                            <thead>
+                            <tr>
+                                <th>Filename</th>
+                                <th style="width: 7rem;">Actions</th>
+                            </tr>
+                            </thead>
+                            <tbody id="allowedFilesTableBody"></tbody>
+                        </table>
+                    </div>
+                    <button type="button" id="addAllowedFileBtn" class="btn btn-sm btn-outline-primary">Add file</button>
+                    <div class="form-text">Exact filenames only, e.g. Dockerfile, pom.xml</div>
+                </div>
+                <div class="col-12">
                     <label for="projectTypeDescription" class="form-label">Description</label>
                     <textarea id="projectTypeDescription" class="form-control" rows="2"
                               placeholder="Optional description"></textarea>
@@ -48,6 +64,7 @@
                 <tr>
                     <th>Name</th>
                     <th>Extensions</th>
+                    <th>Files</th>
                     <th>Description</th>
                     <th>Actions</th>
                 </tr>

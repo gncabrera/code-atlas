@@ -32,40 +32,48 @@ public class MetadataFilter {
     }
 
     public MetadataFilterContext createContext(Project project) {
-        Set<String> allowedExtensions = loadAllowedExtensions(project.getId());
+        List<ProjectProjectType> assignments = projectProjectTypeRepository
+                .findByProjectIdOrderByProjectTypeNameAsc(project.getId());
+        Set<String> allowedExtensions = new LinkedHashSet<>();
+        Set<String> allowedFileNames = new LinkedHashSet<>();
+        for (ProjectProjectType assignment : assignments) {
+            if (assignment.getProjectType() == null) {
+                continue;
+            }
+            addCommaSeparatedValues(allowedExtensions, assignment.getProjectType().getAllowedExtensions());
+            addCommaSeparatedValues(allowedFileNames, assignment.getProjectType().getAllowedFiles());
+        }
         GitIgnoreMatcher gitIgnore = GitIgnoreMatcher.fromPath(Path.of(project.getPath(), ".gitignore"));
-        return new MetadataFilterContext(allowedExtensions, gitIgnore);
+        return new MetadataFilterContext(allowedExtensions, allowedFileNames, gitIgnore);
     }
 
     public boolean shouldGenerateMetadata(MetadataFilterContext context, ProjectFileIndex file) {
         if (context == null || file == null) {
             return false;
         }
+        String relativePath = normalizePath(file.getFilePath());
         String extension = normalizeExtension(file.getFileExtension());
-        if (extension.isEmpty() || !context.allowedExtensions().contains(extension)) {
+        String basename = basenameOf(relativePath);
+        boolean extensionOk = !extension.isEmpty() && context.allowedExtensions().contains(extension);
+        boolean fileOk = !basename.isEmpty() && context.allowedFileNames().contains(basename);
+        if (!extensionOk && !fileOk) {
             return false;
         }
-        String relativePath = normalizePath(file.getFilePath());
         if (containsExcludedSegment(relativePath)) {
             return false;
         }
         return !context.gitIgnore().isIgnored(relativePath);
     }
 
-    private Set<String> loadAllowedExtensions(Long projectId) {
-        List<ProjectProjectType> assignments = projectProjectTypeRepository.findByProjectIdOrderByProjectTypeNameAsc(projectId);
-        Set<String> allowedExtensions = new LinkedHashSet<>();
-        for (ProjectProjectType assignment : assignments) {
-            if (assignment.getProjectType() == null || assignment.getProjectType().getAllowedExtensions() == null) {
-                continue;
-            }
-            Arrays.stream(assignment.getProjectType().getAllowedExtensions().split(","))
-                    .map(String::trim)
-                    .map(value -> value.toLowerCase(Locale.ROOT))
-                    .filter(value -> !value.isEmpty())
-                    .forEach(allowedExtensions::add);
+    private void addCommaSeparatedValues(Set<String> target, String rawValues) {
+        if (rawValues == null || rawValues.isBlank()) {
+            return;
         }
-        return allowedExtensions;
+        Arrays.stream(rawValues.split(","))
+                .map(String::trim)
+                .map(value -> value.toLowerCase(Locale.ROOT))
+                .filter(value -> !value.isEmpty())
+                .forEach(target::add);
     }
 
     private boolean containsExcludedSegment(String relativePath) {
@@ -91,8 +99,18 @@ public class MetadataFilter {
         return relativePath.replace('\\', '/').replaceAll("^/+", "");
     }
 
+    private String basenameOf(String relativePath) {
+        if (relativePath == null || relativePath.isBlank()) {
+            return "";
+        }
+        int slashIndex = relativePath.lastIndexOf('/');
+        String basename = slashIndex < 0 ? relativePath : relativePath.substring(slashIndex + 1);
+        return basename.trim().toLowerCase(Locale.ROOT);
+    }
+
     public record MetadataFilterContext(
             Set<String> allowedExtensions,
+            Set<String> allowedFileNames,
             GitIgnoreMatcher gitIgnore
     ) {
     }

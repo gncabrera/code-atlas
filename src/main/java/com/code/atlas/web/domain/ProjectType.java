@@ -26,6 +26,9 @@ public class ProjectType {
     @Column(name = "allowed_extensions", nullable = false)
     private String allowedExtensions;
 
+    @Column(name = "allowed_files")
+    private String allowedFiles;
+
     @Column
     private String description;
 }

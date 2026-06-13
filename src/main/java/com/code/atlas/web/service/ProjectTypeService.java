@@ -50,6 +50,7 @@ public class ProjectTypeService {
         ProjectType projectType = new ProjectType();
         projectType.setName(normalizedName);
         projectType.setAllowedExtensions(normalizeAllowedExtensions(request.allowedExtensions()));
+        projectType.setAllowedFiles(normalizeAllowedFiles(request.allowedFiles()));
         projectType.setDescription(normalizeDescription(request.description()));
         return toDto(projectTypeRepository.save(projectType));
     }
@@ -63,6 +64,7 @@ public class ProjectTypeService {
         }
         existing.setName(normalizedName);
         existing.setAllowedExtensions(normalizeAllowedExtensions(request.allowedExtensions()));
+        existing.setAllowedFiles(normalizeAllowedFiles(request.allowedFiles()));
         existing.setDescription(normalizeDescription(request.description()));
         return toDto(projectTypeRepository.save(existing));
     }
@@ -97,6 +99,27 @@ public class ProjectTypeService {
         return String.join(",", normalized);
     }
 
+    public String normalizeAllowedFiles(String rawFiles) {
+        if (rawFiles == null || rawFiles.isBlank()) {
+            return null;
+        }
+        Set<String> normalized = new LinkedHashSet<>();
+        for (String segment : rawFiles.split(",")) {
+            String fileName = segment.trim();
+            if (fileName.isEmpty()) {
+                continue;
+            }
+            if (fileName.contains("/") || fileName.contains("\\")) {
+                throw new IllegalArgumentException("Allowed file must be a filename only: " + segment.trim());
+            }
+            normalized.add(fileName.toLowerCase(Locale.ROOT));
+        }
+        if (normalized.isEmpty()) {
+            return null;
+        }
+        return String.join(",", normalized);
+    }
+
     private String normalizeDescription(String description) {
         if (description == null) {
             return null;
@@ -110,6 +133,7 @@ public class ProjectTypeService {
                 projectType.getId(),
                 projectType.getName(),
                 projectType.getAllowedExtensions(),
+                projectType.getAllowedFiles(),
                 projectType.getDescription()
         );
     }
