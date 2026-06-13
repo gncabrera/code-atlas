@@ -10,9 +10,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.genai.Client;
 import com.google.genai.types.GenerateContentResponse;
 import com.google.genai.types.HttpOptions;
+import com.google.genai.types.HttpRetryOptions;
 import jakarta.transaction.Transactional;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.Nullable;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +25,8 @@ public class AIModelService {
     private final AIModelRepository aiModelRepository;
     private final AIModelApiKeyRepository aiModelApiKeyRepository;
     private final PromptHistoryService promptHistoryService;
+    private static final int GEMINI_MAX_ATTEMPTS = 3;
+
     private final int timeoutSeconds;
     private final ObjectMapper objectMapper;
 
@@ -152,11 +156,12 @@ public class AIModelService {
     }
     @Transactional
     public ModelResponseDto sendToModel(Project project, AIModel model, String prompt, String notes, String logLabel) {
-        if (!model.isEnabled()) {
+        AIModel activeModel = getModelEntity(model.getId());
+        if (!activeModel.isEnabled()) {
             throw new IllegalArgumentException("Selected AI model is disabled.");
         }
         int estimatedTokens = estimateTokens(prompt);
-        if (model.getTokensPerMinute() > 0 && estimatedTokens > model.getTokensPerMinute()) {
+        if (activeModel.getTokensPerMinute() > 0 && estimatedTokens > activeModel.getTokensPerMinute()) {
             throw new IllegalArgumentException(
                     "Estimated tokens exceed model tokensPerMinute limit."
             );
@@ -165,23 +170,14 @@ public class AIModelService {
         boolean logLlmCall = logLabel != null && !logLabel.isBlank();
         if (logLlmCall) {
             log.info("[Context][project={}] LLM — starting: {} (model={}, estTokens={})",
-                    project.getId(), logLabel, model.getName(), estimatedTokens);
+                    project.getId(), logLabel, activeModel.getName(), estimatedTokens);
         }
 
-        PromptHistory history = promptHistoryService.create(project, model, prompt, notes);
+        PromptHistory history = promptHistoryService.create(project, activeModel, prompt, notes);
         long startedNanos = System.nanoTime();
 
         try {
-            String apiKeyValue = resolveApiKeyValue(model);
-            HttpOptions httpOptions = HttpOptions.builder()
-                    .timeout(timeoutSeconds * 1000)
-                    .build();
-            Client client = Client.builder()
-                    .apiKey(apiKeyValue)
-                    .httpOptions(httpOptions)
-                    .build();
-            GenerateContentResponse response = client.models.generateContent(model.getName(), prompt, null);
-            String outputText = response.text();
+            String outputText = sendToModel(activeModel, prompt);
             promptHistoryService.success(history, outputText);
             if (logLlmCall) {
                 log.info("[Context][project={}] LLM — completed: {} ({} ms, estTokens={})",
@@ -193,17 +189,38 @@ public class AIModelService {
             promptHistoryService.error(history, errorDetail);
             if (logLlmCall) {
                 log.error("[Context][project={}] LLM — failed: {} ({} ms, model={}): {}",
-                        project.getId(), logLabel, ContextPipelineLogger.elapsedMs(startedNanos), model.getName(), errorDetail, ex);
+                        project.getId(), logLabel, ContextPipelineLogger.elapsedMs(startedNanos), activeModel.getName(), errorDetail, ex);
             } else {
                 log.error("Failed calling AI model (model={}, historyId={}): {}",
-                        model.getName(), history.getId(), errorDetail, ex);
+                        activeModel.getName(), history.getId(), errorDetail, ex);
             }
             throw new IllegalArgumentException(
-                    "Failed calling AI model '" + model.getName() + "': " + errorDetail
+                    "Failed calling AI model '" + activeModel.getName() + "': " + errorDetail
             );
         }
     }
 
+    @Nullable
+    private String sendToModel(AIModel model, String prompt) {
+        String apiKeyValue = resolveApiKeyValue(model);
+        HttpOptions httpOptions = HttpOptions.builder()
+                .timeout(timeoutSeconds * 1000)
+                .retryOptions(HttpRetryOptions.builder()
+                        .attempts(GEMINI_MAX_ATTEMPTS)
+                        .httpStatusCodes(408, 429, 500, 502, 503, 504)
+                        .initialDelay(1.0)
+                        .expBase(2.0)
+                        .build())
+                .build();
+        GenerateContentResponse response;
+        try (Client client = Client.builder()
+                .apiKey(apiKeyValue)
+                .httpOptions(httpOptions)
+                .build()) {
+            response = client.models.generateContent(model.getName(), prompt, null);
+        }
+        return response.text();
+    }
 
 
     public static int estimateTokens(String input) {

@@ -86,7 +86,10 @@ public class FileSummariesIndexService {
         for (ProjectFileIndex file : allFiles) {
             ProjectFileMetadataIndex existing = existingSummaries
                     .stream()
-                    .filter(s -> Objects.equals(s.getFile(), file))
+                    .filter(summary -> {
+                        ProjectFileIndex indexedFile = summary.getFile();
+                        return indexedFile != null && Objects.equals(indexedFile.getId(), file.getId());
+                    })
                     .findFirst()
                     .orElse(null);
             if(existing == null || !file.getContentHash().equals(existing.getContentHash())) {
@@ -152,27 +155,30 @@ public class FileSummariesIndexService {
                     .stream()
                     .filter(f -> Objects.equals(f.getFilePath(), fileKey))
                     .findFirst()
-                    .ifPresent(f -> saveSummary(item.metadata(), f));
+                    .ifPresent(f -> saveSummary(project, item.metadata(), f));
             saved++;
         }
         pipelineLogger.message(project, PHASE, "Persisted " + saved + " file summaries (chunk "
                 + chunkIndex + "/" + chunkCount + ")");
     }
 
-    private void saveSummary(FileSummaryOfflineResponse.Metadata metadata, ProjectFileIndex fileIndex) {
-        ProjectFileMetadataIndex entry = projectFileMetadataIndexRepository.findByFileId(fileIndex.getId())
+    private void saveSummary(Project project, FileSummaryOfflineResponse.Metadata metadata, ProjectFileIndex fileIndex) {
+        Project managedProject = projectService.getProjectEntity(project.getId());
+        ProjectFileIndex managedFile = projectFileIndexRepository.findById(fileIndex.getId())
+                .orElseThrow(() -> new IllegalStateException("Indexed file not found for id: " + fileIndex.getId()));
+        ProjectFileMetadataIndex entry = projectFileMetadataIndexRepository.findByFileId(managedFile.getId())
                 .orElseGet(() -> {
                     ProjectFileMetadataIndex newEntry = new ProjectFileMetadataIndex();
-                    newEntry.setProject(fileIndex.getProject());
-                    newEntry.setFile(fileIndex);
+                    newEntry.setProject(managedProject);
+                    newEntry.setFile(managedFile);
                     return newEntry;
                 });
         try {
             entry.setMetadataJson(objectMapper.writeValueAsString(metadata));
         } catch (JsonProcessingException ex) {
-            throw new IllegalStateException("Failed serializing file metadata for " + fileIndex.getFilePath(), ex);
+            throw new IllegalStateException("Failed serializing file metadata for " + managedFile.getFilePath(), ex);
         }
-        entry.setContentHash(fileIndex.getContentHash());
+        entry.setContentHash(managedFile.getContentHash());
         entry.setUpdatedAt(LocalDateTime.now());
         projectFileMetadataIndexRepository.save(entry);
     }

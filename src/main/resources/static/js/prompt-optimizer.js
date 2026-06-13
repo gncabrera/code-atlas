@@ -110,7 +110,7 @@ $(function () {
             return;
         }
         const payload = { aiModelId: Number(contextModelId) };
-        setPromptPageLocked(true, $btn, loadingText);
+        CodeAtlas.setButtonLoading($btn, true, loadingText);
         $.ajax({
             url: `/api/projects/${projectId}/index/offline${endpointSuffix}`,
             method: "POST",
@@ -118,13 +118,14 @@ $(function () {
             data: JSON.stringify(payload)
         })
             .done(function (response) {
-                CodeAtlas.showToast(response.message || "Offline index updated.", "success");
+                CodeAtlas.showToast(response.message || "Offline index job started.", "success");
+                $("#logViewerModal").modal("show");
             })
             .fail(function (xhr) {
                 CodeAtlas.showToast(CodeAtlas.apiMessage(xhr, failMessage), "danger");
             })
             .always(function () {
-                setPromptPageLocked(false, $btn);
+                CodeAtlas.setButtonLoading($btn, false);
             });
     }
 

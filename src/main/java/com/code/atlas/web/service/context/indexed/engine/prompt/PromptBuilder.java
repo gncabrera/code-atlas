@@ -5,6 +5,7 @@ import com.code.atlas.web.service.context.indexed.dto.KnowledgeResult;
 import com.code.atlas.web.service.context.indexed.dto.RetrievedFile;
 
 import java.util.List;
+import java.util.StringJoiner;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -12,24 +13,24 @@ import org.springframework.stereotype.Service;
 public class PromptBuilder {
 
     private final int maxTotalChars;
+    private final PromptHelper promptHelper;
 
-    public PromptBuilder(@Value("${codeatlas.context.indexed.max-total-chars:7000}") int maxTotalChars) {
+    public PromptBuilder(
+            @Value("${codeatlas.context.indexed.max-total-chars:7000}") int maxTotalChars,
+            PromptHelper promptHelper
+    ) {
         this.maxTotalChars = Math.max(1000, maxTotalChars);
+        this.promptHelper = promptHelper;
     }
 
     public String assemble(Intent intent, KnowledgeResult knowledgeResult) {
         StringBuilder builder = new StringBuilder();
-        appendSection(builder, "# User Request Context", "Action: " + intent.action()
-                + "\nSymbols: " + intent.symbols()
-                + "\nConcepts: " + intent.concepts()
-                + "\nCapabilities: " + intent.capabilities()
-                + "\nArchitectural roles: " + intent.architecturalRoles()
-                + "\nChange impact areas: " + intent.changeImpactAreas()
-                + "\nFrontend impact: " + intent.frontendImpact()
-                + "\nConfidence: " + intent.confidence());
+        List<RetrievedFile> files = knowledgeResult.files();
+        appendSection(builder, "# Request Analysis", formatRequestAnalysis(intent));
         appendSection(builder, "# Architecture Facts", knowledgeResult.architectureFacts());
-        appendSection(builder, "# Relevant Files", formatFileList(knowledgeResult.files()));
-        appendSection(builder, "# Code Snippets", formatSnippets(knowledgeResult.files()));
+        appendSection(builder, "# Relevant Files", formatRelevantFiles(files));
+        appendSection(builder, "# File Summaries", promptHelper.formatSummaries(files));
+        appendSection(builder, "# Code Snippets", formatSnippets(files));
         return builder.toString().trim();
     }
 
@@ -40,20 +41,46 @@ public class PromptBuilder {
         builder.append(title).append("\n\n").append(body.trim()).append("\n\n");
     }
 
-    private String formatFileList(List<RetrievedFile> files) {
+    private String formatRequestAnalysis(Intent intent) {
+        StringBuilder builder = new StringBuilder();
+        builder.append("Action: ").append(intent.action());
+        if (!intent.symbols().isEmpty()) {
+            builder.append("\nPrimary symbols: ").append(String.join(", ", intent.symbols()));
+        }
+        if (!intent.concepts().isEmpty()) {
+            builder.append("\nPrimary concepts: ").append(String.join(", ", intent.concepts()));
+        }
+        if (!intent.capabilities().isEmpty()) {
+            builder.append("\nCapabilities: ").append(String.join(", ", intent.capabilities()));
+        }
+        return builder.toString().trim();
+    }
+
+    private String formatRelevantFiles(List<RetrievedFile> files) {
         if (files.isEmpty()) {
             return "No files retrieved.";
         }
-        StringBuilder builder = new StringBuilder();
-        int index = 1;
+        StringJoiner joiner = new StringJoiner("\n\n");
         for (RetrievedFile file : files) {
-            builder.append(index++).append(". ").append(file.file().getFilePath())
-                    .append(" (score=").append(file.score()).append(")\n");
+            joiner.add(formatRelevantFile(file));
+        }
+        return joiner.toString();
+    }
+
+    private String formatRelevantFile(RetrievedFile file) {
+        StringBuilder builder = new StringBuilder();
+        builder.append(file.file().getFilePath());
+        if (!file.type().isBlank()) {
+            builder.append("\n- type: ").append(file.type());
+        }
+        builder.append("\n- score: ").append(file.score());
+        if (!file.reasons().isEmpty()) {
+            builder.append("\n- matched:");
             for (String reason : file.reasons()) {
-                builder.append("   - ").append(reason).append('\n');
+                builder.append("\n  - ").append(reason);
             }
         }
-        return builder.toString().trim();
+        return builder.toString();
     }
 
     private String formatSnippets(List<RetrievedFile> files) {

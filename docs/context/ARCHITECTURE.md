@@ -346,26 +346,67 @@ Rules:
 
 ### Step 8 — Assemble context
 
-**Service:** `PromptEngine` → `PromptBuilder`  
+**Service:** `PromptEngine` → `PromptBuilder` (+ `PromptHelper.formatSummaries`)  
 **Model:** Code (pure template, no AI prompt file)  
 
 **Input:** `Intent` + `KnowledgeResult` (architecture facts + merged files).
 
-**Output sections:**
+**Output sections (in order):**
 
 ```text
-# User Request Context
+# Request Analysis
 # Architecture Facts
 # Relevant Files
+# File Summaries
 # Code Snippets
 ```
+
+**Example (abbreviated):**
+
+```text
+# Request Analysis
+
+Action: modify
+Primary symbols: User, UserService
+Primary concepts: soft-delete
+
+# Architecture Facts
+
+Current architecture:
+Layering:
+* Controllers delegate to Services
+...
+
+# Relevant Files
+
+src/main/java/.../UserService.java
+- type: service
+- score: 240
+- matched:
+  - symbol: User
+  - concept: soft-delete
+
+# File Summaries
+
+UserService.java
+Handles user lifecycle operations and coordinates persistence.
+
+# Code Snippets
+
+## src/main/java/.../UserService.java
+```java
+...
+```
+```
+
+Request Analysis exposes only `action`, `symbols`, `concepts`, and `capabilities` (omits internal retrieval fields). Relevant Files surfaces `type`, `score`, and `reasons` from each `RetrievedFile`. File Summaries reads `summary` from `project_file_metadata_index` via `PromptHelper.formatSummaries` (placeholder when missing).
 
 Deterministic formatting only. Size limiting via `codeatlas.context.indexed.max-total-chars` exists but is currently disabled in code.
 
 | Index | Role |
 | --- | --- |
 | Project File Index | — |
-| Project File Metadata Index | — |
+| Project File Metadata Index | **Read** — per-file `summary` for File Summaries section |
 
 ---
 
@@ -374,7 +415,7 @@ Deterministic formatting only. Size limiting via `codeatlas.context.indexed.max-
 | Index | Primary steps |
 | --- | --- |
 | Project File Index | Step 1 (refresh); steps 3 & 5 (path/extension via metadata join) |
-| Project File Metadata Index | Steps 3 & 5 (retrieval scoring); step 4 (prompt blocks); step 7 (summaries — partial) |
+| Project File Metadata Index | Steps 3 & 5 (retrieval scoring); step 4 (prompt blocks); step 7 (AI prompt metadata); step 8 (file summaries) |
 
 ---
 
@@ -387,6 +428,6 @@ Deterministic formatting only. Size limiting via `codeatlas.context.indexed.max-
 | Intent extraction | Implemented |
 | Deterministic retrieval | **Implemented** — metadata scoring, ranking, disk snippets |
 | Missing context → retrieval intent | **Implemented** — model `Intent` + `diffIntent` delta |
-| Prompt file blocks (`PromptHelper`) | **Implemented** — retrieval signals + `metadata_json` |
-| Architecture summary metadata lookup | **Partial** — `formatSummaries` TODO |
-| Prompt assembly | Implemented |
+| Prompt file blocks (`PromptHelper`) | **Implemented** — retrieval signals + `metadata_json` + `formatSummaries` (Step 8) |
+| Architecture summary metadata lookup | **Partial** — Step 7 `{{FILE_SUMMARIES}}` placeholder not wired |
+| Prompt assembly | **Implemented** — 5-section layout (Request Analysis → Snippets) |
