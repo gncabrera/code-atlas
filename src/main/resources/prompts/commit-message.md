@@ -15,7 +15,6 @@ Write commit messages terse and exact. Conventional Commits format. No fluff. Wh
 - Add body only for: non-obvious *why*, breaking changes, migration notes, linked issues
 - Wrap at 72 chars
 - Bullets `-` not `*`
-- Reference issues/PRs at end: `Closes #42`, `Refs #17`
 
 **What NEVER goes in:**
 - "This commit does X", "I", "we", "now", "currently" — the diff says what
@@ -23,6 +22,7 @@ Write commit messages terse and exact. Conventional Commits format. No fluff. Wh
 - "Generated with Claude Code" or any AI attribution
 - Emoji (unless project convention requires)
 - Restating the file name when scope already says it
+- Reference issues/PRs at end: `Closes #42`, `Refs #17`
 
 ## Examples
 
@@ -34,8 +34,6 @@ Diff: new endpoint for user profile with body explaining the why
 
   Mobile client needs profile data without the full user payload
   to reduce LTE bandwidth on cold-launch screens.
-
-  Closes #128
   ```
 
 Diff: breaking API change
