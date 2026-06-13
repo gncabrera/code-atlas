@@ -3,6 +3,15 @@
     font-weight: 600;
 }
 
+#buildPreviewTiming {
+    gap: 0.25rem;
+}
+
+#buildPreviewCachedBadge {
+    font-size: 0.75rem;
+    vertical-align: middle;
+}
+
 #outputPromptActions {
     gap: 0.5rem;
 }

@@ -539,6 +539,24 @@ $(function () {
         updateTokenInfo();
     });
 
+    function hideBuildPreviewTiming() {
+        $("#buildPreviewTiming").addClass("d-none").removeClass("d-inline-flex");
+        $("#buildPreviewCachedBadge").addClass("d-none");
+    }
+
+    function showBuildPreviewTiming(durationMs, contextStrategy) {
+        const $timing = $("#buildPreviewTiming");
+        const $badge = $("#buildPreviewCachedBadge");
+        $("#buildPreviewDurationMs").text(durationMs);
+        $timing.removeClass("d-none").addClass("d-inline-flex");
+        if (contextStrategy === "INDEXED" && durationMs < 50) {
+            $badge.removeClass("d-none");
+            bootstrap.Tooltip.getOrCreateInstance($badge[0]);
+        } else {
+            $badge.addClass("d-none");
+        }
+    }
+
     $("#buildPreviewBtn").on("click", function () {
         const $buildBtn = $(this);
         const userRequest = $("#userRequest").val();
@@ -574,6 +592,8 @@ $(function () {
         if (contextStrategy === "INDEXED") {
             payload.contextAiModelId = Number($("#contextAiModelSelect").val());
         }
+        hideBuildPreviewTiming();
+        const startedAt = performance.now();
         CodeAtlas.setButtonLoading($buildBtn, true, "Building Preview...");
         $.ajax({
             url: "/api/prompts/build-preview",
@@ -582,12 +602,15 @@ $(function () {
             data: JSON.stringify(payload)
         })
             .done(function (response) {
+                const durationMs = Math.round(performance.now() - startedAt);
+                showBuildPreviewTiming(durationMs, contextStrategy);
                 $("#aiModelPrompt").val(response.data.aiModelPrompt);
                 updateTokenInfo();
                 debouncedSaveDraft();
                 CodeAtlas.showToast(response.message || "Preview built.", "success");
             })
             .fail(function (xhr) {
+                hideBuildPreviewTiming();
                 CodeAtlas.showToast(CodeAtlas.apiMessage(xhr, "Failed building preview."), "danger");
             })
             .always(function () {
