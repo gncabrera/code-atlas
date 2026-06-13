@@ -61,6 +61,7 @@ public class ProjectService {
     @Transactional
     public ProjectResponseDto createProject(ProjectRequestDto requestDto) {
         Path normalizedPath = validateAndNormalizePath(requestDto.path());
+        validateProjectTypeIds(requestDto.projectTypeIds());
         Project project = new Project();
         project.setPath(normalizedPath.toString());
         project.setName(requestDto.name().trim());
@@ -75,6 +76,7 @@ public class ProjectService {
     @Transactional
     public ProjectResponseDto updateProject(Long id, ProjectRequestDto requestDto) {
         Path normalizedPath = validateAndNormalizePath(requestDto.path());
+        validateProjectTypeIds(requestDto.projectTypeIds());
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Project not found for id: " + id));
         project.setPath(normalizedPath.toString());
@@ -133,6 +135,12 @@ public class ProjectService {
         return projectProjectTypeRepository.findByProjectIdInOrderByProjectIdAscProjectTypeNameAsc(projectIds)
                 .stream()
                 .collect(Collectors.groupingBy(assignment -> assignment.getProject().getId()));
+    }
+
+    private void validateProjectTypeIds(List<Long> projectTypeIds) {
+        if (projectTypeIds == null || projectTypeIds.isEmpty()) {
+            throw new IllegalArgumentException("At least one project type is required.");
+        }
     }
 
     private void syncProjectTypes(Project project, List<Long> projectTypeIds) {

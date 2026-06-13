@@ -402,6 +402,9 @@
             if (!description) {
                 return "Description is required.";
             }
+            if (getSelectedProjectTypeIds().length === 0) {
+                return "At least one project type is required.";
+            }
             return null;
         },
         renderColumns: function (project) {

@@ -1,13 +1,18 @@
 package com.code.atlas.web.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.code.atlas.web.domain.Project;
+import com.code.atlas.web.repository.ProjectProjectTypeRepository;
 import com.code.atlas.web.repository.ProjectRepository;
+import com.code.atlas.web.repository.ProjectTypeRepository;
+import com.code.atlas.web.service.dto.ProjectRequestDto;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -21,6 +26,12 @@ class ProjectServiceTest {
 
     @Mock
     private ProjectRepository projectRepository;
+
+    @Mock
+    private ProjectProjectTypeRepository projectProjectTypeRepository;
+
+    @Mock
+    private ProjectTypeRepository projectTypeRepository;
 
     @Mock
     private GitProcessRunner gitProcessRunner;
@@ -63,5 +74,15 @@ class ProjectServiceTest {
 
         assertTrue(content.startsWith("DESIGN.md\n\n"));
         assertTrue(content.contains(body));
+    }
+
+    @Test
+    void createProject_withoutProjectTypes_throws() {
+        IllegalArgumentException ex = assertThrows(
+                IllegalArgumentException.class,
+                () -> new ProjectRequestDto(tempDir.toString(), "Demo", "desc", false, true, List.of())
+        );
+
+        assertEquals("At least one project type is required.", ex.getMessage());
     }
 }

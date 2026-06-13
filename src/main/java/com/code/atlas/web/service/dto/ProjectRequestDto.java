@@ -17,5 +17,8 @@ public record ProjectRequestDto(
         if (name == null || name.isBlank()) {
             throw new IllegalArgumentException("Project name is required.");
         }
+        if (projectTypeIds == null || projectTypeIds.isEmpty()) {
+            throw new IllegalArgumentException("At least one project type is required.");
+        }
     }
 }

@@ -66,26 +66,27 @@ public class FileSummariesIndexService {
             pipelineLogger.message(project, PHASE, "No indexed files — skipped file metadata generation");
             return;
         }
+        MetadataFilter.MetadataFilterContext filterContext = metadataFilter.createContext(project);
+        List<ProjectFileIndex> eligibleFiles = allFiles.stream()
+                .filter(file -> metadataFilter.shouldGenerateMetadata(filterContext, file))
+                .toList();
+        int skippedByFilter = allFiles.size() - eligibleFiles.size();
+        if (skippedByFilter > 0) {
+            pipelineLogger.message(project, PHASE, "Metadata filter skipped " + skippedByFilter + " file(s)");
+        }
+        self.purgeStaleFileSummaries(project.getId(), eligibleFiles);
         List<ProjectFileIndex> filesToSummarize;
         if (incremental) {
-            // TODO: Also purge files not needing more metadata metadataFilter.shouldGenerateMetadata
-            self.purgeStaleFileSummaries(project.getId(), allFiles);
             List<ProjectFileMetadataIndex> existingSummaries = projectFileMetadataIndexRepository.findByProjectId(project.getId());
-
-            filesToSummarize = selectFilesNeedingSummary(allFiles, existingSummaries);
-            int unchanged = allFiles.size() - filesToSummarize.size();
+            filesToSummarize = selectFilesNeedingSummary(eligibleFiles, existingSummaries);
+            int unchanged = eligibleFiles.size() - filesToSummarize.size();
             pipelineLogger.message(project, PHASE, "Incremental file summaries: " + filesToSummarize.size()
                     + " to process, " + unchanged + " unchanged");
         } else {
-
-            filesToSummarize = allFiles;
+            filesToSummarize = eligibleFiles;
         }
-        // TODO: Filter out files not needing metadataFilter.shouldGenerateMetadata
         summarizeAndPersistFiles(project, aiModel, filesToSummarize);
     }
-
-
-
     private List<ProjectFileIndex> selectFilesNeedingSummary(
             List<ProjectFileIndex> allFiles,
             List<ProjectFileMetadataIndex> existingSummaries
