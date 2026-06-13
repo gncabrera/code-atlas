@@ -3,6 +3,7 @@ package com.code.atlas.web.controller;
 import com.code.atlas.web.api.ApiResponse;
 import com.code.atlas.web.api.GlobalExceptionHandler;
 import com.code.atlas.web.domain.Project;
+import com.code.atlas.web.service.ProjectIndexExportImportService;
 import com.code.atlas.web.service.ProjectIndexService;
 import com.code.atlas.web.service.ProjectService;
 import com.code.atlas.web.service.dto.ImportPreflightDto;
@@ -30,10 +31,12 @@ public class ProjectIndexController extends BaseRestController {
 
     private final ProjectService projectService;
     private final ProjectIndexService projectIndexService;
+    private final ProjectIndexExportImportService projectIndexExportImportService;
 
-    public ProjectIndexController(ProjectService projectService, ProjectIndexService projectIndexService) {
+    public ProjectIndexController(ProjectService projectService, ProjectIndexService projectIndexService, ProjectIndexExportImportService projectIndexExportImportService) {
         this.projectService = projectService;
         this.projectIndexService = projectIndexService;
+        this.projectIndexExportImportService = projectIndexExportImportService;
     }
 
     @GetMapping("/status")
@@ -52,7 +55,7 @@ public class ProjectIndexController extends BaseRestController {
             projectService.getProjectEntity(id);
             StreamingResponseBody body = outputStream -> {
                 try {
-                    projectIndexService.writeExportStream(id, outputStream);
+                    projectIndexExportImportService.writeExportStream(id, outputStream);
                 } catch (IOException ex) {
                     GlobalExceptionHandler.logCaughtException("GET /api/projects/{id}/index/export", ex);
                     throw new IllegalStateException("Failed streaming project index export.", ex);
@@ -75,7 +78,7 @@ public class ProjectIndexController extends BaseRestController {
     ) {
         try {
             validateJsonUpload(file);
-            ImportPreflightDto preflight = projectIndexService.analyzeImport(id, file.getInputStream());
+            ImportPreflightDto preflight = projectIndexExportImportService.analyzeImport(id, file.getInputStream());
             return ResponseEntity.ok(ApiResponse.success("Import preflight completed.", preflight));
         } catch (Exception ex) {
             return handledException("POST /api/projects/{id}/index/import/preflight", ex);
@@ -88,7 +91,7 @@ public class ProjectIndexController extends BaseRestController {
             @RequestBody IndexImportConfirmRequestDto requestDto
     ) {
         try {
-            projectIndexService.confirmImport(id, requestDto.preflightId());
+            projectIndexExportImportService.confirmImport(id, requestDto.preflightId());
             return ResponseEntity.ok(ApiResponse.success("Project index imported.", null));
         } catch (Exception ex) {
             return handledException("POST /api/projects/{id}/index/import/confirm", ex);

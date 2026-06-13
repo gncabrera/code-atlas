@@ -7,6 +7,7 @@ public enum PromptOptimizerReadOnlyMode {
     IMPLEMENTATION("Implementation", "implementation.md"),
     REVIEWER("Reviewer", "reviewer.md"),
     REFACTOR("Refactor", "refactor.md"),
+    PLAN("Plan", "plan.md"),
     SECURITY("Security", "security.md");
 
     private final String displayName;

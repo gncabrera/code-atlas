@@ -3,8 +3,8 @@ package com.code.atlas.web.service.context.indexed.engine.context.retriever;
 import com.code.atlas.web.domain.Project;
 import com.code.atlas.web.domain.ProjectFileIndex;
 import com.code.atlas.web.domain.ProjectFileMetadataIndex;
+import com.code.atlas.web.helper.FileHelper;
 import com.code.atlas.web.repository.ProjectFileMetadataIndexRepository;
-import com.code.atlas.web.service.context.deterministic.ContextFileSupport;
 import com.code.atlas.web.service.context.indexed.dto.ContextResult;
 import com.code.atlas.web.service.context.indexed.dto.FileSummaryOfflineResponse;
 import com.code.atlas.web.service.context.indexed.dto.Intent;
@@ -86,10 +86,10 @@ public class DeterministicRetriever {
         MetadataMatchScorer.ScoreResult scoreResult = MetadataMatchScorer.score(intent, metadata);
         String relativePath = fileIndex.getFilePath().trim();
         String architecturalRole = metadata.architecturalRole() == null ? "" : metadata.architecturalRole().trim();
-        String extension = ContextFileSupport.extensionOf(Path.of(relativePath).getFileName().toString());
+        String extension = FileHelper.extensionOf(Path.of(relativePath).getFileName().toString());
         return new ScoredCandidate(
                 metadataRow.getFile(),
-                ContextFileSupport.languageByExtension(extension),
+                FileHelper.languageByExtension(extension),
                 architecturalRole,
                 scoreResult.score(),
                 scoreResult.reasons(),
