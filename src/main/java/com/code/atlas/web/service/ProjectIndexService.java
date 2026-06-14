@@ -4,7 +4,9 @@ import com.code.atlas.web.domain.Project;
 import com.code.atlas.web.domain.ProjectFileIndex;
 import com.code.atlas.web.domain.ProjectFileMetadataIndex;
 import com.code.atlas.web.helper.FileHelper;
+import com.code.atlas.web.helper.IndexPathExclusions;
 import com.code.atlas.web.repository.ProjectFileIndexRepository;
+import com.code.atlas.web.service.context.indexed.engine.context.builder.GitIgnoreMatcher;
 import com.code.atlas.web.repository.ProjectFileMetadataIndexRepository;
 import com.code.atlas.web.service.context.indexed.ContextPipelineLogger;
 import com.code.atlas.web.service.dto.FlatProjectIndexDto;
@@ -177,14 +179,24 @@ public class ProjectIndexService {
     }
 
     private List<Path> collectRelevantFiles(Path projectRoot) {
+        GitIgnoreMatcher gitIgnore = GitIgnoreMatcher.fromPath(projectRoot.resolve(".gitignore"));
         try (Stream<Path> stream = Files.walk(projectRoot)) {
             return stream
                     .filter(Files::isRegularFile)
+                    .filter(filePath -> isIndexablePath(projectRoot, filePath, gitIgnore))
                     .sorted(Comparator.naturalOrder())
                     .toList();
         } catch (IOException ex) {
             return List.of();
         }
+    }
+
+    private boolean isIndexablePath(Path projectRoot, Path filePath, GitIgnoreMatcher gitIgnore) {
+        String relativePath = projectRoot.relativize(filePath).toString().replace('\\', '/');
+        if (IndexPathExclusions.containsExcludedSegment(relativePath)) {
+            return false;
+        }
+        return !gitIgnore.isIgnored(relativePath);
     }
 
     private String hash(String input) {

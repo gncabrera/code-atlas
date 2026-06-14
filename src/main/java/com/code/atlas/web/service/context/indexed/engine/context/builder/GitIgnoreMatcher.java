@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
-final class GitIgnoreMatcher {
+public final class GitIgnoreMatcher {
 
     private final List<Rule> rules;
 
@@ -17,11 +17,11 @@ final class GitIgnoreMatcher {
         this.rules = List.copyOf(rules);
     }
 
-    static GitIgnoreMatcher empty() {
+    public static GitIgnoreMatcher empty() {
         return new GitIgnoreMatcher(List.of());
     }
 
-    static GitIgnoreMatcher fromPath(Path gitIgnorePath) {
+    public static GitIgnoreMatcher fromPath(Path gitIgnorePath) {
         if (gitIgnorePath == null || !Files.isRegularFile(gitIgnorePath)) {
             return empty();
         }
@@ -32,7 +32,7 @@ final class GitIgnoreMatcher {
         }
     }
 
-    static GitIgnoreMatcher fromLines(List<String> lines) {
+    public static GitIgnoreMatcher fromLines(List<String> lines) {
         List<Rule> rules = new ArrayList<>();
         for (String rawLine : lines) {
             String line = stripComment(rawLine).trim();
@@ -51,7 +51,7 @@ final class GitIgnoreMatcher {
         return new GitIgnoreMatcher(rules);
     }
 
-    boolean isIgnored(String relativePath) {
+    public boolean isIgnored(String relativePath) {
         if (relativePath == null || relativePath.isBlank() || rules.isEmpty()) {
             return false;
         }

@@ -3,6 +3,7 @@ package com.code.atlas.web.service.context.indexed.engine.context.builder;
 import com.code.atlas.web.domain.Project;
 import com.code.atlas.web.domain.ProjectFileIndex;
 import com.code.atlas.web.domain.ProjectProjectType;
+import com.code.atlas.web.helper.IndexPathExclusions;
 import com.code.atlas.web.repository.ProjectProjectTypeRepository;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -14,16 +15,6 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class MetadataFilter {
-
-    private static final Set<String> EXCLUDED_PATH_SEGMENTS = Set.of(
-            "node_modules",
-            "target",
-            "build",
-            "dist",
-            "out",
-            "coverage",
-            ".git"
-    );
 
     private final ProjectProjectTypeRepository projectProjectTypeRepository;
 
@@ -59,7 +50,7 @@ public class MetadataFilter {
         if (!extensionOk && !fileOk) {
             return false;
         }
-        if (containsExcludedSegment(relativePath)) {
+        if (IndexPathExclusions.containsExcludedSegment(relativePath)) {
             return false;
         }
         return !context.gitIgnore().isIgnored(relativePath);
@@ -74,15 +65,6 @@ public class MetadataFilter {
                 .map(value -> value.toLowerCase(Locale.ROOT))
                 .filter(value -> !value.isEmpty())
                 .forEach(target::add);
-    }
-
-    private boolean containsExcludedSegment(String relativePath) {
-        for (String segment : relativePath.split("/")) {
-            if (EXCLUDED_PATH_SEGMENTS.contains(segment)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     private String normalizeExtension(String extension) {
