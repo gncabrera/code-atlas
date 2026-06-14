@@ -157,3 +157,7 @@
         overflow: visible;
     }
 }
+
+.plan-action-row .form-check {
+    white-space: nowrap;
+}

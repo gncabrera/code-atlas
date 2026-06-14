@@ -39,10 +39,7 @@ $(function () {
     $('#generateContextBtn').on('click', generateContext);
     $('#continueToDiscoveryBtn').on('click', function () { navigateTo('discovery'); });
     $('#generateDiscoveryBtn').on('click', generateDiscovery);
-    $('#continueToReviewBtn').on('click', function () {
-        renderReviewFromState();
-        navigateTo('review');
-    });
+    $('#continueToReviewBtn').on('click', continueToReview);
     $('#saveAnswersBtn').on('click', saveAnswers);
     $('#generatePlanBtn').on('click', generatePlan);
     $('#refinePlanBtn').on('click', refinePlan);
@@ -83,6 +80,223 @@ $(function () {
             opts.data = JSON.stringify(data);
         }
         return $.ajax(opts);
+    }
+
+    function apiPromise(method, url, data) {
+        var opts = {
+            method: method,
+            url: url
+        };
+        if (data !== null && data !== undefined) {
+            opts.contentType = 'application/json';
+            opts.data = JSON.stringify(data);
+        }
+        return $.ajax(opts).then(function (res) {
+            if (res.result === 'success') {
+                return res.data;
+            }
+            return $.Deferred().reject({
+                responseJSON: { message: res.message || 'Request failed.' }
+            }).promise();
+        });
+    }
+
+    function sessionUrl(suffix) {
+        return '/api/plan-mode/sessions/' + state.activeSessionId + suffix;
+    }
+
+    function runWorkflowSequence(triggerBtn, steps) {
+        var index = 0;
+
+        function runNext() {
+            if (index >= steps.length) {
+                CodeAtlas.setButtonLoading(triggerBtn, false);
+                return;
+            }
+            var step = steps[index++];
+            CodeAtlas.setButtonLoading(triggerBtn, true, step.loadingText);
+            step.execute()
+                .done(function (data) {
+                    if (step.validate && !step.validate(data)) {
+                        CodeAtlas.setButtonLoading(triggerBtn, false);
+                        CodeAtlas.showToast(step.validateError || 'Unexpected response state.', 'danger');
+                        return;
+                    }
+                    step.onSuccess(data);
+                    runNext();
+                })
+                .fail(function (xhr) {
+                    CodeAtlas.setButtonLoading(triggerBtn, false);
+                    CodeAtlas.showToast(CodeAtlas.apiMessage(xhr, 'Request failed.'), 'danger');
+                });
+        }
+
+        runNext();
+    }
+
+    // ─── Session apply helpers ───────────────────────────────────────────────
+
+    function applyCreatedSession(session) {
+        state.activeSession = session;
+        state.activeSessionId = session.id;
+        loadSessions();
+        renderSession(session);
+        navigateTo('context');
+    }
+
+    function applyContextGenerated(session) {
+        state.activeSession = session;
+        if (session.contextData) {
+            $('#contextEmptyMsg').hide();
+            $('#contextDataPreview').val(session.contextData).show();
+            $('#toggleContextPreview').show();
+            $('#continueToDiscoveryBtn').show();
+        }
+        updateStepperState('context', session.status);
+        loadSessions();
+    }
+
+    function applyDiscoveryGenerated(session) {
+        state.activeSession = session;
+        state.discoveryAnswers = {};
+        state.selectedSuggestions = [];
+        if (session.discovery) {
+            renderDiscovery(session.discovery);
+            $('#discoveryEmptyMsg').hide();
+            $('#discoveryContent').show();
+            $('#continueToReviewBtn').show();
+            $('#skipReviewCheck').show();
+        }
+        updateStepperState('discovery', session.status);
+        loadSessions();
+        navigateTo('discovery');
+    }
+
+    function applyAnswersSaved(session, shouldNavigateToPlan) {
+        state.activeSession = session;
+        loadSessions();
+        if (shouldNavigateToPlan) {
+            navigateTo('plan');
+        }
+    }
+
+    function applyPlanGenerated(session) {
+        state.activeSession = session;
+        if (session.result) {
+            renderPlan(session.result);
+        }
+        updateStepperState('plan', session.status);
+        loadSessions();
+        navigateTo('plan');
+    }
+
+    function buildCreateSessionPayload() {
+        return {
+            userRequest: $('#userRequestInput').val().trim(),
+            outputType: $('#outputTypeSelect').val(),
+            contextModelId: parseInt($('#contextModelSelect').val(), 10),
+            planModelId: parseInt($('#planModelSelect').val(), 10),
+            projectId: parseInt($('#projectSelect').val(), 10) || null
+        };
+    }
+
+    function validateCreateSessionInputs() {
+        var userRequest = $('#userRequestInput').val().trim();
+        var contextModelId = parseInt($('#contextModelSelect').val(), 10);
+        var planModelId = parseInt($('#planModelSelect').val(), 10);
+
+        if (!userRequest) { showAlert('warning', 'User request is required.'); return false; }
+        if (!contextModelId) { showAlert('warning', 'Context model is required.'); return false; }
+        if (!planModelId) { showAlert('warning', 'Plan model is required.'); return false; }
+        return true;
+    }
+
+    function runSkipToDiscoverySequence() {
+        var payload = buildCreateSessionPayload();
+
+        runWorkflowSequence($('#createSessionBtn'), [
+            {
+                loadingText: 'Creating...',
+                execute: function () {
+                    return apiPromise('POST', '/api/plan-mode/sessions', payload);
+                },
+                validate: function (session) {
+                    return session && session.id;
+                },
+                validateError: 'Session was not created.',
+                onSuccess: applyCreatedSession
+            },
+            {
+                loadingText: 'Generating context...',
+                execute: function () {
+                    return apiPromise('POST', sessionUrl('/generate-context'), {});
+                },
+                validate: function (session) {
+                    return session && session.contextData;
+                },
+                validateError: 'Context was not generated.',
+                onSuccess: applyContextGenerated
+            },
+            {
+                loadingText: 'Continuing...',
+                execute: function () {
+                    navigateTo('discovery');
+                    return $.Deferred().resolve(state.activeSession).promise();
+                },
+                onSuccess: function () {}
+            },
+            {
+                loadingText: 'Generating discovery...',
+                execute: function () {
+                    return apiPromise('POST', sessionUrl('/generate-discovery'), {});
+                },
+                validate: function (session) {
+                    return session && session.discovery;
+                },
+                validateError: 'Discovery was not generated.',
+                onSuccess: applyDiscoveryGenerated
+            }
+        ]);
+    }
+
+    function continueToReview() {
+        if ($('#skipReview').is(':checked')) {
+            if (!state.activeSessionId) return;
+
+            runWorkflowSequence($('#continueToReviewBtn'), [
+                {
+                    loadingText: 'Saving...',
+                    execute: function () {
+                        return apiPromise('POST', sessionUrl('/answers'), {
+                            answers: state.discoveryAnswers,
+                            selectedSuggestions: state.selectedSuggestions
+                        });
+                    },
+                    validate: function (session) {
+                        return session && session.status === 'ANSWERED';
+                    },
+                    validateError: 'Answers were not saved.',
+                    onSuccess: function (session) {
+                        applyAnswersSaved(session, true);
+                    }
+                },
+                {
+                    loadingText: 'Generating plan...',
+                    execute: function () {
+                        return apiPromise('POST', sessionUrl('/generate-plan'), {});
+                    },
+                    validate: function (session) {
+                        return session && session.result;
+                    },
+                    validateError: 'Plan was not generated.',
+                    onSuccess: applyPlanGenerated
+                }
+            ]);
+            return;
+        }
+
+        renderReviewFromState();
+        navigateTo('review');
     }
 
     // ─── Data Loading ─────────────────────────────────────────────────────────
@@ -226,6 +440,8 @@ $(function () {
         $('#questionsContainer').empty();
         $('#suggestionsContainer').empty();
         $('#continueToReviewBtn').hide();
+        $('#skipReviewCheck').hide();
+        $('#skipReview').prop('checked', false);
         $('#saveAnswersBtn').show();
         $('#generateDiscoveryBtn').show();
         $('#discoveryReadOnlyNotice').hide();
@@ -247,6 +463,8 @@ $(function () {
         $('#continueToContextBtn').hide();
         $('#updateRequestBtn').hide();
         $('#requestReadOnlyNotice').hide();
+        $('#skipToDiscoveryCheck').show();
+        $('#skipToDiscovery').prop('checked', false);
     }
 
     function populateRequestForm(session) {
@@ -271,6 +489,7 @@ $(function () {
         $('#continueToContextBtn').hide();
         $('#updateRequestBtn').hide();
         $('#requestReadOnlyNotice').show();
+        $('#skipToDiscoveryCheck').hide();
     }
 
     function populateRequestFormEditable(session) {
@@ -293,35 +512,24 @@ $(function () {
         $('#continueToContextBtn').show();
         $('#updateRequestBtn').hide();
         $('#requestReadOnlyNotice').hide();
+        $('#skipToDiscoveryCheck').show();
     }
 
     function createSession() {
-        var userRequest = $('#userRequestInput').val().trim();
-        var outputType = $('#outputTypeSelect').val();
-        var contextModelId = parseInt($('#contextModelSelect').val(), 10);
-        var planModelId = parseInt($('#planModelSelect').val(), 10);
-        var projectId = parseInt($('#projectSelect').val(), 10) || null;
+        if (!validateCreateSessionInputs()) return;
 
-        if (!userRequest) { showAlert('warning', 'User request is required.'); return; }
-        if (!contextModelId) { showAlert('warning', 'Context model is required.'); return; }
-        if (!planModelId) { showAlert('warning', 'Plan model is required.'); return; }
+        if ($('#skipToDiscovery').is(':checked')) {
+            runSkipToDiscoverySequence();
+            return;
+        }
 
+        var payload = buildCreateSessionPayload();
         var $btn = $('#createSessionBtn');
         CodeAtlas.setButtonLoading($btn, true, 'Creating...');
 
-        api('POST', '/api/plan-mode/sessions', {
-            userRequest: userRequest,
-            outputType: outputType,
-            contextModelId: contextModelId,
-            planModelId: planModelId,
-            projectId: projectId
-        }, function (session) {
+        api('POST', '/api/plan-mode/sessions', payload, function (session) {
             CodeAtlas.setButtonLoading($btn, false);
-            state.activeSession = session;
-            state.activeSessionId = session.id;
-            loadSessions();
-            renderSession(session);
-            navigateTo('context');
+            applyCreatedSession(session);
         }, function () {
             CodeAtlas.setButtonLoading($btn, false);
         });
@@ -408,12 +616,14 @@ $(function () {
             if (planGenerated) {
                 setDiscoveryReadOnly(true);
                 $('#continueToReviewBtn').hide();
+                $('#skipReviewCheck').hide();
                 $('#saveAnswersBtn').hide();
                 $('#generateDiscoveryBtn').hide();
                 $('#discoveryReadOnlyNotice').show();
             } else {
                 setDiscoveryReadOnly(false);
                 $('#continueToReviewBtn').show();
+                $('#skipReviewCheck').show();
                 $('#saveAnswersBtn').show();
                 $('#generateDiscoveryBtn').show();
                 $('#discoveryReadOnlyNotice').hide();
@@ -487,17 +697,9 @@ $(function () {
         var $btn = $('#generateContextBtn');
         CodeAtlas.setButtonLoading($btn, true, 'Generating context...');
 
-        api('POST', '/api/plan-mode/sessions/' + state.activeSessionId + '/generate-context', {}, function (session) {
+        api('POST', sessionUrl('/generate-context'), {}, function (session) {
             CodeAtlas.setButtonLoading($btn, false);
-            state.activeSession = session;
-            if (session.contextData) {
-                $('#contextEmptyMsg').hide();
-                $('#contextDataPreview').val(session.contextData).show();
-                $('#toggleContextPreview').show();
-                $('#continueToDiscoveryBtn').show();
-            }
-            updateStepperState('context', session.status);
-            loadSessions();
+            applyContextGenerated(session);
             showAlert('success', 'Context generated.');
         }, function () {
             CodeAtlas.setButtonLoading($btn, false);
@@ -511,19 +713,9 @@ $(function () {
         var $btn = $('#generateDiscoveryBtn');
         CodeAtlas.setButtonLoading($btn, true, 'Generating discovery...');
 
-        api('POST', '/api/plan-mode/sessions/' + state.activeSessionId + '/generate-discovery', {}, function (session) {
+        api('POST', sessionUrl('/generate-discovery'), {}, function (session) {
             CodeAtlas.setButtonLoading($btn, false);
-            state.activeSession = session;
-            state.discoveryAnswers = {};
-            state.selectedSuggestions = [];
-            if (session.discovery) {
-                renderDiscovery(session.discovery);
-                $('#discoveryEmptyMsg').hide();
-                $('#discoveryContent').show();
-                $('#continueToReviewBtn').show();
-            }
-            updateStepperState('discovery', session.status);
-            loadSessions();
+            applyDiscoveryGenerated(session);
             showAlert('success', 'Discovery generated.');
         }, function () {
             CodeAtlas.setButtonLoading($btn, false);
@@ -687,14 +879,12 @@ $(function () {
         var $btn = $('#saveAnswersBtn');
         CodeAtlas.setButtonLoading($btn, true, 'Saving...');
 
-        api('POST', '/api/plan-mode/sessions/' + state.activeSessionId + '/answers', {
+        api('POST', sessionUrl('/answers'), {
             answers: state.discoveryAnswers,
             selectedSuggestions: state.selectedSuggestions
         }, function (session) {
             CodeAtlas.setButtonLoading($btn, false);
-            state.activeSession = session;
-            loadSessions();
-            navigateTo('plan');
+            applyAnswersSaved(session, true);
         }, function () {
             CodeAtlas.setButtonLoading($btn, false);
         });
@@ -707,14 +897,9 @@ $(function () {
         var $btn = $('#generatePlanBtn');
         CodeAtlas.setButtonLoading($btn, true, 'Generating plan...');
 
-        api('POST', '/api/plan-mode/sessions/' + state.activeSessionId + '/generate-plan', {}, function (session) {
+        api('POST', sessionUrl('/generate-plan'), {}, function (session) {
             CodeAtlas.setButtonLoading($btn, false);
-            state.activeSession = session;
-            if (session.result) {
-                renderPlan(session.result);
-            }
-            updateStepperState('plan', session.status);
-            loadSessions();
+            applyPlanGenerated(session);
             showAlert('success', 'Plan generated.');
         }, function () {
             CodeAtlas.setButtonLoading($btn, false);

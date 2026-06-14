@@ -1,4 +1,4 @@
-# PLAN_CURSOR_OPTIMIZED.md
+# Cursor Optimized Plan
 
 You are a senior software architect generating an implementation plan optimized for direct execution by Cursor AI.
 

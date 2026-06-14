@@ -127,13 +127,17 @@
                 Session is read-only. Use <strong>Refine Plan</strong> in Step 5 to iterate, or create a new session.
             </div>
 
-            <div class="d-flex gap-2">
+            <div class="d-flex gap-2 align-items-center plan-action-row">
                 <button id="createSessionBtn" class="btn btn-primary">
                     Create Session &amp; Continue
                 </button>
                 <button id="continueToContextBtn" class="btn btn-outline-primary" style="display:none;">
                     Continue
                 </button>
+                <div id="skipToDiscoveryCheck" class="form-check align-self-center ms-1">
+                    <input type="checkbox" id="skipToDiscovery" class="form-check-input">
+                    <label class="form-check-label small" for="skipToDiscovery">Skip to discovery</label>
+                </div>
             </div>
         </div>
 
@@ -213,13 +217,17 @@
                 Discovery is read-only for existing sessions.
             </div>
 
-            <div class="d-flex gap-2">
+            <div class="d-flex gap-2 align-items-center plan-action-row">
                 <button id="generateDiscoveryBtn" class="btn btn-primary">
                     Generate Discovery
                 </button>
                 <button id="continueToReviewBtn" class="btn btn-outline-secondary" style="display:none;">
                     Continue to Review
                 </button>
+                <div id="skipReviewCheck" class="form-check align-self-center ms-1" style="display:none;">
+                    <input type="checkbox" id="skipReview" class="form-check-input">
+                    <label class="form-check-label small" for="skipReview">Skip Review</label>
+                </div>
             </div>
         </div>
 
