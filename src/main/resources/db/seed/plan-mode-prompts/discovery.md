@@ -31,22 +31,36 @@ Generate:
 - No yes/no questions.
 - No preference questions (e.g. "Do you prefer X?").
 - Focus on: architecture decisions, persistence strategy, migration strategy, security decisions, API behavior, rollout strategy, compatibility requirements.
+- A question is considered blocking only if different answers would produce materially different implementations.
+- If all options would lead to nearly identical code, do not ask the question.
 
 ## Suggestion Rules
+- Include only when genuinely useful.
+- Provide 10-14 concise ideas. Max 14
 
-- Generate 10–14 suggestions. Target: 12.
 - Mix the following required categories:
-  - FEATURE
-  - UX
-  - ARCHITECTURE
-  - TESTING
-  - PERFORMANCE
-  - SECURITY
-  - OBSERVABILITY
-  - DEVELOPER_EXPERIENCE
-  - ROLLOUT
+    - FEATURE
+    - UX
+    - ARCHITECTURE
+    - TESTING
+    - PERFORMANCE
+    - SECURITY
+    - OBSERVABILITY
+    - DEVELOPER_EXPERIENCE
+    - ROLLOUT
 - Include at least 2 suggestions inspired by successful products (GitHub Checks, Linear Workflows, Stripe Idempotency, etc.), adapted to this codebase.
-- Include at least 2 creative / out-of-the-box ideas.
+- Include at least 2 creative / out-of-the-box ideas. Be creative, explore crazy ideas
+
+Suggestions should be ranked by expected value.
+
+Prefer suggestions that:
+- Reduce implementation risk.
+- Improve maintainability.
+- Improve developer experience.
+- Improve observability.
+- Reuse existing architecture.
+
+Every suggestion should be specific to the current request and repository context.
 
 ## Output Format
 
