@@ -69,19 +69,26 @@ class CommitHelperServiceTest {
         model.setTokensPerMinute(10_000);
     }
 
+    private void stubProjectRoot() {
+        when(projectService.resolveProjectRoot(project)).thenReturn(tempDir);
+    }
+
     @Test
     void getMetadata_withProjectId_returnsCurrentBranch() {
+        stubProjectRoot();
         when(projectService.getProjectEntity(1L)).thenReturn(project);
         when(projectService.getAllProjects()).thenReturn(List.of(
                 new ProjectResponseDto(1L, tempDir.toString(), "Test Project", null, false, true, List.of(), List.of())
         ));
         when(aiModelService.getEnabledModels()).thenReturn(List.of());
-        when(gitProcessRunner.run(any(Path.class), any())).thenReturn("true", "feature/autocommit");
+        when(gitProcessRunner.run(tempDir, List.of("git", "rev-parse", "--abbrev-ref", "HEAD")))
+                .thenReturn("feature/autocommit");
 
         CommitHelperMetadataDto metadata = commitHelperService.getMetadata(1L);
 
         assertEquals("feature/autocommit", metadata.currentBranch());
-        verify(gitProcessRunner).run(any(Path.class), eq(List.of("git", "rev-parse", "--abbrev-ref", "HEAD")));
+        verify(gitProcessRunner).assertGitRepository(tempDir);
+        verify(gitProcessRunner).run(tempDir, List.of("git", "rev-parse", "--abbrev-ref", "HEAD"));
     }
 
     @Test
@@ -107,27 +114,27 @@ class CommitHelperServiceTest {
 
     @Test
     void generateCommitMessage_callsGitDiffAndAiModel() {
+        stubProjectRoot();
         when(projectService.getProjectEntity(1L)).thenReturn(project);
         when(aiModelService.getModelEntity(2L)).thenReturn(model);
-        when(gitProcessRunner.run(any(Path.class), any())).thenReturn("true");
-        when(gitProcessRunner.collectWorkingTreeDiff(any(Path.class))).thenReturn("diff line");
+        when(gitProcessRunner.collectWorkingTreeDiff(tempDir)).thenReturn("diff line");
         when(aiModelService.sendToModel(eq(project), eq(model), any(), eq("Commit Helper")))
                 .thenReturn(new ModelResponseDto("feat(api): add commit helper", 42));
 
         String message = commitHelperService.generateCommitMessage(1L, 2L);
 
         assertEquals("feat(api): add commit helper", message);
-        verify(gitProcessRunner).run(any(Path.class), eq(List.of("git", "rev-parse", "--is-inside-work-tree")));
-        verify(gitProcessRunner).collectWorkingTreeDiff(any(Path.class));
+        verify(gitProcessRunner).assertGitRepository(tempDir);
+        verify(gitProcessRunner).collectWorkingTreeDiff(tempDir);
         verify(aiModelService).sendToModel(eq(project), eq(model), any(), eq("Commit Helper"));
     }
 
     @Test
     void generateCommitMessage_rejectsEmptyDiff() {
+        stubProjectRoot();
         when(projectService.getProjectEntity(1L)).thenReturn(project);
         when(aiModelService.getModelEntity(2L)).thenReturn(model);
-        when(gitProcessRunner.run(any(Path.class), any())).thenReturn("true");
-        when(gitProcessRunner.collectWorkingTreeDiff(any(Path.class))).thenReturn("   ");
+        when(gitProcessRunner.collectWorkingTreeDiff(tempDir)).thenReturn("   ");
 
         IllegalArgumentException ex = assertThrows(
                 IllegalArgumentException.class,
@@ -148,28 +155,32 @@ class CommitHelperServiceTest {
 
     @Test
     void executeCommit_runsAddAndCommit() {
+        stubProjectRoot();
         when(projectService.getProjectEntity(1L)).thenReturn(project);
-        when(gitProcessRunner.run(any(Path.class), any())).thenReturn("true", "", "");
+        when(gitProcessRunner.run(tempDir, List.of("git", "add", "-A"))).thenReturn("");
+        when(gitProcessRunner.run(tempDir, List.of("git", "commit", "-m", "feat: test commit"))).thenReturn("");
 
         commitHelperService.executeCommit(1L, "feat: test commit");
 
         var inOrder = inOrder(gitProcessRunner);
-        inOrder.verify(gitProcessRunner).run(any(Path.class), eq(List.of("git", "rev-parse", "--is-inside-work-tree")));
-        inOrder.verify(gitProcessRunner).run(any(Path.class), eq(List.of("git", "add", "-A")));
-        inOrder.verify(gitProcessRunner).run(any(Path.class), eq(List.of("git", "commit", "-m", "feat: test commit")));
+        inOrder.verify(gitProcessRunner).assertGitRepository(tempDir);
+        inOrder.verify(gitProcessRunner).run(tempDir, List.of("git", "add", "-A"));
+        inOrder.verify(gitProcessRunner).run(tempDir, List.of("git", "commit", "-m", "feat: test commit"));
     }
 
     @Test
     void executeCommitAndPush_runsPushAfterCommit() {
+        stubProjectRoot();
         when(projectService.getProjectEntity(1L)).thenReturn(project);
-        when(gitProcessRunner.run(any(Path.class), any())).thenReturn("true", "", "", "");
+        when(gitProcessRunner.run(tempDir, List.of("git", "add", "-A"))).thenReturn("");
+        when(gitProcessRunner.run(tempDir, List.of("git", "commit", "-m", "feat: test commit"))).thenReturn("");
 
         commitHelperService.executeCommitAndPush(1L, "feat: test commit");
 
         var inOrder = inOrder(gitProcessRunner);
-        inOrder.verify(gitProcessRunner).run(any(Path.class), eq(List.of("git", "rev-parse", "--is-inside-work-tree")));
-        inOrder.verify(gitProcessRunner).run(any(Path.class), eq(List.of("git", "add", "-A")));
-        inOrder.verify(gitProcessRunner).run(any(Path.class), eq(List.of("git", "commit", "-m", "feat: test commit")));
-        inOrder.verify(gitProcessRunner).pushCurrentBranch(any(Path.class));
+        inOrder.verify(gitProcessRunner).assertGitRepository(tempDir);
+        inOrder.verify(gitProcessRunner).run(tempDir, List.of("git", "add", "-A"));
+        inOrder.verify(gitProcessRunner).run(tempDir, List.of("git", "commit", "-m", "feat: test commit"));
+        inOrder.verify(gitProcessRunner).pushCurrentBranch(tempDir);
     }
 }

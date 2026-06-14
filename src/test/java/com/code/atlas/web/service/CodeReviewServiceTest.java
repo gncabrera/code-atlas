@@ -68,20 +68,25 @@ class CodeReviewServiceTest {
         model.setTokensPerMinute(10_000);
     }
 
+    private void stubProjectRoot() {
+        when(projectService.resolveProjectRoot(project)).thenReturn(tempDir);
+    }
+
     @Test
     void getMetadata_withProjectId_returnsBranches() {
+        stubProjectRoot();
         when(projectService.getProjectEntity(1L)).thenReturn(project);
         when(projectService.getAllProjects()).thenReturn(List.of(
                 new ProjectResponseDto(1L, tempDir.toString(), "Test Project", null, false, true, List.of(), List.of())
         ));
         when(aiModelService.getEnabledModels()).thenReturn(List.of());
-        when(gitProcessRunner.run(any(Path.class), any())).thenReturn("true");
-        when(gitProcessRunner.listBranches(any(Path.class))).thenReturn(List.of("main", "origin/main"));
+        when(gitProcessRunner.listBranches(tempDir)).thenReturn(List.of("main", "origin/main"));
 
         CodeReviewMetadataDto metadata = codeReviewService.getMetadata(1L);
 
         assertEquals(List.of("main", "origin/main"), metadata.branches());
-        verify(gitProcessRunner).listBranches(any(Path.class));
+        verify(gitProcessRunner).assertGitRepository(tempDir);
+        verify(gitProcessRunner).listBranches(tempDir);
     }
 
     @Test
@@ -149,13 +154,13 @@ class CodeReviewServiceTest {
 
     @Test
     void runBranchCodeReview_callsGitDiffAndAiModel() {
+        stubProjectRoot();
         when(projectService.getProjectEntity(1L)).thenReturn(project);
         when(aiModelService.getModelEntity(2L)).thenReturn(model);
         when(projectService.resolveAgentsFileContent(project)).thenReturn("agents");
         when(projectService.resolveDesignFileContent(project)).thenReturn("");
         when(projectService.getProjectFiles(project)).thenReturn(List.of("src/Main.java"));
-        when(gitProcessRunner.run(any(Path.class), any())).thenReturn("true");
-        when(gitProcessRunner.diffBetweenBranches(any(Path.class), eq("main"), eq("feature/x")))
+        when(gitProcessRunner.diffBetweenBranches(tempDir, "main", "feature/x"))
                 .thenReturn("diff content");
         when(aiModelService.sendToModel(eq(project), eq(model), any(), eq("Code Review")))
                 .thenReturn(new ModelResponseDto("""
@@ -166,19 +171,20 @@ class CodeReviewServiceTest {
 
         assertEquals(7, result.summary().score());
         assertEquals("MEDIUM", result.summary().risk());
-        verify(gitProcessRunner).diffBetweenBranches(any(Path.class), eq("main"), eq("feature/x"));
+        verify(gitProcessRunner).assertGitRepository(tempDir);
+        verify(gitProcessRunner).diffBetweenBranches(tempDir, "main", "feature/x");
         verify(aiModelService).sendToModel(eq(project), eq(model), any(), eq("Code Review"));
     }
 
     @Test
     void runCodeReview_currentChangesOnly_usesWorkingTreeDiff() {
+        stubProjectRoot();
         when(projectService.getProjectEntity(1L)).thenReturn(project);
         when(aiModelService.getModelEntity(2L)).thenReturn(model);
         when(projectService.resolveAgentsFileContent(project)).thenReturn("agents");
         when(projectService.resolveDesignFileContent(project)).thenReturn("");
         when(projectService.getProjectFiles(project)).thenReturn(List.of("src/Main.java"));
-        when(gitProcessRunner.run(any(Path.class), any())).thenReturn("true");
-        when(gitProcessRunner.collectWorkingTreeDiff(any(Path.class))).thenReturn("uncommitted diff");
+        when(gitProcessRunner.collectWorkingTreeDiff(tempDir)).thenReturn("uncommitted diff");
         when(aiModelService.sendToModel(eq(project), eq(model), any(), eq("Code Review")))
                 .thenReturn(new ModelResponseDto("""
                         {"summary":{"score":9,"risk":"LOW","mainConcerns":[]},"findings":[]}
@@ -189,15 +195,16 @@ class CodeReviewServiceTest {
 
         assertEquals(9, result.summary().score());
         assertEquals("LOW", result.summary().risk());
-        verify(gitProcessRunner).collectWorkingTreeDiff(any(Path.class));
+        verify(gitProcessRunner).assertGitRepository(tempDir);
+        verify(gitProcessRunner).collectWorkingTreeDiff(tempDir);
         verify(aiModelService).sendToModel(eq(project), eq(model), any(), eq("Code Review"));
     }
 
     @Test
     void runCodeReview_currentChangesOnly_rejectsEmptyWorkingTreeDiff() {
+        stubProjectRoot();
         when(projectService.getProjectEntity(1L)).thenReturn(project);
-        when(gitProcessRunner.run(any(Path.class), any())).thenReturn("true");
-        when(gitProcessRunner.collectWorkingTreeDiff(any(Path.class))).thenReturn("");
+        when(gitProcessRunner.collectWorkingTreeDiff(tempDir)).thenReturn("");
 
         CodeReviewRequestDto request = new CodeReviewRequestDto(1L, 2L, null, null, true);
         IllegalArgumentException ex = assertThrows(
