@@ -7,11 +7,15 @@ import com.code.atlas.web.service.context.indexed.ContextPipelineLogger;
 import com.code.atlas.web.service.context.indexed.dto.MissingContextResponse;
 import com.code.atlas.web.service.dto.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.genai.Client;
+import com.google.genai.types.Content;
 import com.google.genai.types.GenerateContentResponse;
 import com.google.genai.types.HttpOptions;
 import com.google.genai.types.HttpRetryOptions;
+import com.google.genai.types.Part;
 import jakarta.transaction.Transactional;
+import java.util.ArrayList;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.Nullable;
@@ -200,18 +204,77 @@ public class AIModelService {
         }
     }
 
+    @Transactional
+    public ModelResponseDto sendToModelMultiTurn(
+            Project project,
+            AIModel model,
+            List<ConversationTurnDto> history,
+            String newUserPrompt,
+            String notes,
+            String logLabel) {
+        AIModel activeModel = getModelEntity(model.getId());
+        if (!activeModel.isEnabled()) {
+            throw new IllegalArgumentException("Selected AI model is disabled.");
+        }
+        List<Content> contents = buildContents(history, newUserPrompt);
+        String fullPromptEstimate = history.stream()
+                .map(ConversationTurnDto::content)
+                .reduce("", (a, b) -> a + b) + newUserPrompt;
+        int estimatedTokens = estimateTokens(fullPromptEstimate);
+        if (activeModel.getTokensPerMinute() > 0 && estimatedTokens > activeModel.getTokensPerMinute()) {
+            throw new IllegalArgumentException("Estimated tokens exceed model tokensPerMinute limit.");
+        }
+
+        boolean logLlmCall = logLabel != null && !logLabel.isBlank();
+        if (logLlmCall) {
+            log.info("[PlanMode][project={}] LLM — starting: {} (model={}, estTokens={})",
+                    project != null ? project.getId() : "none", logLabel, activeModel.getName(), estimatedTokens);
+        }
+
+        PromptHistory historyRecord = promptHistoryService.create(project, activeModel, newUserPrompt, notes);
+        long startedNanos = System.nanoTime();
+
+        try {
+            String outputText = sendToModelMultiTurn(activeModel, contents);
+            promptHistoryService.success(historyRecord, outputText);
+            if (logLlmCall) {
+                log.info("[PlanMode][project={}] LLM — completed: {} ({} ms)",
+                        project != null ? project.getId() : "none",
+                        logLabel, ContextPipelineLogger.elapsedMs(startedNanos));
+            }
+            return new ModelResponseDto(outputText, estimatedTokens);
+        } catch (Exception ex) {
+            String errorDetail = ExceptionMessageFormatter.formatChain(ex);
+            promptHistoryService.error(historyRecord, errorDetail);
+            if (logLlmCall) {
+                log.error("[PlanMode][project={}] LLM — failed: {} ({} ms): {}",
+                        project != null ? project.getId() : "none",
+                        logLabel, ContextPipelineLogger.elapsedMs(startedNanos), errorDetail, ex);
+            }
+            throw new IllegalArgumentException(
+                    "Failed calling AI model '" + activeModel.getName() + "': " + errorDetail);
+        }
+    }
+
+    private static List<Content> buildContents(List<ConversationTurnDto> history, String newUserPrompt) {
+        List<Content> contents = new ArrayList<>();
+        for (ConversationTurnDto turn : history) {
+            contents.add(Content.builder()
+                    .role(turn.role().toLowerCase())
+                    .parts(ImmutableList.of(Part.fromText(turn.content())))
+                    .build());
+        }
+        contents.add(Content.builder()
+                .role("user")
+                .parts(ImmutableList.of(Part.fromText(newUserPrompt)))
+                .build());
+        return contents;
+    }
+
     @Nullable
     private String sendToModel(AIModel model, String prompt) {
         String apiKeyValue = resolveApiKeyValue(model);
-        HttpOptions httpOptions = HttpOptions.builder()
-                .timeout(timeoutSeconds * 1000)
-                .retryOptions(HttpRetryOptions.builder()
-                        .attempts(GEMINI_MAX_ATTEMPTS)
-                        .httpStatusCodes(408, 429, 500, 502, 503, 504)
-                        .initialDelay(1.0)
-                        .expBase(2.0)
-                        .build())
-                .build();
+        HttpOptions httpOptions = buildHttpOptions();
         GenerateContentResponse response;
         try (Client client = Client.builder()
                 .apiKey(apiKeyValue)
@@ -220,6 +283,32 @@ public class AIModelService {
             response = client.models.generateContent(model.getName(), prompt, null);
         }
         return response.text();
+    }
+
+    @Nullable
+    private String sendToModelMultiTurn(AIModel model, List<Content> contents) {
+        String apiKeyValue = resolveApiKeyValue(model);
+        HttpOptions httpOptions = buildHttpOptions();
+        GenerateContentResponse response;
+        try (Client client = Client.builder()
+                .apiKey(apiKeyValue)
+                .httpOptions(httpOptions)
+                .build()) {
+            response = client.models.generateContent(model.getName(), contents, null);
+        }
+        return response.text();
+    }
+
+    private HttpOptions buildHttpOptions() {
+        return HttpOptions.builder()
+                .timeout(timeoutSeconds * 1000)
+                .retryOptions(HttpRetryOptions.builder()
+                        .attempts(GEMINI_MAX_ATTEMPTS)
+                        .httpStatusCodes(408, 429, 500, 502, 503, 504)
+                        .initialDelay(1.0)
+                        .expBase(2.0)
+                        .build())
+                .build();
     }
 
 

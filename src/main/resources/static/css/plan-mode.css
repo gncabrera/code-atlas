@@ -1,0 +1,159 @@
+.plan-mode-layout {
+    display: flex;
+    height: calc(100vh - 56px);
+    overflow: hidden;
+}
+
+.plan-sidebar {
+    width: 260px;
+    min-width: 260px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #f8f9fa;
+}
+
+.plan-sessions-list {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.plan-stepper {
+    flex-shrink: 0;
+}
+
+.plan-content {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+/* Session list items */
+.session-item {
+    display: block;
+    padding: 0.65rem 1rem;
+    border-bottom: 1px solid #dee2e6;
+    cursor: pointer;
+    transition: background 0.15s;
+    text-decoration: none;
+    color: inherit;
+}
+
+.session-item:hover {
+    background: #e9ecef;
+    color: inherit;
+}
+
+.session-item.active {
+    background: #d0e7ff;
+    border-left: 3px solid #0d6efd;
+    padding-left: calc(1rem - 3px);
+}
+
+.session-item .session-title {
+    font-size: 0.875rem;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.session-item .session-meta {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-top: 2px;
+}
+
+.session-item .session-delete {
+    float: right;
+    padding: 0 2px;
+    color: #dc3545;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+
+.session-item:hover .session-delete {
+    opacity: 1;
+}
+
+/* Stepper */
+.plan-stepper ul {
+    padding: 0 0 1rem 0;
+}
+
+.plan-step {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    transition: background 0.15s;
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.plan-step:hover {
+    background: #e9ecef;
+    color: #212529;
+}
+
+.plan-step.active {
+    color: #0d6efd;
+    font-weight: 600;
+}
+
+.plan-step.completed {
+    color: #198754;
+}
+
+.plan-step.locked {
+    opacity: 0.45;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.step-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid currentColor;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 0.6rem;
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+
+.plan-step.completed .step-icon::before {
+    content: "✓";
+}
+
+.plan-step.active .step-icon::before {
+    content: "●";
+}
+
+/* Panel */
+.plan-panel {
+    max-width: 900px;
+}
+
+@media (max-width: 768px) {
+    .plan-mode-layout {
+        flex-direction: column;
+        height: auto;
+        overflow: visible;
+    }
+
+    .plan-sidebar {
+        width: 100%;
+        min-width: 0;
+        height: auto;
+        max-height: 260px;
+    }
+
+    .plan-content {
+        height: auto;
+        overflow: visible;
+    }
+}

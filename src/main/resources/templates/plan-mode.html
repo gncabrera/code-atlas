@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Code Atlas - Plan Mode</title>
+    <th:block th:replace="~{fragments/head :: pageHead('plan-mode.css')}"></th:block>
+</head>
+<body>
+<div th:replace="~{fragments/navbar :: navbar}"></div>
+
+<div class="plan-mode-layout">
+
+    <!-- Sidebar -->
+    <div id="planSidebar" class="plan-sidebar border-end">
+
+        <div class="p-3 border-bottom">
+            <button id="newSessionBtn" class="btn btn-primary w-100">
+                <i class="bi bi-plus-lg me-1"></i> New Session
+            </button>
+        </div>
+
+        <!-- Session list -->
+        <div class="plan-sessions-list" id="sessionListContainer">
+            <div class="p-3 text-muted small text-center" id="sessionListEmpty" style="display:none;">
+                No sessions yet.
+            </div>
+            <div id="sessionList"></div>
+        </div>
+
+        <!-- Stepper (shown only when a session is active) -->
+        <div id="planStepper" class="plan-stepper border-top" style="display:none;">
+            <div class="p-3 text-uppercase text-muted small fw-semibold mb-1">Steps</div>
+            <ul class="list-unstyled mb-0">
+                <li class="plan-step" data-step="request">
+                    <span class="step-icon"></span>
+                    <span class="step-label">Request</span>
+                </li>
+                <li class="plan-step" data-step="context">
+                    <span class="step-icon"></span>
+                    <span class="step-label">Context</span>
+                </li>
+                <li class="plan-step" data-step="discovery">
+                    <span class="step-icon"></span>
+                    <span class="step-label">Discovery</span>
+                </li>
+                <li class="plan-step" data-step="review">
+                    <span class="step-icon"></span>
+                    <span class="step-label">Review</span>
+                </li>
+                <li class="plan-step" data-step="plan">
+                    <span class="step-icon"></span>
+                    <span class="step-label">Plan</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Main content -->
+    <div id="planContent" class="plan-content p-4">
+
+        <!-- Welcome (no session selected) -->
+        <div id="panelWelcome" class="plan-panel">
+            <div class="text-center py-5">
+                <i class="bi bi-map display-4 text-primary mb-3 d-block"></i>
+                <h2>Plan Mode</h2>
+                <p class="text-muted">Transform a high-level request into a complete implementation plan.</p>
+                <button id="welcomeNewSessionBtn" class="btn btn-primary btn-lg mt-2">
+                    <i class="bi bi-plus-lg me-1"></i> New Session
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 1: Request -->
+        <div id="panelRequest" class="plan-panel" style="display:none;">
+            <div class="d-flex align-items-center mb-4">
+                <h4 class="mb-0">Request</h4>
+                <span class="badge bg-secondary ms-2">Step 1 of 5</span>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header">Output Type</div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="outputTypeSelect" class="form-label">What do you need?</label>
+                            <select id="outputTypeSelect" class="form-select">
+                                <option value="CURSOR_OPTIMIZED">Cursor Optimized</option>
+                                <option value="HUMAN_READABLE">Human Readable</option>
+                                <option value="ARCHITECTURE_PROPOSAL">Architecture Proposal</option>
+                                <option value="TECHNICAL_SPECIFICATION">Technical Specification</option>
+                                <option value="IMPLEMENTATION_CHECKLIST">Implementation Checklist</option>
+                                <option value="TASK_BREAKDOWN">Task Breakdown</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="projectSelect" class="form-label">Project (optional)</label>
+                            <select id="projectSelect" class="form-select">
+                                <option value="">No project</option>
+                            </select>
+                            <div class="form-text">Required for indexed context retrieval.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="contextModelSelect" class="form-label">Context Model</label>
+                            <select id="contextModelSelect" class="form-select"></select>
+                            <div class="form-text">Used to generate indexed context.</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="planModelSelect" class="form-label">Plan Model</label>
+                            <select id="planModelSelect" class="form-select"></select>
+                            <div class="form-text">Used for discovery and plan generation.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header">Your Request</div>
+                <div class="card-body">
+                    <textarea id="userRequestInput" class="form-control" rows="8"
+                              placeholder="Describe what you want to implement...&#10;&#10;Example: Add soft delete support for users with audit trail, admin restore, and cascade behavior for related records."></textarea>
+                </div>
+            </div>
+
+            <div id="requestReadOnlyNotice" class="alert alert-info mb-3" style="display:none;">
+                <i class="bi bi-lock-fill me-1"></i>
+                Session is read-only. Use <strong>Refine Plan</strong> in Step 5 to iterate, or create a new session.
+            </div>
+
+            <div class="d-flex gap-2">
+                <button id="createSessionBtn" class="btn btn-primary">
+                    Create Session &amp; Continue
+                </button>
+                <button id="continueToContextBtn" class="btn btn-outline-primary" style="display:none;">
+                    Continue
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 2: Context -->
+        <div id="panelContext" class="plan-panel" style="display:none;">
+            <div class="d-flex align-items-center mb-4">
+                <h4 class="mb-0">Context</h4>
+                <span class="badge bg-secondary ms-2">Step 2 of 5</span>
+                <span id="contextStaleBadge" class="badge bg-warning text-dark ms-2" style="display:none;">Stale — re-run</span>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header">Session</div>
+                <div class="card-body">
+                    <div class="row g-2 text-muted small">
+                        <div class="col-md-4"><strong>Output:</strong> <span id="ctxOutputType"></span></div>
+                        <div class="col-md-4"><strong>Project:</strong> <span id="ctxProject"></span></div>
+                        <div class="col-md-4"><strong>Model:</strong> <span id="ctxContextModel"></span></div>
+                    </div>
+                    <div class="mt-2 text-truncate"><strong class="small">Request:</strong> <span id="ctxUserRequest" class="small text-muted"></span></div>
+                </div>
+            </div>
+
+            <div class="card mb-3">
+                <div class="card-header d-flex align-items-center justify-content-between">
+                    <span>Indexed Context</span>
+                    <button id="toggleContextPreview" class="btn btn-sm btn-outline-secondary" style="display:none;">
+                        Show / Hide
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="contextEmptyMsg" class="text-muted">No context generated yet.</div>
+                    <textarea id="contextDataPreview" class="form-control font-monospace small" rows="12"
+                              style="display:none;" readonly></textarea>
+                </div>
+            </div>
+
+            <div id="contextReadOnlyNotice" class="alert alert-info mb-3" style="display:none;">
+                <i class="bi bi-lock-fill me-1"></i>
+                Context is read-only for existing sessions.
+            </div>
+
+            <div class="d-flex gap-2">
+                <button id="generateContextBtn" class="btn btn-primary">
+                    Generate Context
+                </button>
+                <button id="continueToDiscoveryBtn" class="btn btn-outline-secondary" style="display:none;">
+                    Continue to Discovery
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 3: Discovery -->
+        <div id="panelDiscovery" class="plan-panel" style="display:none;">
+            <div class="d-flex align-items-center mb-4">
+                <h4 class="mb-0">Discovery</h4>
+                <span class="badge bg-secondary ms-2">Step 3 of 5</span>
+                <span id="discoveryStaleBadge" class="badge bg-warning text-dark ms-2" style="display:none;">Stale — re-run</span>
+            </div>
+
+            <div id="discoveryEmptyMsg" class="text-muted mb-3">No discovery generated yet.</div>
+
+            <div id="discoveryContent" style="display:none;">
+                <div class="card mb-4">
+                    <div class="card-header">Questions</div>
+                    <div class="card-body" id="questionsContainer"></div>
+                </div>
+
+                <div class="card mb-4">
+                    <div class="card-header">Suggestions</div>
+                    <div class="card-body" id="suggestionsContainer"></div>
+                </div>
+            </div>
+
+            <div id="discoveryReadOnlyNotice" class="alert alert-info mb-3" style="display:none;">
+                <i class="bi bi-lock-fill me-1"></i>
+                Discovery is read-only for existing sessions.
+            </div>
+
+            <div class="d-flex gap-2">
+                <button id="generateDiscoveryBtn" class="btn btn-primary">
+                    Generate Discovery
+                </button>
+                <button id="continueToReviewBtn" class="btn btn-outline-secondary" style="display:none;">
+                    Continue to Review
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 4: Review -->
+        <div id="panelReview" class="plan-panel" style="display:none;">
+            <div class="d-flex align-items-center mb-4">
+                <h4 class="mb-0">Review</h4>
+                <span class="badge bg-secondary ms-2">Step 4 of 5</span>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">Your Answers</div>
+                <div class="card-body" id="reviewAnswersContainer">
+                    <div class="text-muted">Go back to Discovery to answer questions.</div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header">Selected Suggestions</div>
+                <div class="card-body" id="reviewSuggestionsContainer">
+                    <div class="text-muted">No suggestions selected.</div>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button id="saveAnswersBtn" class="btn btn-primary">
+                    Save &amp; Continue to Plan
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 5: Plan -->
+        <div id="panelPlan" class="plan-panel" style="display:none;">
+            <div class="d-flex align-items-center mb-4">
+                <h4 class="mb-0">Plan</h4>
+                <span class="badge bg-secondary ms-2">Step 5 of 5</span>
+                <span id="planStaleBadge" class="badge bg-warning text-dark ms-2" style="display:none;">Stale — re-run</span>
+            </div>
+
+            <div id="planEmptyMsg" class="text-muted mb-3">No plan generated yet.</div>
+
+            <div id="planResultContent" class="mb-4" style="display:none;">
+                <div class="card mb-3">
+                    <div class="card-header d-flex align-items-center justify-content-between">
+                        <span>Generated Plan</span>
+                        <button id="exportPlanBtn" class="btn btn-sm btn-outline-success">
+                            <i class="bi bi-download me-1"></i> Export as Markdown
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <textarea id="generatedPlanText" class="form-control font-monospace small" rows="30" readonly></textarea>
+                    </div>
+                </div>
+
+                <!-- Refinement -->
+                <div class="card">
+                    <div class="card-header">Refine Plan</div>
+                    <div class="card-body">
+                        <textarea id="refinementInput" class="form-control mb-3" rows="3"
+                                  placeholder="Ask for changes... e.g. Add error handling for the service layer"></textarea>
+                        <button id="refinePlanBtn" class="btn btn-outline-primary">
+                            Refine Plan
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex gap-2">
+                <button id="generatePlanBtn" class="btn btn-primary">
+                    Generate Plan
+                </button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<th:block th:replace="~{fragments/scripts :: pageScripts('plan-mode.js')}"></th:block>
+</body>
+</html>
