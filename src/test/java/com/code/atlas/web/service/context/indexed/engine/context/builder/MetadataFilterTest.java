@@ -84,15 +84,15 @@ class MetadataFilterTest {
     void shouldGenerateMetadata_whenGitIgnored_returnsFalse() throws IOException {
         Files.writeString(tempDir.resolve(".gitignore"), """
                 *.log
-                generated/
-                !generated/keep.java
+                scratch/
+                !scratch/keep.java
                 """);
 
         MetadataFilter.MetadataFilterContext context = metadataFilter.createContext(project);
 
         assertFalse(metadataFilter.shouldGenerateMetadata(context, file("app.log", "log")));
-        assertFalse(metadataFilter.shouldGenerateMetadata(context, file("module/generated/output.java", "java")));
-        assertTrue(metadataFilter.shouldGenerateMetadata(context, file("generated/keep.java", "java")));
+        assertFalse(metadataFilter.shouldGenerateMetadata(context, file("module/scratch/output.java", "java")));
+        assertTrue(metadataFilter.shouldGenerateMetadata(context, file("scratch/keep.java", "java")));
     }
 
     @Test
